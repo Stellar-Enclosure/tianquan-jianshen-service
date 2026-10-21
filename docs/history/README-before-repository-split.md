@@ -1,0 +1,226 @@
+# Stellar Enclosure Tianquan-Jianshen Permission Platform
+
+Tianquan-Jianshen is a tenant-isolated permission control plane and runtime enforcement
+system. It manages applications, resource manifests, role DAGs, assignments,
+constraints, active role sets, authorization snapshots, audit evidence, and
+Yuheng/Tianshu publication while retaining only authorization state for each
+external tenant ID. Tianquan-Shoubing owns the tenant catalog and identity-sub memberships;
+Tianquan-Jianshen does not create or administer those facts.
+
+[English](README.md) | [中文](README.zh-CN.md)
+
+## Product semantics
+
+- Authorization changes do **not** use an approval workflow. Authentication,
+  authorization, governance, idempotency, and audit are direct system concerns.
+- Duty rotation and shift scheduling are business-domain concepts. Tianquan-Jianshen does
+  not model either workflow; it exposes role activation as a semantic API.
+- Tianquan-Shoubing establishes identity and issues the USER Access/Refresh pair. Tianquan-Jianshen
+  never creates or manages a personnel Session and never asks the user to
+  choose a role during login.
+- A user-level active-role set may contain multiple roles. Selecting any role activates its
+  canonical top-level role and the entire descendant family, so authorization
+  uses the union of all selected root families.
+- Mutually exclusive roots in the same APP cannot be active in one user-level set.
+  Tianquan-Jianshen rejects the whole replacement atomically because an ambiguous APP
+  context cannot be authorized safely.
+- Tianquan-Jianshen has no separate test module. Each Maven module owns its tests under
+  `src/test`; cross-module verification is kept in the closest owning module.
+
+## Modules
+
+| Module            | Responsibility                                                                         | Dependency boundary                                    |
+|-------------------|----------------------------------------------------------------------------------------|--------------------------------------------------------|
+| `contract`        | Stable DTOs, enums, manifest and decision contracts                                    | No Spring runtime or persistence                       |
+| `core`            | Role graph, activation algebra, constraints and pure policies                          | No I/O, HTTP, Redis, JPA or Admin                      |
+| `starter`         | Business-service PEP, reference JWT validation and snapshot reads                      | Never depends on Admin                                 |
+| `gateway-adapter` | Yuheng hot-path authentication and authorization                                      | Never calls Admin over HTTP and never queries SQL      |
+| `admin`           | Authorization control plane, persistence, projection workers, Tianshu/Yuheng registration | Server-only; never imported by Starter                 |
+| `react-sdk`       | Typed process-memory auth state and UI integration primitives                          | npm workspace, not a Maven child; no browser-persistent credentials |
+| `admin-web`       | Permission-filtered administration UI                                                  | npm workspace, not a Maven child; static Vite application |
+
+Only the first five rows are Maven children of this reactor; `react-sdk` and
+`admin-web` are npm workspaces declared in this directory's `package.json`.
+There is no `tianquan-jianshen-test` artifact and no aggregate runtime library.
+
+## Runtime flow
+
+1. A trusted provider submits an immutable resource Manifest.
+2. An operator validates impact and activates the Manifest atomically.
+3. Role/permission/constraint mutations append a mutation journal record and
+   establish a fail-closed Fence.
+4. Projection workers build immutable user authorization snapshots in the
+   dedicated runtime Redis client; the Fence opens only after projection.
+5. Starter or Yuheng verifies the Tianquan-Shoubing USER JWT, asks the Tianquan-Shoubing membership
+   directory for the exact subject/tenant fact, and applies policy-version,
+   Function, Data, Field and Participation rules.
+6. Admin reports interface Definitions to Yuheng Admin with the exact Tianshu v3
+   `bizCode + appCode` identity, registers its `HTTP_PROVIDER` lease in Tianshu,
+   and observes the explicit Yuheng Release.
+7. Yuheng obtains provider instances from Tianshu and routes only when Definition,
+   Lease, Release, consistency, authorization snapshot and Fence checks all agree.
+
+For the operator migration and restore order, follow the
+[unified identity cutover runbook](../../docs/runbooks/unified-identity-oauth-client-tenant-cutover.md).
+
+## OAuth Resource authorization boundary
+
+Tianquan-Jianshen owns USER authorization only. Before Tianquan-Shoubing issues or refreshes a USER token
+for an exact `bizCode + appCode + environment` Resource, the Tianquan-Shoubing directory and
+Tianquan-Jianshen application-entry policy confirm the user's tenant membership. After authentication,
+the downstream Starter applies the user's interface, data, field, participation,
+and active-role policies. USER tokens contain identity claims only, so permission
+changes remain effective through Tianquan-Jianshen's snapshot and fence rules.
+
+Tianquan-Jianshen does not own SERVICE principals, service grants, or service scopes. Tianquan-Shoubing
+authorizes `client_credentials` against an exact source Client, target Resource,
+tenant, and scope set. A verified SERVICE request is accepted locally only when
+its token contains the operation's required Tianquan-Shoubing scope; it never enters the Tianquan-Jianshen
+user decision path. Thus a user allowed into `permission/tianquan-shoubing@prod` cannot obtain
+a token for `permission/tianquan-jianshen@prod` unless that target's separate Tianquan-Jianshen entry
+decision also succeeds, while service-to-service access is governed exclusively
+by Tianquan-Shoubing Service Grants.
+
+Tianquan-Jianshen Admin obtains its Tianshu-audience PLATFORM SERVICE token through Spring
+OAuth2 Client using the Tianquan-Shoubing-administered app ID and one-time Secret. Tianshu binds
+the token audience, scope, source, instance, replay state, and lease expiry; no
+second registration credential is used. Apply Tianquan-Shoubing V6 and the compatible Tianshu/RBAC
+release together. Roll back with a coordinated forward fix because old
+service-permission and unauthenticated-registration paths are intentionally
+removed.
+
+See [architecture.md](docs/architecture.md) for algorithms and design patterns,
+[api-and-manifest.md](docs/api-and-manifest.md) for contracts,
+[security-boundaries.md](docs/security-boundaries.md) for trust boundaries, and
+[operations-runbook.md](docs/operations-runbook.md) for deployment.
+
+## Tianshu configuration and Yuheng service integration
+
+Configuration scope and service scope are different identities:
+
+- Configuration resource identity is `bizCode + appCode + env + resourceName`;
+  namespace bindings control visibility but are not part of that identity.
+  Tianshu owns the `CONFIG_CLIENT` lease, while Tianquan-Jianshen consumes the YAML policy
+  document and
+  accepts only validated monotonically versioned snapshots.
+- Service scope is `bizCode + appCode + env + namespace + serviceKind + protocol
+  + serviceName + group + version`. Tianquan-Jianshen uses a separate `HTTP_PROVIDER` lease;
+  the provider obtains it from Tianshu with a PLATFORM SERVICE token and Yuheng
+  obtains unexpired instances from this scope.
+
+The two leases may share an instance ID but never a lease credential or state.
+At startup, the configuration client must hold a `CONFIG_CLIENT` lease and be
+`READY` before the root HTTP server is published as an `HTTP_PROVIDER`. Interface
+Definition reporting is independent of both leases. Spring MVC mappings plus the
+existing Yuheng annotations feed the Yuheng Interface Catalog, which is the
+only API document center. A Yuheng Release is always an explicit operator action;
+Tianquan-Jianshen never auto-publishes one.
+
+| Tianshu key | Default | Accepted range |
+| --- | ---: | ---: |
+| `tianquan-jianshen.maximum-active-roots` | 16 | 1..32 |
+
+The key controls only the maximum number of active role roots. It is consumed as a
+non-refreshable `@DdcValue` placeholder, so a new value takes effect on restart, and the
+same setting is bound locally as `egon.tianquan-jianshen.maximum-active-roots`.
+Tianquan-Shoubing owns the
+five-minute USER Access Token and stable Refresh Token lifecycles. There are no
+Tianquan-Jianshen token/session timeout keys and no cross-key timeout publication.
+
+An accepted update atomically replaces one complete in-memory policy snapshot.
+It affects only newly executed role-activation commands. Tianquan-Shoubing token issuance and
+Refresh Token revocation remain outside Tianquan-Jianshen; already committed active-role
+sets are not rewritten.
+Invalid values produce a failed ACK while the last-known-good policy and Tianshu
+repository metadata remain active; recovery requires a higher valid version.
+
+Operational routeability is five independent facts: Tianshu Config Client,
+Yuheng Definition, unexpired Tianshu HTTP Provider lease, explicit Yuheng
+Release/engine consistency, and an observed routed request. Status and metrics
+expose bounded versions, state, fingerprints, and error codes only—never raw
+configuration values, lease credentials, passwords, tokens, private keys, hashes,
+or bootstrap administrator secrets.
+
+## First platform administrator
+
+The first administrator can only be created through the one-shot CLI inside the
+executable Admin artifact; there is no HTTP endpoint for it. The command runs in a
+non-web Spring context (`WebApplicationType.NONE`) and exits on success or failure
+without starting an HTTP server. Use the `exec`-classifier jar
+(`stellar-enclosure-tianquan-jianshen-admin-exec.jar`), not the thin jar of the same base name.
+
+```bash
+java -jar stellar-enclosure-tianquan-jianshen-admin-exec.jar \
+  bootstrap-platform-admin \
+  --tenant-id <positive-long-tenant-id> \
+  --identity-sub <tianquan-shoubing-user-sub>
+```
+
+`--tenant-id` and `--identity-sub` are the only accepted options; each appears exactly
+once and the tenant ID must be a positive `Long`. Anything else, `--password` included,
+is rejected as an unsupported option. Tianquan-Jianshen never creates or stores a
+credential, so there is no password prompt — the passphrase belongs to Tianquan-Shoubing.
+
+The command first requires the subject to be an active member of that tenant in the
+identity directory. Inside one transaction it then takes a PostgreSQL advisory lock,
+refuses a tenant that already has a platform administrator, records the verified-tenant
+authorization state, requires the pre-existing `tianquan-jianshen-admin` application and
+its tenant binding, creates `ROLE_PLATFORM_ADMIN` (MANAGEMENT / CRITICAL), grants the
+eighteen required active `iam.*` resources, writes the user, the direct assignment and its
+self-closure, and appends the `PLATFORM_ADMIN_BOOTSTRAPPED` audit event plus an
+`ASSIGNMENT_CHANGED` authorization event.
+
+Bootstrap fails outright when the platform application or any required resource has not
+been published yet, so apply the Flyway migrations and the resource Manifest first.
+Re-running is refused; a lost administrator requires the separate recovery runbook rather
+than a second silent root account.
+
+## Build and test
+
+Requirements: Java 21, the Maven Wrapper, and Node 24 from `.node-version`.
+
+```bash
+./mvnw -B -ntp \
+  -pl :stellar-enclosure-tianquan-jianshen-contract,:stellar-enclosure-tianquan-jianshen-core,:stellar-enclosure-tianquan-jianshen-starter,:stellar-enclosure-tianquan-jianshen-gateway-adapter,:stellar-enclosure-tianquan-jianshen-admin,:stellar-enclosure-yuheng-biz-gateway \
+  -am clean verify
+
+cd stellar-enclosure-platform/stellar-enclosure-tianquan-jianshen
+npm ci
+npm run typecheck
+npm test -- --run
+npm run lint
+npm run build
+npm run e2e --workspace @egon-cola/tianquan-jianshen-admin-web -- --list
+```
+
+The E2E listing command discovers scenarios without opening a browser. The
+repository does not automatically start Tianquan-Jianshen, Yuheng, Tianshu, PostgreSQL, Redis,
+or the Admin Web.
+
+## Verification tooling
+
+All scripts live under `scripts/verification/` in this directory and there is no
+repository-root equivalent, so run them from
+`stellar-enclosure-platform/stellar-enclosure-tianquan-jianshen`. All scripts are opt-in. `--help`
+and `--check-config` are read-only and do not contact external services.
+
+```bash
+scripts/verification/verify-static.sh --verify
+scripts/verification/verify-local-dependencies.sh --check-config
+scripts/verification/prepare-tianquan-jianshen-fixture.sh --check-config
+scripts/verification/verify-yuheng-tianshu-topology.sh --check-config
+scripts/verification/cleanup-tianquan-jianshen-fixture.sh --check-config
+```
+
+Live topology verification requires two operator-started Admin instances with
+distinct ports, instance IDs, build IDs, and Snowflake machine IDs. It pauses
+for the operator to perform stop/restore actions and never changes process
+state itself. External topology evidence is deliberately distinct from unit,
+module-integration, static, and host-local dependency evidence.
+
+## Delivery boundary
+
+CI proves compilation, tests, frontend checks, packaging, and static boundaries.
+It does not claim that a particular external PostgreSQL/Redis/Tianshu/Yuheng
+deployment is healthy. Record live evidence using
+[verification-evidence-template.md](docs/verification-evidence-template.md).

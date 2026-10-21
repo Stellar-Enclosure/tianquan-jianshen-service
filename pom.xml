@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project child.project.url.inherit.append.path="false" xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>top.egon</groupId>
+        <artifactId>stellar-enclosure-platform-parent</artifactId>
+        <version>0.0.1</version>
+        <relativePath/>
+    </parent>
+
+    <artifactId>stellar-enclosure-tianquan-jianshen</artifactId>
+    <packaging>pom</packaging>
+    <url>https://github.com/Stellar-Enclosure/tianquan-jianshen-service</url>
+    <name>stellar-enclosure-tianquan-jianshen</name>
+    <description>Tianquan-Jianshen permission platform for Stellar Enclosure.</description>
+
+    <modules>
+        <module>stellar-enclosure-tianquan-jianshen-contract</module>
+        <module>stellar-enclosure-tianquan-jianshen-core</module>
+        <module>stellar-enclosure-tianquan-jianshen-starter</module>
+        <module>stellar-enclosure-tianquan-jianshen-gateway-adapter</module>
+        <module>stellar-enclosure-tianquan-jianshen-admin</module>
+    </modules>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>top.egon</groupId>
+                <artifactId>stellar-enclosure-tianquan-jianshen-contract</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>top.egon</groupId>
+                <artifactId>stellar-enclosure-tianquan-jianshen-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>top.egon</groupId>
+                <artifactId>stellar-enclosure-tianquan-jianshen-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>top.egon</groupId>
+                <artifactId>stellar-enclosure-tianquan-jianshen-gateway-adapter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>top.egon</groupId>
+                <artifactId>stellar-enclosure-tianquan-jianshen-admin</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <scm child.scm.connection.inherit.append.path="false" child.scm.developerConnection.inherit.append.path="false" child.scm.url.inherit.append.path="false">
+        <connection>scm:git:https://github.com/Stellar-Enclosure/tianquan-jianshen-service.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/Stellar-Enclosure/tianquan-jianshen-service.git</developerConnection>
+        <url>https://github.com/Stellar-Enclosure/tianquan-jianshen-service</url>
+        <tag>HEAD</tag>
+    </scm>
+</project>

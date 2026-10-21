@@ -1,0 +1,225 @@
+# Stellar Enclosure Tianquan-Jianshen 权限平台
+
+[English](README.md) | [中文](README.zh-CN.md)
+
+Tianquan-Jianshen 是一个租户隔离的权限控制面与运行时鉴权系统，统一管理应用、资源清单、
+角色 DAG、角色分配、约束、用户级激活角色集合、授权快照、审计证据，以及
+Yuheng/Tianshu 发布和服务发现。全部能力位于 `stellar-enclosure-platform` 下，按一个完整
+系统交付，不拆成多个上线阶段。
+
+## 一、不可变业务语义
+
+1. **不需要审批。** 权限变更是受身份、授权、幂等、并发和审计约束的直接命令，
+   Tianquan-Jianshen 不建立审批单、审批人或审批状态机。
+2. **轮岗属于业务定义。** 排班、轮岗和当班规则由业务系统决定；权限平台只提供
+   “激活角色集合”的语义接口，不维护轮岗流程。
+3. **登录不选择角色。** Tianquan-Shoubing 负责登录并签发 USER Access/Refresh Token；Tianquan-Jianshen
+   不创建或管理人员 Session。Bootstrap 返回候选角色，随后由激活接口一次性替换
+   用户级激活集合。
+4. **支持同时激活多个角色。** 对每个被选角色先解析唯一最顶级角色，再纳入该根
+   角色的全部后代角色和所有权限；多个根族权限按确定性代数合并。
+5. **同一 APP 下互斥根角色不能同时激活。** 这会造成 APP 授权上下文歧义，系统
+   在变更前校验 DSD/互斥约束，并原子拒绝整个集合，不做部分成功。
+6. **无独立测试模块。** `contract/core/starter/gateway-adapter/admin` 各自在
+   `src/test` 下维护单元或模块集成测试，不创建 `tianquan-jianshen-test`。
+
+## 二、模块与依赖边界
+
+| 模块                                         | 职责                               | 强制边界                          |
+|--------------------------------------------|----------------------------------|-------------------------------|
+| `stellar-enclosure-tianquan-jianshen-contract`        | 稳定 DTO、枚举、Manifest、Decision 合同   | 不依赖 Spring 运行时和持久化            |
+| `stellar-enclosure-tianquan-jianshen-core`            | 角色图、激活算法、权限代数、约束规则               | 纯 Java，不访问 I/O/HTTP/Redis/JPA |
+| `stellar-enclosure-tianquan-jianshen-starter`         | 业务服务侧 PEP、Tianquan-Shoubing JWT 校验、用户授权快照读取    | 不依赖 Admin，只消费合同与 Core         |
+| `stellar-enclosure-tianquan-jianshen-gateway-adapter` | Yuheng 热路径认证与授权                 | 不通过 HTTP 调 Admin，不访问 SQL      |
+| `stellar-enclosure-tianquan-jianshen-admin`           | 控制面、认证、持久化、Worker、Tianshu/Yuheng 集成 | 仅服务端使用，不被 Starter 引入          |
+| `stellar-enclosure-tianquan-jianshen-react-sdk`       | 类型化认证状态和 UI 接入能力                 | npm workspace（非 Maven 子模块），Access Token 仅进程内存保存 |
+| `stellar-enclosure-tianquan-jianshen-admin-web`       | 权限过滤后的管理台                        | npm workspace（非 Maven 子模块），静态 Vite SPA，仅使用本地组件注册表 |
+
+前五个模块是本 reactor 的 Maven 子模块；`react-sdk` 与 `admin-web` 只是本目录
+`package.json` 声明的 npm workspace。不存在 `tianquan-jianshen-test` Artifact，也没有
+聚合运行时库。
+
+## 三、关键执行链路
+
+```text
+不可变 Resource Manifest
+  -> 校验/影响分析/幂等激活
+  -> 角色、权限、约束、分配变更
+  -> Mutation Journal + Fail-Closed Fence
+  -> PostgreSQL Worker 领取任务
+  -> 生成不可变授权快照并原子发布到专用 Redis
+  -> Fence 开放
+  -> Starter / Yuheng 校验 JWT 与精确版本
+  -> Function + Data + Field + Participation 决策
+```
+
+```text
+Tianquan-Jianshen Admin Definition Report（Tianshu v3 bizCode + appCode）-> Yuheng Admin
+Tianquan-Jianshen Admin HTTP_PROVIDER Lease（同一 bizCode + appCode）-> Tianshu
+Yuheng Release -> Tianshu 配置投影 -> Yuheng Engine
+Yuheng Engine -> 从 Tianshu 获取 Tianquan-Jianshen 实例 -> 路由请求
+```
+
+Definition、Lease、Release 是三项独立状态，任何一项未知或不一致都不能被合并解释
+为“可路由”。进程存活也不等于 Yuheng 已可路由。
+
+## 四、OAuth Resource 授权边界
+
+Tianquan-Jianshen 只负责 USER 授权。Tianquan-Shoubing 为精确的
+`bizCode + appCode + environment` Resource 签发或刷新 USER Token 之前，由
+Tianquan-Shoubing 目录与 Tianquan-Jianshen 应用准入策略共同确认用户的 Tenant 成员关系。
+认证完成后，下游 Starter 执行该用户的接口、数据、字段、参与和激活角色策略。USER Token
+只携带身份类 Claim，因此权限变更仍通过 Tianquan-Jianshen 的 Snapshot 与 Fence 规则生效。
+
+Tianquan-Jianshen 不拥有 SERVICE principal、Service Grant 或 Service Scope。
+Tianquan-Shoubing 依据精确的来源 Client、目标 Resource、Tenant 和 Scope 集合授权
+`client_credentials`。已验证的 SERVICE 请求只有在 Token 携带该操作要求的
+Tianquan-Shoubing Scope 时才在本地放行，且绝不进入 Tianquan-Jianshen 的用户决策路径。
+因此被允许进入 `permission/tianquan-shoubing@prod` 的用户，除非
+`permission/tianquan-jianshen@prod` 自身的应用准入决策也通过，否则拿不到该目标的 Token；
+而服务到服务的访问完全由 Tianquan-Shoubing Service Grant 治理。
+
+Tianquan-Jianshen Admin 通过 Spring OAuth2 Client，使用 Tianquan-Shoubing 管理的 app ID
+和一次性 Secret 取得 Tianshu Audience 的 PLATFORM SERVICE Token。Tianshu 绑定 Token 的
+Audience、Scope、来源、实例、重放状态和租约有效期，不使用第二套注册凭据。Tianquan-Shoubing
+V6 必须与兼容的 Tianshu/RBAC 发布一起应用；由于旧的服务权限和不注册即可访问的路径已被
+有意移除，回退只能采用协调一致的前向修复。
+
+## 五、Tianshu 配置 scope、服务 scope 与 Yuheng 文档中心
+
+配置 scope 与服务 scope 是两个不同的身份空间：
+
+- 配置资源身份为 `bizCode + appCode + env + resourceName`；命名空间绑定只控制可见性，
+  不属于资源身份。Tianquan-Jianshen 以 `CONFIG_CLIENT` Lease 拉取 YAML 策略文档，只接受通过校验
+  且版本单调递增的快照。
+- 服务 scope 为 `bizCode + appCode + env + namespace + serviceKind + protocol +
+  serviceName + group + version`。Tianquan-Jianshen 以独立的 `HTTP_PROVIDER` Lease 注册服务，
+  Yuheng 从该 scope 获取未过期实例并路由到 advertised host/port。
+
+两类 Lease 可以使用同一个 Instance ID，但 Lease 凭据和状态互相独立。启动时必须先
+取得 `CONFIG_CLIENT` Lease 并达到 `READY`，再由 Tianquan-Jianshen 发布门闩把根 HTTP Server
+发布为 `HTTP_PROVIDER`。Definition 上报与两类 Lease 也相互独立。Spring MVC Mapping
+和现有 Yuheng 注解共同生成 Yuheng Interface Catalog；它是唯一接口文档中心。
+Yuheng Release 必须由操作者显式发布，Tianquan-Jianshen 不自动发布 Release。
+
+| Tianshu Key | 默认值 | 合法范围 |
+| --- | ---: | ---: |
+| `tianquan-jianshen.maximum-active-roots` | 16 | 1..32 |
+
+该 Key 只控制最大激活根角色数。它以 `refreshable = false` 的 `@DdcValue` 占位符被消费，
+因此新值需要重启才生效；同一设置在本地绑定为
+`egon.tianquan-jianshen.maximum-active-roots`。Tianquan-Shoubing 负责固定五分钟 USER Access Token 与稳定
+Refresh Token 的生命周期。Tianquan-Jianshen 不再有 Token/Session 超时 Key，也不存在跨 Key
+超时发布顺序。
+
+合法更新通过不可变 Snapshot 原子替换，只影响之后执行的角色激活命令；不会改写
+Tianquan-Shoubing 已签发的 Token 或已提交的激活集合。非法值产生 FAILED ACK，但继续使用
+Last-Known-Good Policy 和旧版本/Checksum；恢复必须发布更高的合法版本。
+
+运维必须分别观察五项事实：Tianshu Config Client、Yuheng Definition、未过期的 Tianshu
+HTTP Provider Lease、显式 Yuheng Release/Engine Consistency、真实 Routed Request。
+状态与指标只暴露版本、状态、指纹和错误码，不暴露配置原值、Lease 凭据、密码、
+Token、私钥、Hash 或首个管理员 Bootstrap Secret。
+
+## 六、角色激活规则摘要
+
+- 输入是用户级**完整目标角色集合**，不是增量追加；必须携带预期 `authVersion`，
+  服务端在用户授权行锁内完成 CAS。
+- 子角色输入先映射到唯一顶级根；一个角色存在多个根、出现环或超过深度上限时
+  直接拒绝。
+- 每个根展开完整后代族；同一族重复输入被归一化，结果与输入顺序无关。
+- 一个用户可以激活多个 APP 的多个根，也可以激活同 APP 中没有互斥关系的
+  多个根；同 APP 的互斥组合被拒绝。
+- 激活前验证 Assignment 证据、DSD、先决角色、禁用/过期状态和最大激活根数。
+- 激活成功后生成新的不可变快照；响应不确定时客户端用
+  `GET /auth/role-activations` 恢复，而不是盲目重放。
+
+## 七、权限决策摘要
+
+最终决策按固定顺序执行：身份与 Tenant/APP 边界、User/Tenant/Policy
+精确版本、Fence、Function Permission、Data Scope、Field Rule、Participation 与
+Operation SOD。任何必需数据缺失、版本不一致、Redis/密钥不可用或规则无法解析，
+均 Fail Closed。
+
+权限合并满足交换律、结合律和幂等性；字段规则按稳定键排序，敏感字段默认
+`NONE`，不能因规则缺失自动放宽。Yuheng 热路径只做一次决策，不访问 PostgreSQL，
+也不回调 Admin HTTP 接口。
+
+## 八、首次管理员初始化
+
+首次部署只允许使用 Admin 可执行制品内的 one-shot CLI，不提供创建首个管理员的 HTTP
+接口。命令进入 non-web Spring Context（`WebApplicationType.NONE`），成功或失败后都会
+退出，不启动 HTTP Server。可执行制品是带 `exec` classifier 的
+`stellar-enclosure-tianquan-jianshen-admin-exec.jar`，不是同名的瘦 jar：
+
+```bash
+java -jar stellar-enclosure-tianquan-jianshen-admin-exec.jar \
+  bootstrap-platform-admin \
+  --tenant-id <positive-long-tenant-id> \
+  --identity-sub <tianquan-shoubing-user-sub>
+```
+
+CLI 只接受 `--tenant-id` 和 `--identity-sub` 这一对参数：`--tenant-id` 必须是正
+Long，两个选项各出现一次，任何其它选项（包括 `--password`）都会以
+`unsupported option` 拒绝。Tianquan-Jianshen 不创建也不管理凭据——口令属于
+Tianquan-Shoubing，因此这里不存在“从标准输入读密码”的步骤。
+
+执行顺序是：先用 `IdentityTenantMembershipDirectory` 校验该 `identity-sub` 在目标
+Tenant 中是**已激活**的成员，再在单个事务内取得 PostgreSQL Advisory Lock、拒绝该
+Tenant 已存在平台管理员、登记已验证 Tenant 的授权状态、要求 `tianquan-jianshen-admin`
+应用及其 Tenant 绑定已存在，随后创建 `ROLE_PLATFORM_ADMIN`（MANAGEMENT /
+CRITICAL）、为 18 个必需的 `iam.*` ACTIVE 资源补齐角色授权、写入 User、直接
+Assignment 与自身闭包，并追加 `PLATFORM_ADMIN_BOOTSTRAPPED` 审计与
+`ASSIGNMENT_CHANGED` 授权事件。
+
+若平台应用或任一必需资源尚未按 Manifest 激活发布，命令会直接失败，因此必须先完成
+Flyway 与资源清单发布。重复执行会被拒绝；管理员遗失必须使用独立恢复 runbook，不能
+重跑初始化命令静默创建第二个 root 账号。
+
+## 九、构建与验证
+
+要求 Java 21、Maven Wrapper，以及模块 `.node-version` 指定的 Node 24。
+
+```bash
+./mvnw -B -ntp \
+  -pl :stellar-enclosure-tianquan-jianshen-contract,:stellar-enclosure-tianquan-jianshen-core,:stellar-enclosure-tianquan-jianshen-starter,:stellar-enclosure-tianquan-jianshen-gateway-adapter,:stellar-enclosure-tianquan-jianshen-admin,:stellar-enclosure-yuheng-biz-gateway \
+  -am clean verify
+
+cd stellar-enclosure-platform/stellar-enclosure-tianquan-jianshen
+npm ci
+npm run typecheck
+npm test -- --run
+npm run lint
+npm run build
+npm run e2e --workspace @egon-cola/tianquan-jianshen-admin-web -- --list
+```
+
+上述 E2E 命令只列出场景，不打开浏览器。仓库不会自动启动项目、Yuheng、Tianshu、
+PostgreSQL、Redis 或前端服务。
+
+验证脚本位于本目录的 `scripts/verification/`，仓库根目录没有同名目录，因此必须在
+`stellar-enclosure-platform/stellar-enclosure-tianquan-jianshen` 下执行。脚本默认不执行外部访问：
+
+```bash
+scripts/verification/verify-static.sh --verify
+scripts/verification/verify-local-dependencies.sh --check-config
+scripts/verification/prepare-tianquan-jianshen-fixture.sh --check-config
+scripts/verification/verify-yuheng-tianshu-topology.sh --check-config
+scripts/verification/cleanup-tianquan-jianshen-fixture.sh --check-config
+```
+
+真实拓扑验证要求操作者预先启动两个 Admin 实例，并显式提供不同端口、Instance ID、
+Build ID、Snowflake machine-id、Tianshu/Yuheng 地址、Release ID 和专用 Tenant。脚本在
+故障切换点暂停，由操作者改变外部状态；脚本本身不停止进程。
+
+## 十、文档入口
+
+- [架构、算法与设计模式](docs/architecture.md)
+- [API 与 Manifest 合同](docs/api-and-manifest.md)
+- [运维手册](docs/operations-runbook.md)
+- [安全与信任边界](docs/security-boundaries.md)
+- [验证证据模板](docs/verification-evidence-template.md)
+
+CI/单测/静态扫描只能证明源码和隔离环境内的行为，不能冒充用户实际部署中的
+PostgreSQL、Redis、Tianshu、Yuheng 或多进程拓扑证据。真实验证结果必须按证据模板
+记录环境、命令、退出码、Release、Schema、Redis 前缀和清理结果。
