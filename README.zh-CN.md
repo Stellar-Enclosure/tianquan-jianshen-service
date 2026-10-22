@@ -223,3 +223,7 @@ Build ID、Snowflake machine-id、Tianshu/Yuheng 地址、Release ID 和专用 T
 CI/单测/静态扫描只能证明源码和隔离环境内的行为，不能冒充用户实际部署中的
 PostgreSQL、Redis、Tianshu、Yuheng 或多进程拓扑证据。真实验证结果必须按证据模板
 记录环境、命令、退出码、Release、Schema、Redis 前缀和清理结果。
+
+## 独立仓库发布
+
+发布范围、前置配置、校验与发布命令见 [仓库 README](README.md#publish-to-maven-central)。应用和测试示例不发布到 Maven Central，前端站点保持 `private: true`。
