@@ -1,6 +1,30 @@
 # tianquan-jianshen-service
 
-Stellar Enclosure Java modules. All first-party modules start at **0.0.1**.
+[English](README.md) | [中文](README.zh-CN.md)
+
+Tenant-isolated IAM/RBAC3 management and runtime user authorization for Stellar Enclosure. All first-party modules start at **0.0.1**.
+
+## Current capabilities
+
+- Manage businesses, applications, users/directories, organizations and positions; admit application resource manifests and maintain resource/permission mappings.
+- Maintain role DAGs, inheritance, user assignments, role-resource grants and user-level active role sets. Evaluate separation-of-duty, prerequisite and cardinality constraints before accepting mutations.
+- Decide function, operation, data and field access from immutable authorization snapshots; provide management delegation policies, authorization simulation and role-change impact analysis.
+- Persist mutation journals/audit evidence and publish runtime snapshots with fail-closed fences; expose runtime status/retry and CI resource-registration APIs.
+- Integrate with Tianshu configuration/service registration and Yuheng definition reporting; enforce user permissions in consuming services through the Starter.
+
+## Modules and boundaries
+
+| Module | Responsibility |
+|---|---|
+| [Contract](stellar-enclosure-tianquan-jianshen-contract/) | Stable DTOs, manifests, enums and authorization decision contracts. |
+| [Core](stellar-enclosure-tianquan-jianshen-core/) | Pure Java role graphs, activation algorithms, permission algebra and constraints. |
+| [Starter](stellar-enclosure-tianquan-jianshen-starter/) | Service-side enforcement, Shoubing JWT validation and runtime authorization state consumption. |
+| [Gateway adapter](stellar-enclosure-tianquan-jianshen-gateway-adapter/) | Internal Yuheng integration without depending on the Admin implementation. |
+| [Admin](stellar-enclosure-tianquan-jianshen-admin/) | Management/runtime decision APIs, PostgreSQL facts, workers, Redis projections and platform integration. |
+
+The code-level responsibility here is user authorization and IAM governance. [Shoubing](https://github.com/Stellar-Enclosure/tianquan-shoubing-service) handles login and token issuance; Jianshen does not issue tokens or own personnel sessions. SERVICE callers are checked against Shoubing scopes rather than borrowing USER role decisions. The [React SDK](https://github.com/Stellar-Enclosure/web-sdk/tree/main/packages/stellar-enclosure-tianquan-jianshen-react-sdk) and [console](https://github.com/Stellar-Enclosure/tianquan-jianshen-web) are separate npm repositories/workspaces, not modules in this Maven reactor.
+
+Management APIs primarily use `/api/tianquan-jianshen/v1`, with bootstrap/about under `/api/v1/auth` and internal runtime decisions under `/internal/v1/authorization`. PostgreSQL/Redis projection health, Tianshu leases, Yuheng release consistency and actual routed requests are separate observations; see the [architecture](docs/architecture.md), [API/manifest contract](docs/api-and-manifest.md) and [security boundaries](docs/security-boundaries.md).
 
 ## Build
 

@@ -4,8 +4,20 @@
 
 Tianquan-Jianshen 是一个租户隔离的权限控制面与运行时鉴权系统，统一管理应用、资源清单、
 角色 DAG、角色分配、约束、用户级激活角色集合、授权快照、审计证据，以及
-Yuheng/Tianshu 发布和服务发现。全部能力位于 `stellar-enclosure-platform` 下，按一个完整
-系统交付，不拆成多个上线阶段。
+Yuheng/Tianshu 发布和服务发现。当前 Maven 能力位于独立 `tianquan-jianshen-service` 仓库，
+React 管理台与 SDK 分别由 `tianquan-jianshen-web`、`web-sdk` 维护。
+
+## 功能入口
+
+| 领域 | 当前功能 |
+|---|---|
+| IAM 目录 | 业务/应用准入、用户、组织、岗位及人员归属 |
+| 授权治理 | 资源 Manifest、权限映射、角色 DAG/继承、用户角色分配与资源授权 |
+| 约束与激活 | 职责分离、先决条件、基数约束及用户级多角色激活 |
+| 运行时决策 | 功能、操作、数据、字段权限与参与记录判定，授权快照与 Fence |
+| 管理与运维 | 管理策略、授权模拟/变更影响分析、审计、Mutation 重试与 CI 资源注册 |
+
+主要管理 API 位于 `/api/tianquan-jianshen/v1`，授权上下文入口位于 `/api/v1/auth`，内部运行时决策位于 `/internal/v1/authorization`。Jianshen 负责 USER 授权；登录、Token 签发和 SERVICE Scope 属于 Shoubing 的职责。
 
 ## 一、不可变业务语义
 
@@ -32,11 +44,11 @@ Yuheng/Tianshu 发布和服务发现。全部能力位于 `stellar-enclosure-pla
 | `stellar-enclosure-tianquan-jianshen-starter`         | 业务服务侧 PEP、Tianquan-Shoubing JWT 校验、用户授权快照读取    | 不依赖 Admin，只消费合同与 Core         |
 | `stellar-enclosure-tianquan-jianshen-gateway-adapter` | Yuheng 热路径认证与授权                 | 不通过 HTTP 调 Admin，不访问 SQL      |
 | `stellar-enclosure-tianquan-jianshen-admin`           | 控制面、认证、持久化、Worker、Tianshu/Yuheng 集成 | 仅服务端使用，不被 Starter 引入          |
-| `stellar-enclosure-tianquan-jianshen-react-sdk`       | 类型化认证状态和 UI 接入能力                 | npm workspace（非 Maven 子模块），Access Token 仅进程内存保存 |
-| `stellar-enclosure-tianquan-jianshen-admin-web`       | 权限过滤后的管理台                        | npm workspace（非 Maven 子模块），静态 Vite SPA，仅使用本地组件注册表 |
+| [Jianshen React SDK](https://github.com/Stellar-Enclosure/web-sdk/tree/main/packages/stellar-enclosure-tianquan-jianshen-react-sdk) | 类型化授权状态、角色激活和 UI Guard | 位于独立 web-sdk npm workspace，通过 Cookie/BFF 访问，不保存 Access Token |
+| [tianquan-jianshen-web](https://github.com/Stellar-Enclosure/tianquan-jianshen-web) | 权限过滤后的管理台 | 独立 Node 仓库，静态 Vite SPA，仅使用本地组件注册表 |
 
-前五个模块是本 reactor 的 Maven 子模块；`react-sdk` 与 `admin-web` 只是本目录
-`package.json` 声明的 npm workspace。不存在 `tianquan-jianshen-test` Artifact，也没有
+前五个模块是本 reactor 的 Maven 子模块；本仓库不包含前端 `package.json` 或 npm workspace。
+不存在 `tianquan-jianshen-test` Artifact，也没有
 聚合运行时库。
 
 ## 三、关键执行链路
@@ -155,8 +167,8 @@ Operation SOD。任何必需数据缺失、版本不一致、Redis/密钥不可�
 ```bash
 java -jar stellar-enclosure-tianquan-jianshen-admin-exec.jar \
   bootstrap-platform-admin \
-  --tenant-id <positive-long-tenant-id> \
-  --identity-sub <tianquan-shoubing-user-sub>
+  --tenant-id '<positive-long-tenant-id>' \
+  --identity-sub '<tianquan-shoubing-user-sub>'
 ```
 
 CLI 只接受 `--tenant-id` 和 `--identity-sub` 这一对参数：`--tenant-id` 必须是正
@@ -178,27 +190,17 @@ Flyway 与资源清单发布。重复执行会被拒绝；管理员遗失必须�
 
 ## 九、构建与验证
 
-要求 Java 21、Maven Wrapper，以及模块 `.node-version` 指定的 Node 24。
+后端要求 Java 21 与 Maven Wrapper。先按[仓库构建说明](README.md#build)准备跨仓库依赖，再在 `tianquan-jianshen-service` 根目录执行：
 
 ```bash
 ./mvnw -B -ntp \
-  -pl :stellar-enclosure-tianquan-jianshen-contract,:stellar-enclosure-tianquan-jianshen-core,:stellar-enclosure-tianquan-jianshen-starter,:stellar-enclosure-tianquan-jianshen-gateway-adapter,:stellar-enclosure-tianquan-jianshen-admin,:stellar-enclosure-yuheng-biz-gateway \
+  -pl :stellar-enclosure-tianquan-jianshen-contract,:stellar-enclosure-tianquan-jianshen-core,:stellar-enclosure-tianquan-jianshen-starter,:stellar-enclosure-tianquan-jianshen-gateway-adapter,:stellar-enclosure-tianquan-jianshen-admin \
   -am clean verify
-
-cd stellar-enclosure-platform/stellar-enclosure-tianquan-jianshen
-npm ci
-npm run typecheck
-npm test -- --run
-npm run lint
-npm run build
-npm run e2e --workspace @egon-cola/tianquan-jianshen-admin-web -- --list
 ```
 
-上述 E2E 命令只列出场景，不打开浏览器。仓库不会自动启动项目、Yuheng、Tianshu、
-PostgreSQL、Redis 或前端服务。
+前端构建、资源报告与浏览器测试命令见 [tianquan-jianshen-web](https://github.com/Stellar-Enclosure/tianquan-jianshen-web)。Yuheng Biz Gateway 不在本 reactor 中；后端构建与静态检查不会自动启动项目、数据库或前端服务。
 
-验证脚本位于本目录的 `scripts/verification/`，仓库根目录没有同名目录，因此必须在
-`stellar-enclosure-platform/stellar-enclosure-tianquan-jianshen` 下执行。脚本默认不执行外部访问：
+验证脚本位于本仓库的 `scripts/verification/`，在 `tianquan-jianshen-service` 根目录执行。以下静态/配置检查不执行外部访问：
 
 ```bash
 scripts/verification/verify-static.sh --verify
