@@ -34,7 +34,7 @@ class RedisAuthorizationSnapshotCacheTest {
         when(redisson.getScript(any(Codec.class))).thenReturn(script);
         when(script.eval(
                 eq(RScript.Mode.READ_WRITE), anyString(),
-                eq(RScript.ReturnType.INTEGER), anyList(), any(Object[].class)))
+                eq(RScript.ReturnType.LONG), anyList(), any(Object[].class)))
                 .thenReturn(1L);
         RedisAuthorizationSnapshotCache store = store(redisson);
         var key = new AuthorizationSnapshotCache.Key(
@@ -47,7 +47,7 @@ class RedisAuthorizationSnapshotCacheTest {
         ArgumentCaptor<List<Object>> keys = ArgumentCaptor.forClass(List.class);
         verify(script).eval(
                 eq(RScript.Mode.READ_WRITE), anyString(),
-                eq(RScript.ReturnType.INTEGER), keys.capture(), any(Object[].class));
+                eq(RScript.ReturnType.LONG), keys.capture(), any(Object[].class));
         assertThat(keys.getValue()).containsExactly(
                 "tianquan-jianshen:authorization:finance:tenant-a:alice-sub",
                 "tianquan-jianshen:authorization:finance:tenant-a:user:alice-sub",

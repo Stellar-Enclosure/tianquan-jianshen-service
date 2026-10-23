@@ -136,8 +136,14 @@ public class Rbac3AdminApplication {
     @org.springframework.context.annotation.Configuration(value = "rbac3CatalogInputConfiguration", proxyBeanMethods = false)
     @org.springframework.context.annotation.Profile("rbac3-catalog-input")
     @org.springframework.boot.autoconfigure.ImportAutoConfiguration({
-            org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration.class,
-            org.springframework.boot.autoconfigure.validation.ValidationAutoConfiguration.class})
-    public static class CatalogInputConfiguration { }
+            org.springframework.boot.jackson2.autoconfigure.Jackson2AutoConfiguration.class,
+            org.springframework.boot.validation.autoconfigure.ValidationAutoConfiguration.class})
+    public static class CatalogInputConfiguration {
+        @org.springframework.context.annotation.Bean("jacksonObjectMapper")
+        com.fasterxml.jackson.databind.ObjectMapper jacksonObjectMapper(
+                org.springframework.http.converter.json.Jackson2ObjectMapperBuilder builder) {
+            return builder.build();
+        }
+    }
 
 }

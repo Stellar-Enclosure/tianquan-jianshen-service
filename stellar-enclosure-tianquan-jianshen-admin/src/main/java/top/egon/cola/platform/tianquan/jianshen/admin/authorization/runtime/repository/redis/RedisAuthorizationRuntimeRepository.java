@@ -112,7 +112,7 @@ public class RedisAuthorizationRuntimeRepository implements
         Set<String> affectedSystems = cachedSystems(command.tenantId(), command.identitySub());
         snapshot.appContexts().forEach(context -> affectedSystems.add(context.applicationCode()));
         Long published = redisson.getScript(StringCodec.INSTANCE).eval(
-                RScript.Mode.READ_WRITE, PUBLISH_SCRIPT, RScript.ReturnType.INTEGER,
+                RScript.Mode.READ_WRITE, PUBLISH_SCRIPT, RScript.ReturnType.LONG,
                 List.of(keyFactory.snapshot(command.tenantId(), command.identitySub(), command.authVersion()),
                         keyFactory.gatewayScope(command.tenantId(), command.identitySub(), command.authVersion()),
                         keyFactory.authVersion(command.tenantId(), command.userId()),
@@ -164,7 +164,7 @@ public class RedisAuthorizationRuntimeRepository implements
         }
         Set<String> affectedSystems = cachedSystems(tenantId, identitySub);
         Long invalidated = redisson.getScript(StringCodec.INSTANCE).eval(
-                RScript.Mode.READ_WRITE, INVALIDATE_SCRIPT, RScript.ReturnType.INTEGER,
+                RScript.Mode.READ_WRITE, INVALIDATE_SCRIPT, RScript.ReturnType.LONG,
                 List.of(keyFactory.authVersion(tenantId, userId), keyFactory.policyVersion(tenantId),
                         keyFactory.user(tenantId, identitySub)),
                 Long.toString(authVersion), Long.toString(policyVersion));

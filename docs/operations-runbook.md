@@ -6,7 +6,7 @@ Operators own PostgreSQL, the three Redis roles, Tianshu Admin, Yuheng Admin,
 Yuheng Engine, TLS, secret distribution, OAuth/HMAC credentials, DNS and
 process supervision. Tianquan-Jianshen scripts never create or start those services.
 
-Use Java 21. Admin is packaged as the normal library JAR plus an executable JAR
+Use Java 25. Admin is packaged as the normal library JAR plus an executable JAR
 with classifier `exec`. Node 24 is required only for building the SDK/Admin Web.
 
 Before deployment, allocate per instance:

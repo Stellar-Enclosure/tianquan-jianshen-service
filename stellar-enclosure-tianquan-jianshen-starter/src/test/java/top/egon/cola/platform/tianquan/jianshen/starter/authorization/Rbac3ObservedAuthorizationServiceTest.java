@@ -204,7 +204,7 @@ class Rbac3ObservedAuthorizationServiceTest {
         when(stream.add(org.mockito.ArgumentMatchers.any(org.redisson.api.stream.StreamAddArgs.class))).thenAnswer(call -> {
             firstEntered.countDown();
             assertTrue(release.await(5, java.util.concurrent.TimeUnit.SECONDS));
-            return new org.redisson.api.StreamMessageId(1, 1);
+            return new org.redisson.api.stream.StreamMessageId(1, 1);
         });
         var producer = new top.egon.cola.platform.tianquan.shoubing.starter.audit.TokenUsageAuditComponent(redis,
                 new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules(),

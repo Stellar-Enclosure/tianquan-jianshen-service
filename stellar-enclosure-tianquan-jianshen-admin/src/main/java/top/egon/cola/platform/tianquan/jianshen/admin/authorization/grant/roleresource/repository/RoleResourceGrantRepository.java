@@ -26,7 +26,7 @@ public interface RoleResourceGrantRepository {
             @jakarta.validation.constraints.NotNull @jakarta.validation.constraints.Positive Long applicationId,
             @jakarta.validation.constraints.NotNull @jakarta.validation.constraints.Positive Long roleId,
             @jakarta.validation.constraints.Min(0) long expectedRoleVersion,
-            @jakarta.validation.constraints.NotNull @jakarta.validation.constraints.Size(max = 256) @jakarta.validation.Valid List<FieldRuleDesiredVO> rules,
+            @jakarta.validation.constraints.NotNull @jakarta.validation.constraints.Size(max = 256) List<@jakarta.validation.Valid FieldRuleDesiredVO> rules,
             @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max = 128)
             @jakarta.validation.constraints.Pattern(regexp = "[\\x21-\\x7E]{1,128}") String actorId,
             @jakarta.validation.constraints.NotNull Instant now) {

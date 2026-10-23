@@ -331,7 +331,7 @@ class RoleFieldRuleReplacementContractTest {
                     assertThat(context.getBean("jpaSharedEM_entityManagerFactory")).isInstanceOf(org.springframework.orm.jpa.EntityManagerProxy.class);
                     assertThat(context.getBeansOfType(org.springframework.scheduling.TaskScheduler.class)).isEmpty();
                     assertThat(context.getBeansOfType(top.egon.cola.component.outbox.dispatch.OutboxPoller.class)).isEmpty();
-                    assertThat(context.getBeansOfType(org.springframework.boot.web.servlet.server.ServletWebServerFactory.class)).isEmpty();
+                    assertThat(context.getBeansOfType(org.springframework.boot.web.server.servlet.ServletWebServerFactory.class)).isEmpty();
                     assertThat(context.getBeanDefinitionNames()).noneMatch(name -> name.toLowerCase(java.util.Locale.ROOT).contains("development")
                             || name.toLowerCase(java.util.Locale.ROOT).contains("providerexport"));
                     var adapter = context.getBean("catalogProjectionEventProducerAdapter", top.egon.cola.component.outbox.delivery.DeliveryHandler.class);

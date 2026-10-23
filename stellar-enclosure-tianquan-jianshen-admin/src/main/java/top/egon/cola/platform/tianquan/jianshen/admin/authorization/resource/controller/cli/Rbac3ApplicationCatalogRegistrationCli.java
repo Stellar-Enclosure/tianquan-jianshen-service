@@ -334,7 +334,7 @@ public class Rbac3ApplicationCatalogRegistrationCli {
     public static class RoleFieldRulesFileDTO {
         @NotNull(groups = ReplaceRoleFieldRulesCommandDTO.Mutation.class)
         @Size(max = 256, groups = ReplaceRoleFieldRulesCommandDTO.Mutation.class)
-        @Valid private List<@NotNull(groups = ReplaceRoleFieldRulesCommandDTO.Mutation.class) RoleFieldRuleDTO> rules;
+        private List<@Valid @NotNull(groups = ReplaceRoleFieldRulesCommandDTO.Mutation.class) RoleFieldRuleDTO> rules;
         @JsonIgnore @AssertTrue(groups = ReplaceRoleFieldRulesCommandDTO.Mutation.class)
         public boolean isRuleSetValid() { return new ReplaceRoleFieldRulesCommandDTO().setRules(rules).isRuleSetValid(); }
     }

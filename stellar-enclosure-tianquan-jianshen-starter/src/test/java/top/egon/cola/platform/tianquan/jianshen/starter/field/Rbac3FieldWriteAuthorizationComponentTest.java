@@ -129,7 +129,7 @@ class Rbac3FieldWriteAuthorizationComponentTest {
         when(authorization.decideFields(any())).thenReturn(decision(Decision.ALLOW, Map.of("title", access(FieldAccessLevel.WRITE))));
         new org.springframework.boot.test.context.runner.ApplicationContextRunner()
                 .withConfiguration(org.springframework.boot.autoconfigure.AutoConfigurations.of(
-                        org.springframework.boot.autoconfigure.validation.ValidationAutoConfiguration.class,
+                        org.springframework.boot.validation.autoconfigure.ValidationAutoConfiguration.class,
                         top.egon.cola.platform.tianquan.jianshen.starter.autoconfigure.Rbac3StarterAutoConfiguration.class))
                 .withPropertyValues("egon.cola.platform.tianquan.jianshen.enabled=true", "egon.cola.platform.tianquan.jianshen.system-code=cms")
                 .withBean("authorizationService", AuthorizationService.class, () -> authorization)

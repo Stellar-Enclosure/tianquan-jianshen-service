@@ -212,7 +212,7 @@ class DeploymentCatalogRegistrationContractTest {
                     assertThat(context.getBean("rbac3ApplicationCatalogRegistrationCli")).isInstanceOf(top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.controller.cli.Rbac3ApplicationCatalogRegistrationCli.class);
                     assertThat(context.getBean("jpaSharedEM_entityManagerFactory")).isInstanceOf(org.springframework.orm.jpa.EntityManagerProxy.class);
                     assertThat(context.getBeansOfType(org.springframework.scheduling.TaskScheduler.class)).isEmpty();
-                    assertThat(context.getBeansOfType(org.springframework.boot.web.servlet.server.ServletWebServerFactory.class)).isEmpty();
+                    assertThat(context.getBeansOfType(org.springframework.boot.web.server.servlet.ServletWebServerFactory.class)).isEmpty();
                     assertThat(context.getBeanDefinitionNames()).noneMatch(name -> name.toLowerCase(java.util.Locale.ROOT).contains("development")
                             || name.toLowerCase(java.util.Locale.ROOT).contains("serverbootstrap") || name.toLowerCase(java.util.Locale.ROOT).contains("providerexport"));
                 });
@@ -247,7 +247,7 @@ class DeploymentCatalogRegistrationContractTest {
                         "egon.cola.platform.tianquan.shoubing.resource-uri=https://api.example/operator",
                         "egon.cola.platform.tianquan.shoubing.revocation.primary-endpoint=rediss://redis.example:6379",
                         "egon.cola.platform.tianquan.shoubing.revocation.epoch=controlled-epoch",
-                        "spring.autoconfigure.exclude=org.redisson.spring.starter.RedissonAutoConfigurationV2",
+                        "spring.autoconfigure.exclude=org.redisson.spring.starter.RedissonAutoConfigurationV4",
                         "egon.cola.platform.tianquan.shoubing.usage-observation.enabled=true",
                         "egon.cola.platform.tianquan.shoubing.usage-observation.receiver=JIANSHEN",
                         "egon.cola.platform.tianquan.shoubing.usage-observation.fallback-issuer=https://idp.example/tenants/1001",

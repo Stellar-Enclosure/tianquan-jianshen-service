@@ -190,7 +190,7 @@ Flyway 与资源清单发布。重复执行会被拒绝；管理员遗失必须�
 
 ## 九、构建与验证
 
-后端要求 Java 21 与 Maven Wrapper。先按[仓库构建说明](README.md#build)准备跨仓库依赖，再在 `tianquan-jianshen-service` 根目录执行：
+后端要求 Java 25 与 Maven Wrapper。先按[仓库构建说明](README.md#build)准备跨仓库依赖，再在 `tianquan-jianshen-service` 根目录执行：
 
 ```bash
 ./mvnw -B -ntp \

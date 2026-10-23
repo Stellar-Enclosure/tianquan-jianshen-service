@@ -30,8 +30,8 @@ public class ReplaceRoleFieldRulesCommandDTO {
     @NotNull(groups = Mutation.class) @Min(value = 0, groups = Mutation.class) private Long expectedRoleVersion;
     @NotBlank(groups = Mutation.class) @Size(max = 128, groups = Mutation.class)
     @Pattern(regexp = "[\\x21-\\x7E]{1,128}", groups = Mutation.class) private String actorId;
-    @NotNull(groups = Mutation.class) @Size(max = 256, groups = Mutation.class) @Valid
-    private List<@NotNull(groups = Mutation.class) RoleFieldRuleDTO> rules;
+    @NotNull(groups = Mutation.class) @Size(max = 256, groups = Mutation.class)
+    private List<@Valid @NotNull(groups = Mutation.class) RoleFieldRuleDTO> rules;
 
     @JsonIgnore @AssertTrue(groups = Mutation.class, message = "Role field rules must not repeat permission, field and start time")
     public boolean isRuleSetValid() {

@@ -83,10 +83,10 @@ class Rbac3MethodAuthorizationManagerTest {
             var policy = new UserScopePolicyProperties().setEnabled(true).setPermissionScopes(Map.of("fixture:read", Set.of("fixture:read")));
             var manager = Rbac3MethodAuthorizationManager.createConfigured(original, policy, null, IdpSecurityMetricsRecorder.NOOP, validator);
             var invocation = proxyInvocation("permissionOnly");
-            assertThat(manager.check(() -> new IdpAuthenticationToken(identity()), invocation).isGranted()).isFalse();
+            assertThat(manager.authorize(() -> new IdpAuthenticationToken(identity()), invocation).isGranted()).isFalse();
             verify(original, never()).requirePermission(any());
             var scoped = new IdpAuthenticationToken(identity(), List.of(new SimpleGrantedAuthority("SCOPE_fixture:read")));
-            assertThat(manager.check(() -> scoped, invocation).isGranted()).isTrue();
+            assertThat(manager.authorize(() -> scoped, invocation).isGranted()).isTrue();
         }
     }
 

@@ -69,6 +69,13 @@ public final class Rbac3MethodAuthorizationManager
     }
 
     @Override
+    public AuthorizationDecision authorize(
+            Supplier<? extends Authentication> authentication,
+            MethodInvocation invocation) {
+        return check(authentication == null ? null : authentication::get, invocation);
+    }
+
+    /** Retains the existing entry point while Spring Security 7 calls authorize. */
     public AuthorizationDecision check(
             Supplier<Authentication> authentication,
             MethodInvocation invocation) {

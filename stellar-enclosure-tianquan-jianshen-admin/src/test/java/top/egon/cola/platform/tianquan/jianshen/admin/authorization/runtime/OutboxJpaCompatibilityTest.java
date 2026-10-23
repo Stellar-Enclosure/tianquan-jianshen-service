@@ -164,10 +164,10 @@ class OutboxJpaCompatibilityTest {
 
     private ApplicationContextRunner bootOwnerFixture(DataSource selected, jakarta.persistence.EntityManagerFactory emf) {
         return new ApplicationContextRunner().withConfiguration(AutoConfigurations.of(
-                org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration.class,
-                org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration.class,
-                org.springframework.boot.autoconfigure.transaction.TransactionAutoConfiguration.class,
-                org.springframework.boot.autoconfigure.transaction.TransactionManagerCustomizationAutoConfiguration.class))
+                org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration.class,
+                org.springframework.boot.jdbc.autoconfigure.DataSourceTransactionManagerAutoConfiguration.class,
+                org.springframework.boot.transaction.autoconfigure.TransactionAutoConfiguration.class,
+                org.springframework.boot.transaction.autoconfigure.TransactionManagerCustomizationAutoConfiguration.class))
                 .withBean("logicalDataSource", DataSource.class, () -> selected)
                 .withBean("entityManagerFactory", jakarta.persistence.EntityManagerFactory.class, () -> emf)
                 .withPropertyValues("spring.jpa.database=POSTGRESQL", "spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect",

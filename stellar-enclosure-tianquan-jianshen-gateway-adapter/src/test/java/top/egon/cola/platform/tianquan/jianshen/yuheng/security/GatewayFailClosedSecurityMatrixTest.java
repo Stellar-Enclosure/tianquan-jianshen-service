@@ -66,7 +66,7 @@ class GatewayFailClosedSecurityMatrixTest {
         org.mockito.Mockito.doReturn(stream).when(redis).getStream(org.mockito.ArgumentMatchers.eq("egon:oauth:audit:v1"),
                 org.mockito.ArgumentMatchers.eq(org.redisson.client.codec.StringCodec.INSTANCE));
         org.mockito.Mockito.when(stream.add(org.mockito.ArgumentMatchers.any(org.redisson.api.stream.StreamAddArgs.class)))
-                .thenReturn(new org.redisson.api.StreamMessageId(1, 1));
+                .thenReturn(new org.redisson.api.stream.StreamMessageId(1, 1));
         var key = temporary.resolve("audit.key"); java.nio.file.Files.writeString(key, "0123456789abcdef0123456789abcdef");
         java.nio.file.Files.setPosixFilePermissions(key, Set.of(java.nio.file.attribute.PosixFilePermission.OWNER_READ, java.nio.file.attribute.PosixFilePermission.OWNER_WRITE));
         var issuer = java.net.URI.create("https://idp.example/tenants/1001"); var resource = java.net.URI.create("https://api.example/payments");

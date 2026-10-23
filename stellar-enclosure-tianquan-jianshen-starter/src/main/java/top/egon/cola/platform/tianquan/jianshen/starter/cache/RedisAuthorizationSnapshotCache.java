@@ -138,7 +138,7 @@ public final class RedisAuthorizationSnapshotCache
             Number result = redisson.getScript(StringCodec.INSTANCE).eval(
                     RScript.Mode.READ_WRITE,
                     PUT_SCRIPT,
-                    RScript.ReturnType.INTEGER,
+                    RScript.ReturnType.LONG,
                     List.of(key.redisKey(), key.userIndex(snapshot.identitySub()),
                             key.tenantIndex()),
                     objectMapper.writeValueAsString(snapshot),
