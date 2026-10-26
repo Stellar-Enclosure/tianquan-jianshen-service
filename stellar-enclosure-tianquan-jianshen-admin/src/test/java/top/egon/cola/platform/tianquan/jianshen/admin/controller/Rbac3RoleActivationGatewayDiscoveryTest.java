@@ -19,6 +19,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.activation.controller.RoleActivationController;
 
 @WebMvcTest(
+        properties = {"egon.cola.component.tianshu.enabled=false", "egon.cola.component.tianshu.registry.enabled=false",
+                "egon.cola.component.yuheng.reporting.enabled=false", "egon.cola.platform.tianquan.jianshen.enabled=false",
+                "egon.cola.platform.tianquan.shoubing.enabled=false"},
         controllers = RoleActivationController.class,
         excludeAutoConfiguration = {
                 SecurityAutoConfiguration.class,

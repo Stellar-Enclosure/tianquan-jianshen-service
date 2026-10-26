@@ -26,14 +26,23 @@ class Rbac3AdminSecurityChainTest {
         var context = new AnnotationConfigWebApplicationContext(); context.setServletContext(new MockServletContext());
         context.register(Rbac3AdminSecurityConfiguration.class, FixtureConfiguration.class); context.refresh();
         try {
-            var now = java.time.Instant.parse("2026-10-12T00:00:00Z");
+            var now = java.time.Instant.now();
             var identity = new top.egon.cola.platform.tianquan.shoubing.contract.IdentityPrincipal("identity-1", "1001", "901",
                     java.util.Set.of("resource"), now, now.plusSeconds(300), top.egon.cola.platform.tianquan.shoubing.contract.AuthenticationContext.password());
+            var permissions = java.util.Set.of("system:about:read", "system:role-activation:read", "system:role-activation:use");
+            var view = new top.egon.cola.platform.tianquan.jianshen.contract.permission.EffectivePermissionSnapshot(
+                    "https://idp.example/tenants/1001", "identity-1",
+                    new top.egon.cola.platform.tianquan.jianshen.contract.permission.CatalogScope("10", "1001", "xingyuan", "app", "default", "test"),
+                    "1", "1", "2", new top.egon.cola.platform.tianquan.jianshen.contract.permission.EffectivePermissionSnapshot.ActiveRoleContext(
+                            "app", java.util.List.of(), java.util.List.of()), permissions.stream().sorted().toList(), now.plusSeconds(300));
             var snapshot = new top.egon.cola.platform.tianquan.jianshen.contract.authorization.SystemAuthorizationSnapshot("1001", "identity-1", "2001",
-                    "app", 1, 2, java.util.List.of(), null, null, java.util.Set.of("system:about:read", "system:role-activation:read", "system:role-activation:use"),
-                    java.util.Set.of(), java.util.Map.of(), java.util.Map.of(), "sha256:scope-snapshot", now, now.plusSeconds(300));
+                    "app", 1, 2, java.util.List.of(), null, null, permissions,
+                    java.util.Set.of(), java.util.Map.of(), java.util.Map.of(), "sha256:scope-snapshot", now, now.plusSeconds(300), view,
+                    new top.egon.cola.platform.tianquan.jianshen.contract.authorization.RuntimePolicyBinding(
+                            "r-java", "1", "a".repeat(64), "b".repeat(64), "c".repeat(64)));
             var users = context.getBean(UserAccessTokenVerifier.class);
-            org.mockito.Mockito.when(users.verify("scopeless")).thenReturn(new top.egon.cola.platform.tianquan.shoubing.starter.security.AccessTokenVerification.Valid<>(identity, java.util.Set.of()));
+            org.mockito.Mockito.when(users.verify("scopeless")).thenReturn(new top.egon.cola.platform.tianquan.shoubing.starter.security.AccessTokenVerification.Valid<>(identity, java.util.Set.of(), null,
+                    java.net.URI.create("https://idp.example/tenants/1001")));
             org.mockito.Mockito.when(context.getBean(SingleFlightSnapshotLoader.class).load(identity)).thenReturn(snapshot);
             var mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
             for (String path : java.util.List.of("/api/v1/auth/about", "/api/tianquan-jianshen/v1/auth/role-activation-candidates", "/api/tianquan-jianshen/v1/auth/role-activations")) {

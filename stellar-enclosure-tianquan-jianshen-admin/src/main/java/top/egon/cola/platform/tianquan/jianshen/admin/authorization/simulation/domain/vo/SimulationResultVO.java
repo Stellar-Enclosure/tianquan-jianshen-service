@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.simulation.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.decision.domain.vo.DecisionBundleVO;
 
 import java.time.Instant;
@@ -27,6 +33,10 @@ import java.time.Instant;
              * 含义与用法：读取、传递或更新 `current` 时应保持 `SimulationResultVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `current`, preserve `SimulationResultVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.simulation.domain.vo.SimulationResultVO.current", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.current")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
             DecisionBundleVO current,
             /**
              * 字段 `hypothetical` 表示 `SimulationResultVO` 中与 `hypothetical` 相关的状态、依赖、配置或结果（声明类型 `DecisionBundleVO`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -35,6 +45,10 @@ import java.time.Instant;
              * 含义与用法：读取、传递或更新 `hypothetical` 时应保持 `SimulationResultVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `hypothetical`, preserve `SimulationResultVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.simulation.domain.vo.SimulationResultVO.hypothetical", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.hypothetical")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
             DecisionBundleVO hypothetical,
             /**
              * 字段 `authVersion` 表示 `SimulationResultVO` 中与 `auth Version` 相关的状态、依赖、配置或结果（声明类型 `long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -43,6 +57,10 @@ import java.time.Instant;
              * 含义与用法：读取、传递或更新 `authVersion` 时应保持 `SimulationResultVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `authVersion`, preserve `SimulationResultVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.simulation.domain.vo.SimulationResultVO.authVersion", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.authVersion")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
             long authVersion,
             /**
              * 字段 `policyVersion` 表示 `SimulationResultVO` 中的策略版本；Field `policyVersion` stores the policy version in `SimulationResultVO`.
@@ -50,6 +68,10 @@ import java.time.Instant;
              * 含义与用法：读取、传递或更新 `policyVersion` 时应保持 `SimulationResultVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: preserve the lifecycle, immutability, and thread-safety constraints of `SimulationResultVO` when reading or passing `policyVersion`.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.simulation.domain.vo.SimulationResultVO.policyVersion", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.policyVersion")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
             long policyVersion,
             /**
              * 字段 `snapshotChecksum` 表示 `SimulationResultVO` 中与 `snapshot Checksum` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -58,6 +80,10 @@ import java.time.Instant;
              * 含义与用法：读取、传递或更新 `policyVersion` 时应保持 `SimulationResultVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `policyVersion`, preserve `SimulationResultVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.simulation.domain.vo.SimulationResultVO.snapshotChecksum", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.snapshotChecksum")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
             String snapshotChecksum,
             /**
              * 字段 `expiresAt` 表示 `SimulationResultVO` 中与 `expires At` 相关的状态、依赖、配置或结果（声明类型 `Instant`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -66,5 +92,10 @@ import java.time.Instant;
              * 含义与用法：读取、传递或更新 `expiresAt` 时应保持 `SimulationResultVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `expiresAt`, preserve `SimulationResultVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.simulation.domain.vo.SimulationResultVO.expiresAt", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.expiresAt")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant expiresAt) {
     }

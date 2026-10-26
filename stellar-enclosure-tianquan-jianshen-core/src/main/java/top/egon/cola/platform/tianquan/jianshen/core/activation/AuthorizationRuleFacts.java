@@ -10,8 +10,25 @@ public record AuthorizationRuleFacts(
         List<FieldRuleFact> fieldRuleFacts,
         List<FieldDefinitionFact> fieldDefinitions,
         List<ResourceFact> resources,
-        List<LandingRouteFact> landingRoutes
+        List<LandingRouteFact> landingRoutes,
+        List<PermissionGrantBinding> permissionGrantBindings
 ) {
+
+    public AuthorizationRuleFacts(List<ResourceGrantBinding> resources, List<DataScopeFact> scopes,
+            List<FieldRuleFact> rules, List<FieldDefinitionFact> definitions, List<ResourceFact> catalog,
+            List<LandingRouteFact> landing) {
+        this(resources, scopes, rules, definitions, catalog, landing, List.of());
+    }
+
+    /** Explicit grants to permission characters, independent of resource declarations or links. */
+    public record PermissionGrantBinding(String catalogScopeId, String applicationId, String roleId, String permissionCode) {
+        public PermissionGrantBinding {
+            catalogScopeId = required(catalogScopeId, "catalogScopeId");
+            applicationId = required(applicationId, "applicationId");
+            roleId = required(roleId, "roleId");
+            permissionCode = required(permissionCode, "permissionCode");
+        }
+    }
 
     public AuthorizationRuleFacts(
             List<ResourceGrantBinding> resourceGrantBindings,
@@ -31,6 +48,7 @@ public record AuthorizationRuleFacts(
         fieldDefinitions = List.copyOf(fieldDefinitions);
         resources = List.copyOf(resources);
         landingRoutes = List.copyOf(landingRoutes);
+        permissionGrantBindings = List.copyOf(permissionGrantBindings);
     }
 
     public record ResourceGrantBinding(

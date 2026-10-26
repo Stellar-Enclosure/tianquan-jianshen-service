@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -45,7 +44,6 @@ class Rbac3ObservedAuthorizationServiceTest {
     private final IdpObservedVerificationComponent observations = mock(IdpObservedVerificationComponent.class);
     private final TokenAuditProofBO proof = new TokenAuditProofBO(URI.create("https://idp.example/tenants/10001"),
             URI.create("https://api.example/finance"), "a".repeat(64), null, "b".repeat(64));
-    @TempDir java.nio.file.Path temporary;
 
     @AfterEach
     void cleanup() {
@@ -191,27 +189,20 @@ class Rbac3ObservedAuthorizationServiceTest {
     @SuppressWarnings("unchecked")
     void twoRealWorkersWaitForOneActualDurableProducerConfirmation() throws Exception {
         validator.afterPropertiesSet();
-        var key = temporary.resolve("audit.key");
-        java.nio.file.Files.writeString(key, "0123456789abcdef0123456789abcdef");
-        java.nio.file.Files.setPosixFilePermissions(key, Set.of(java.nio.file.attribute.PosixFilePermission.OWNER_READ,
-                java.nio.file.attribute.PosixFilePermission.OWNER_WRITE));
-        var redis = mock(org.redisson.api.RedissonClient.class);
-        org.redisson.api.RStream<String, String> stream = mock(org.redisson.api.RStream.class);
-        org.mockito.Mockito.doReturn(stream).when(redis).getStream(org.mockito.ArgumentMatchers.eq("egon:oauth:audit:v1"),
-                org.mockito.ArgumentMatchers.eq(org.redisson.client.codec.StringCodec.INSTANCE));
+        var authority = mock(top.egon.cola.platform.tianquan.shoubing.starter.state.IdentityAuthorityClient.class);
         var firstEntered = new java.util.concurrent.CountDownLatch(1);
         var release = new java.util.concurrent.CountDownLatch(1);
-        when(stream.add(org.mockito.ArgumentMatchers.any(org.redisson.api.stream.StreamAddArgs.class))).thenAnswer(call -> {
+        when(authority.appendAudit(org.mockito.ArgumentMatchers.any())).thenAnswer(call -> {
+            var event = call.getArgument(0, top.egon.cola.platform.tianquan.shoubing.core.audit.TokenUsageAuditEvent.class);
             firstEntered.countDown();
             assertTrue(release.await(5, java.util.concurrent.TimeUnit.SECONDS));
-            return new org.redisson.api.stream.StreamMessageId(1, 1);
+            return new top.egon.cola.platform.tianquan.shoubing.contract.state.IdentityAuditReceipt(
+                    java.util.UUID.randomUUID().toString(), event.eventId(),
+                    top.egon.cola.platform.tianquan.shoubing.core.audit.TokenUsageAuditFingerprint.of(event),
+                    event.issuer().toASCIIString(), "rbac-runtime", event.resource(), "STORED", NOW);
         });
-        var producer = new top.egon.cola.platform.tianquan.shoubing.starter.audit.TokenUsageAuditComponent(redis,
-                new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules(),
-                new top.egon.cola.platform.tianquan.shoubing.starter.audit.OAuthAuditProperties("egon:oauth:audit:v1",
-                        temporary.resolve("spool"), 1_048_576, key),
-                new top.egon.cola.platform.tianquan.shoubing.starter.audit.AuditDeliveryProperties(),
-                Clock.fixed(NOW, ZoneOffset.UTC), validator);
+        var producer = new top.egon.cola.platform.tianquan.shoubing.starter.audit.TokenUsageAuditComponent(
+                issuer -> authority, Clock.fixed(NOW, ZoneOffset.UTC), validator, IdpSecurityMetricsRecorder.NOOP);
         var converter = (top.egon.cola.platform.tianquan.shoubing.starter.security.domain.converter.TokenUsageAuditEventConverter)
                 Class.forName("top.egon.cola.platform.tianquan.shoubing.starter.security.domain.converter.TokenUsageAuditEventConverterImpl")
                         .getConstructor().newInstance();
@@ -247,10 +238,7 @@ class Rbac3ObservedAuthorizationServiceTest {
                         } finally { release.countDown(); }
                     });
         } finally { release.countDown(); }
-        verify(stream, times(1)).add(org.mockito.ArgumentMatchers.any(org.redisson.api.stream.StreamAddArgs.class));
-        try (var files = java.nio.file.Files.list(temporary.resolve("spool"))) {
-            assertEquals(1, files.filter(path -> path.toString().endsWith(".evt")).count());
-        }
+        verify(authority, times(1)).appendAudit(org.mockito.ArgumentMatchers.any());
     }
 
     private Rbac3ObservedAuthorizationService service() {

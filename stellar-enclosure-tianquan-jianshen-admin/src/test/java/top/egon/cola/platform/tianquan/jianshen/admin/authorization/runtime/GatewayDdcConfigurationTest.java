@@ -60,10 +60,9 @@ class GatewayDdcConfigurationTest {
                 .resolve("src/main/resources/application.yml");
         if (Files.exists(yaml)) {
             assertThat(Files.readString(yaml))
-                    .doesNotContain("localhost", "127.0.0.1")
+                    .doesNotContain("localhost", "127.0.0.1", "rbac3RuntimeRedissonClient")
                     .contains("TIANQUAN_JIANSHEN_RESOURCE_BIZ_CODE", "TIANQUAN_JIANSHEN_ADVERTISED_PORT",
-                            "ddcRedissonClient",
-                            "rbac3RuntimeRedissonClient");
+                            "ddcRedissonClient");
         }
     }
 

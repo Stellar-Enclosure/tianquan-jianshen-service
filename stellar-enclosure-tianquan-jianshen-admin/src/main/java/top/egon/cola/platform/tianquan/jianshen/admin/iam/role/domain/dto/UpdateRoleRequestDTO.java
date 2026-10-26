@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.dto;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -41,6 +47,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `roleName` 时应保持 `UpdateRoleRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `roleName`, preserve `UpdateRoleRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.role.domain.dto.UpdateRoleRequestDTO.roleName", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.roleName")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:role:update"}))
             @NotBlank String roleName,
             /**
              * 字段 `status` 表示 `UpdateRoleRequestDTO` 中与 `status` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -49,6 +59,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `status` 时应保持 `UpdateRoleRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `status`, preserve `UpdateRoleRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.role.domain.dto.UpdateRoleRequestDTO.status", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.status")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:role:update"}))
             @NotBlank String status,
             /**
              * 字段 `landingRouteId` 表示 `UpdateRoleRequestDTO` 中与 `landing Route Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -57,6 +71,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `landingRouteId` 时应保持 `UpdateRoleRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `landingRouteId`, preserve `UpdateRoleRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.role.domain.dto.UpdateRoleRequestDTO.landingRouteId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.landingRouteId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:role:update"}))
             String landingRouteId,
             /**
              * 字段 `landingPriority` 表示 `UpdateRoleRequestDTO` 中与 `landing Priority` 相关的状态、依赖、配置或结果（声明类型 `int`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -65,6 +83,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `landingPriority` 时应保持 `UpdateRoleRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `landingPriority`, preserve `UpdateRoleRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.role.domain.dto.UpdateRoleRequestDTO.landingPriority", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.landingPriority")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    write = @PermissionGroup(codes = {"system:role:update"}))
             @PositiveOrZero int landingPriority,
             /**
              * 字段 `maximumAssignmentDays` 表示 `UpdateRoleRequestDTO` 中与 `maximum Assignment Days` 相关的状态、依赖、配置或结果（声明类型 `Integer`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -73,6 +95,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `maximumAssignmentDays` 时应保持 `UpdateRoleRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `maximumAssignmentDays`, preserve `UpdateRoleRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.role.domain.dto.UpdateRoleRequestDTO.maximumAssignmentDays", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.maximumAssignmentDays")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    write = @PermissionGroup(codes = {"system:role:update"}))
             Integer maximumAssignmentDays,
             /**
              * 字段 `expectedRoleVersion` 表示 `UpdateRoleRequestDTO` 中与 `expected Role Version` 相关的状态、依赖、配置或结果（声明类型 `long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -81,5 +107,9 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `expectedRoleVersion` 时应保持 `UpdateRoleRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `expectedRoleVersion`, preserve `UpdateRoleRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.role.domain.dto.UpdateRoleRequestDTO.expectedRoleVersion", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.expectedRoleVersion")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    write = @PermissionGroup(codes = {"system:role:update"}))
             @PositiveOrZero long expectedRoleVersion) {
     }

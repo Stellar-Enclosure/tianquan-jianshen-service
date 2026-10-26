@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.dto;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -37,6 +43,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `groupCode` 时应保持 `PrerequisiteGroupRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `groupCode`, preserve `PrerequisiteGroupRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.dto.PrerequisiteGroupRequestDTO.groupCode", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.groupCode")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:authorization-constraint:manage"}))
             @NotBlank String groupCode,
             /**
              * 字段 `matchMode` 表示 `PrerequisiteGroupRequestDTO` 中与 `match Mode` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -45,6 +55,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `matchMode` 时应保持 `PrerequisiteGroupRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `matchMode`, preserve `PrerequisiteGroupRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.dto.PrerequisiteGroupRequestDTO.matchMode", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.matchMode")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:authorization-constraint:manage"}))
             @NotBlank String matchMode,
             /**
              * 字段 `prerequisiteRoleIds` 表示 `PrerequisiteGroupRequestDTO` 中与 `prerequisite Role Ids` 相关的状态、依赖、配置或结果（声明类型 `List&lt;@NotBlank String&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -53,6 +67,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `prerequisiteRoleIds` 时应保持 `PrerequisiteGroupRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `prerequisiteRoleIds`, preserve `PrerequisiteGroupRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.dto.PrerequisiteGroupRequestDTO.prerequisiteRoleIds", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.prerequisiteRoleIds")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.ARRAY,
+                    write = @PermissionGroup(codes = {"system:authorization-constraint:manage"}))
             @NotEmpty List<@NotBlank String> prerequisiteRoleIds,
             /**
              * 字段 `expectedRoleVersion` 表示 `PrerequisiteGroupRequestDTO` 中与 `expected Role Version` 相关的状态、依赖、配置或结果（声明类型 `long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -61,5 +79,9 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `expectedRoleVersion` 时应保持 `PrerequisiteGroupRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `expectedRoleVersion`, preserve `PrerequisiteGroupRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.dto.PrerequisiteGroupRequestDTO.expectedRoleVersion", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.expectedRoleVersion")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    write = @PermissionGroup(codes = {"system:authorization-constraint:manage"}))
             @PositiveOrZero long expectedRoleVersion) {
     }

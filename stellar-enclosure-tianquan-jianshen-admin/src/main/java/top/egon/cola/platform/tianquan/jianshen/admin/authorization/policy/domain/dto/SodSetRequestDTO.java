@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.dto;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -41,6 +47,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `setCode` 时应保持 `SodSetRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `setCode`, preserve `SodSetRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.dto.SodSetRequestDTO.setCode", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.setCode")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:authorization-constraint:manage"}))
             @NotBlank String setCode,
             /**
              * 字段 `constraintType` 表示 `SodSetRequestDTO` 中与 `constraint Type` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -49,6 +59,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `constraintType` 时应保持 `SodSetRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `constraintType`, preserve `SodSetRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.dto.SodSetRequestDTO.constraintType", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.constraintType")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:authorization-constraint:manage"}))
             @NotBlank String constraintType,
             /**
              * 字段 `applicationId` 表示 `SodSetRequestDTO` 中与 `application Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -57,6 +71,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `applicationId` 时应保持 `SodSetRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `applicationId`, preserve `SodSetRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.dto.SodSetRequestDTO.applicationId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.applicationId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:authorization-constraint:manage"}))
             String applicationId,
             /**
              * 字段 `maximumActiveRoles` 表示 `SodSetRequestDTO` 中与 `maximum Active Roles` 相关的状态、依赖、配置或结果（声明类型 `int`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -65,6 +83,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `maximumActiveRoles` 时应保持 `SodSetRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `maximumActiveRoles`, preserve `SodSetRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.dto.SodSetRequestDTO.maximumActiveRoles", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.maximumActiveRoles")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    write = @PermissionGroup(codes = {"system:authorization-constraint:manage"}))
             @Positive int maximumActiveRoles,
             /**
              * 字段 `memberRoleIds` 表示 `SodSetRequestDTO` 中与 `member Role Ids` 相关的状态、依赖、配置或结果（声明类型 `List&lt;@NotBlank String&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -73,6 +95,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `memberRoleIds` 时应保持 `SodSetRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `memberRoleIds`, preserve `SodSetRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.dto.SodSetRequestDTO.memberRoleIds", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.memberRoleIds")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.ARRAY,
+                    write = @PermissionGroup(codes = {"system:authorization-constraint:manage"}))
             @NotEmpty List<@NotBlank String> memberRoleIds,
             /**
              * 字段 `validFrom` 表示 `SodSetRequestDTO` 中与 `valid From` 相关的状态、依赖、配置或结果（声明类型 `Instant`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -81,6 +107,11 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `validFrom` 时应保持 `SodSetRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `validFrom`, preserve `SodSetRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.dto.SodSetRequestDTO.validFrom", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.validFrom")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:authorization-constraint:manage"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             @NotNull Instant validFrom,
             /**
              * 字段 `validTo` 表示 `SodSetRequestDTO` 中与 `valid To` 相关的状态、依赖、配置或结果（声明类型 `Instant`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -89,6 +120,11 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `validTo` 时应保持 `SodSetRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `validTo`, preserve `SodSetRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.dto.SodSetRequestDTO.validTo", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.validTo")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:authorization-constraint:manage"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant validTo,
             /**
              * 字段 `expectedVersion` 表示 `SodSetRequestDTO` 中与 `expected Version` 相关的状态、依赖、配置或结果（声明类型 `long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -97,5 +133,9 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `expectedVersion` 时应保持 `SodSetRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `expectedVersion`, preserve `SodSetRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.dto.SodSetRequestDTO.expectedVersion", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.expectedVersion")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    write = @PermissionGroup(codes = {"system:authorization-constraint:manage"}))
             @PositiveOrZero long expectedVersion) {
     }

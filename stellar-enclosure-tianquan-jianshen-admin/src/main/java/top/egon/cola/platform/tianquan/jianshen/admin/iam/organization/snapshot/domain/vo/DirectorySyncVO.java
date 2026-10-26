@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.organization.snapshot.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -40,6 +46,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `snapshotId` 时应保持 `DirectorySyncVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `snapshotId`, preserve `DirectorySyncVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.snapshot.domain.vo.DirectorySyncVO.snapshotId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.snapshotId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:directory:sync"}))
             String snapshotId,
             /**
              * 字段 `outcome` 表示 `DirectorySyncVO` 中与 `outcome` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -48,6 +58,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `outcome` 时应保持 `DirectorySyncVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `outcome`, preserve `DirectorySyncVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.snapshot.domain.vo.DirectorySyncVO.outcome", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.outcome")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:directory:sync"}))
             String outcome,
             /**
              * 字段 `counts` 表示 `DirectorySyncVO` 中与 `counts` 相关的状态、依赖、配置或结果（声明类型 `Map&lt;String, Long&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -56,6 +70,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `counts` 时应保持 `DirectorySyncVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `counts`, preserve `DirectorySyncVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.snapshot.domain.vo.DirectorySyncVO.counts", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.counts")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    plainRead = @PermissionGroup(codes = {"system:directory:sync"}))
             Map<String, Long> counts,
             /**
              * 字段 `affectedUserCount` 表示 `DirectorySyncVO` 中与 `affected User Count` 相关的状态、依赖、配置或结果（声明类型 `long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -64,6 +82,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `affectedUserCount` 时应保持 `DirectorySyncVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `affectedUserCount`, preserve `DirectorySyncVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.snapshot.domain.vo.DirectorySyncVO.affectedUserCount", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.affectedUserCount")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    plainRead = @PermissionGroup(codes = {"system:directory:sync"}))
             long affectedUserCount
     ) {
     }

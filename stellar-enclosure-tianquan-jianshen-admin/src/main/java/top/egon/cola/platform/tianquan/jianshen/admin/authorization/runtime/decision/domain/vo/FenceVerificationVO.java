@@ -1,5 +1,10 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.decision.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.Decision;
 
 import java.time.Instant;
@@ -23,6 +28,9 @@ import java.time.Instant;
              * 含义与用法：读取、传递或更新 `decision` 时应保持 `FenceVerificationVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `decision`, preserve `FenceVerificationVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.decision.domain.vo.FenceVerificationVO.decision", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.decision", access = ResourceAccess.PUBLIC,
+                    allowedPrincipals = {PermissionManifest.PrincipalType.SERVICE}, oauthScopes = {"service:authorization:fence"})
             Decision decision,
             /**
              * 字段 `reasonCode` 表示 `FenceVerificationVO` 中与 `reason Code` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -31,6 +39,9 @@ import java.time.Instant;
              * 含义与用法：读取、传递或更新 `reasonCode` 时应保持 `FenceVerificationVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `reasonCode`, preserve `FenceVerificationVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.decision.domain.vo.FenceVerificationVO.reasonCode", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.reasonCode", access = ResourceAccess.PUBLIC,
+                    allowedPrincipals = {PermissionManifest.PrincipalType.SERVICE}, oauthScopes = {"service:authorization:fence"})
             String reasonCode,
             /**
              * 字段 `identitySub` 表示 Tianquan-Shoubing 稳定主体标识；Field `identitySub` stores the stable Tianquan-Shoubing subject.
@@ -38,6 +49,9 @@ import java.time.Instant;
              * 含义与用法：读取、传递或更新 `identitySub` 时应保持 `FenceVerificationVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: preserve the lifecycle, immutability, and thread-safety constraints of `FenceVerificationVO` when reading or passing `identitySub`.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.decision.domain.vo.FenceVerificationVO.identitySub", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.identitySub", access = ResourceAccess.PUBLIC,
+                    allowedPrincipals = {PermissionManifest.PrincipalType.SERVICE}, oauthScopes = {"service:authorization:fence"})
             String identitySub,
             /**
              * 字段 `verifiedAt` 表示 `FenceVerificationVO` 中与 `verified At` 相关的状态、依赖、配置或结果（声明类型 `Instant`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -46,5 +60,9 @@ import java.time.Instant;
              * 含义与用法：读取、传递或更新 `verifiedAt` 时应保持 `FenceVerificationVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `verifiedAt`, preserve `FenceVerificationVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.decision.domain.vo.FenceVerificationVO.verifiedAt", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.verifiedAt", access = ResourceAccess.PUBLIC,
+                    allowedPrincipals = {PermissionManifest.PrincipalType.SERVICE}, oauthScopes = {"service:authorization:fence"})
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant verifiedAt) {
     }

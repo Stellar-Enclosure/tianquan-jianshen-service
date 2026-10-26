@@ -1,5 +1,8 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.outbox;
 
+import static top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.domain.PermissionSourceEventIdentity.PERMISSION_SOURCE_CHANNEL;
+import static top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.domain.PermissionSourceEventIdentity.PERMISSION_SOURCE_DESTINATION;
+
 import top.egon.cola.component.outbox.api.OutboxMessage;
 import top.egon.cola.component.outbox.api.TransactionalOutbox;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.domain.Rbac3RuntimeEventCatalog;
@@ -40,6 +43,9 @@ public final class TransactionalOutboxAuthorizationEventPublisher
      * Meaning and usage: when reading, passing, or updating `DESTINATIONS`, preserve `TransactionalOutboxAuthorizationEventPublisher`'s lifecycle, immutability, and thread-safety constraints.
      */
     private static final Map<String, String> DESTINATIONS = Map.ofEntries(
+            Map.entry("PERMISSION_SOURCE_IMPORT_REQUESTED", PERMISSION_SOURCE_DESTINATION),
+            Map.entry("CATALOG_ACTIVATION_CHANGED", "tianquan-jianshen.catalog.changed.v1"),
+            Map.entry("CATALOG_GOVERNANCE_CHANGED", "tianquan-jianshen.catalog.changed.v1"),
             Map.entry("TIANQUAN_JIANSHEN_USER_ACTIVE_ROLES_REPLACED",
                     "tianquan-jianshen.role-activation.changed.v1"),
             Map.entry("ASSIGNMENT_CHANGED", "tianquan-jianshen.assignment.changed.v1"),
@@ -122,7 +128,7 @@ public final class TransactionalOutboxAuthorizationEventPublisher
         return outbox.enqueue(OutboxMessage.builder()
                         .messageId(eventId)
                         .idempotencyKey(idempotencyKey)
-                        .channel(CHANNEL)
+                        .channel(PERMISSION_SOURCE_DESTINATION.equals(destination) ? PERMISSION_SOURCE_CHANNEL : CHANNEL)
                         .destination(destination)
                         .payload(envelope)
                         .schemaVersion("1")
@@ -204,6 +210,7 @@ public final class TransactionalOutboxAuthorizationEventPublisher
             throw new IllegalStateException("SHA-256 is unavailable", unavailable);
         }
     }
+
 
     /**
      * 方法 `required` 按照 `TransactionalOutboxAuthorizationEventPublisher` 的职责处理输入，完成 `required` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。

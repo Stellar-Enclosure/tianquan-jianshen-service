@@ -5,8 +5,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.business.repository.UserBusinessAccessRepository;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.ApplicationCatalogEntry;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.DdcCatalogGateway;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.domain.vo.ApplicationCatalogEntry;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.repository.DdcCatalogGateway;
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
 
 import java.time.Instant;

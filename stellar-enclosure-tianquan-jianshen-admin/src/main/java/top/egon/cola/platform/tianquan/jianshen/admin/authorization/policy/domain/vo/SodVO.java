@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
 import java.util.HashSet;
 import java.util.List;
@@ -29,6 +35,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `setId` 时应保持 `SodVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `setId`, preserve `SodVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.SodVO.setId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.setId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-constraint:read"}))
             String setId,
             /**
              * 字段 `setCode` 表示 `SodVO` 中与 `set Code` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -37,6 +47,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `setCode` 时应保持 `SodVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `setCode`, preserve `SodVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.SodVO.setCode", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.setCode")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-constraint:read"}))
             String setCode,
             /**
              * 字段 `constraintType` 表示 `SodVO` 中与 `constraint Type` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -45,6 +59,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `constraintType` 时应保持 `SodVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `constraintType`, preserve `SodVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.SodVO.constraintType", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.constraintType")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-constraint:read"}))
             String constraintType,
             /**
              * 字段 `applicationId` 表示 `SodVO` 中与 `application Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -53,6 +71,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `applicationId` 时应保持 `SodVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `applicationId`, preserve `SodVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.SodVO.applicationId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.applicationId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-constraint:read"}))
             String applicationId,
             /**
              * 字段 `maximumActiveRoles` 表示 `SodVO` 中与 `maximum Active Roles` 相关的状态、依赖、配置或结果（声明类型 `int`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -61,6 +83,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `maximumActiveRoles` 时应保持 `SodVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `maximumActiveRoles`, preserve `SodVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.SodVO.maximumActiveRoles", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.maximumActiveRoles")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-constraint:read"}))
             int maximumActiveRoles,
             /**
              * 字段 `roleIds` 表示 `SodVO` 中与 `role Ids` 相关的状态、依赖、配置或结果（声明类型 `List&lt;String&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -69,6 +95,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `roleIds` 时应保持 `SodVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `roleIds`, preserve `SodVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.SodVO.roleIds", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.roleIds")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.ARRAY,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-constraint:read"}))
             List<String> roleIds,
             /**
              * 字段 `status` 表示 `SodVO` 中与 `status` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -77,6 +107,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `status` 时应保持 `SodVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `status`, preserve `SodVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.SodVO.status", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.status")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-constraint:read"}))
             String status,
             /**
              * 字段 `version` 表示 `SodVO` 中与 `version` 相关的状态、依赖、配置或结果（声明类型 `long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -85,6 +119,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `version` 时应保持 `SodVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `version`, preserve `SodVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.SodVO.version", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.version")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-constraint:read"}))
             long version
     ) {
 

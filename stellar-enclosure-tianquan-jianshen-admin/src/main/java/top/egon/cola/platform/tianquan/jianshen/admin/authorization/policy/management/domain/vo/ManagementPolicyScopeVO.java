@@ -1,5 +1,12 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.management.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionMode;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import top.egon.cola.platform.tianquan.jianshen.core.delegation.ManagementPolicyDecisionService;
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
 import java.time.Instant;
@@ -23,11 +30,19 @@ import java.util.Set;
  *
  * 含义与用法：读取、传递或更新 `type` 时应保持 `ManagementPolicyScopeVO` 的生命周期、不可变性和线程安全约束。
  * Meaning and usage: when reading, passing, or updating `type`, preserve `ManagementPolicyScopeVO`'s lifecycle, immutability, and thread-safety constraints.
- */ String type, /**
+ */ @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.ManagementPolicyScopeVO.type", type = ResourceType.FIELD,
+                labelPage = "tianquan-jianshen.permissions", labelKey = "field.type")
+        @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:management-policy:manage", "system:management-policy:read"}))
+        String type, /**
  * 字段 `referenceId` 表示 `ManagementPolicyScopeVO` 中与 `reference Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
  * Field `referenceId` stores the `reference Id`-related state, dependency, configuration, or result of `ManagementPolicyScopeVO` (declared type `String`); its lifecycle and value semantics are defined by its declared type and owning object.
  *
  * 含义与用法：读取、传递或更新 `referenceId` 时应保持 `ManagementPolicyScopeVO` 的生命周期、不可变性和线程安全约束。
  * Meaning and usage: when reading, passing, or updating `referenceId`, preserve `ManagementPolicyScopeVO`'s lifecycle, immutability, and thread-safety constraints.
- */ String referenceId) {
+ */ @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.ManagementPolicyScopeVO.referenceId", type = ResourceType.FIELD,
+                labelPage = "tianquan-jianshen.permissions", labelKey = "field.referenceId")
+        @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:management-policy:manage", "system:management-policy:read"}))
+        String referenceId) {
     }

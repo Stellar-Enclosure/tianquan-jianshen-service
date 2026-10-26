@@ -52,10 +52,11 @@ public final class Rbac3MethodAuthorizationManager
     @Qualifier("idpObservedVerificationComponent") private final IdpObservedVerificationComponent observations;
     @Qualifier("idpSecurityMetricsRecorder") private final IdpSecurityMetricsRecorder metrics;
     @Qualifier("defaultValidator") private final Validator validator;
+    private final top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionExecutionGuard compiledPolicy;
     private final AtomicBoolean metricFailureLogged = new AtomicBoolean();
 
     public Rbac3MethodAuthorizationManager(AuthorizationService authorization) {
-        this(Objects.requireNonNull(authorization, "authorization"), false, Map.of(), null, IdpSecurityMetricsRecorder.NOOP, null);
+        this(Objects.requireNonNull(authorization, "authorization"), false, Map.of(), null, IdpSecurityMetricsRecorder.NOOP, null, null);
     }
 
     /** Creates a manager from an explicit local policy while retaining the former constructor. */
@@ -65,7 +66,13 @@ public final class Rbac3MethodAuthorizationManager
         new ValidationUtils(Objects.requireNonNull(validator, "defaultValidator")).validate(Objects.requireNonNull(policy, "userScopePolicy"));
         Map<String, Set<String>> scopes = policy.getPermissionScopes().entrySet().stream().collect(java.util.stream.Collectors.toUnmodifiableMap(
                 Map.Entry::getKey, entry -> Set.copyOf(entry.getValue())));
-        return new Rbac3MethodAuthorizationManager(authorization, policy.isEnabled(), scopes, observations, Objects.requireNonNull(metrics, "metrics"), validator);
+        return new Rbac3MethodAuthorizationManager(authorization, policy.isEnabled(), scopes, observations, Objects.requireNonNull(metrics, "metrics"), validator, null);
+    }
+
+    public Rbac3MethodAuthorizationManager(AuthorizationService authorization,
+            top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionExecutionGuard compiledPolicy) {
+        this(Objects.requireNonNull(authorization, "authorization"), false, Map.of(), null,
+                IdpSecurityMetricsRecorder.NOOP, null, Objects.requireNonNull(compiledPolicy, "compiledPolicy"));
     }
 
     @Override
@@ -84,6 +91,27 @@ public final class Rbac3MethodAuthorizationManager
         Class<?> targetClass = invocation.getThis() == null
                 ? method.getDeclaringClass()
                 : invocation.getThis().getClass();
+        var declaration = resource(method, targetClass);
+        if (declaration != null) {
+            if (compiledPolicy == null) return new AuthorizationDecision(false);
+            var policy = compiledPolicy.resource(declaration.key(), top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType.API);
+            if (policy.access() != declaration.access() || !sameRequirement(policy.requirement(), groups(method, targetClass))
+                    || !Set.copyOf(policy.oauthScopes()).equals(Set.of(declaration.oauthScopes()))
+                    || !Set.copyOf(policy.allowedPrincipals()).equals(Set.of(declaration.allowedPrincipals()))) {
+                throw new IllegalStateException("COMPILED_PERMISSION_POLICY_MISMATCH");
+            }
+            if (compiledPolicy.nativeAnonymousBoundary(declaration.key())) return new AuthorizationDecision(true);
+            Authentication current = authentication == null ? null : authentication.get();
+            if (current != null && current.isAuthenticated() && current.getPrincipal() instanceof ServiceIdentityPrincipal service) {
+                compiledPolicy.requireServiceApi(declaration.key(), service);
+                return new AuthorizationDecision(true);
+            }
+            compiledPolicy.require(declaration.key());
+            return new AuthorizationDecision(true);
+        }
+        if (compiledPolicy != null) {
+            throw new IllegalStateException("COMPILED_PERMISSION_RESOURCE_MISSING");
+        }
         List<PermissionRequest> required = permissions(method, targetClass);
         if (validator != null) { required.forEach(request -> new ValidationUtils(validator).validate(request)); }
         if (userScopesEnabled) {
@@ -154,7 +182,9 @@ public final class Rbac3MethodAuthorizationManager
     }
 
     public boolean supports(Method method, Class<?> targetClass) {
-        return !permissions(method, targetClass).isEmpty();
+        return resource(method, targetClass) != null || !permissions(method, targetClass).isEmpty()
+                || !org.springframework.core.annotation.AnnotatedElementUtils.findMergedRepeatableAnnotations(method,
+                    top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.RequiresPermissions.class).isEmpty();
     }
 
     private List<PermissionRequest> permissions(
@@ -168,6 +198,37 @@ public final class Rbac3MethodAuthorizationManager
         addApi(required, method.getDeclaringClass());
         addApi(required, method);
         return List.copyOf(required);
+    }
+
+    private boolean sameRequirement(top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionRequirement left,
+            top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionRequirement right) {
+        if (left == null || right == null) return left == right;
+        var canonical = new top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifestCanonicalizer();
+        return canonical.requirementMap(left).equals(canonical.requirementMap(right));
+    }
+
+    private top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource resource(Method method, Class<?> targetClass) {
+        Method specific = org.springframework.aop.support.AopUtils.getMostSpecificMethod(method,
+                org.springframework.util.ClassUtils.getUserClass(targetClass));
+        return org.springframework.core.annotation.AnnotatedElementUtils.findMergedAnnotation(specific,
+                top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource.class);
+    }
+
+    private top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionRequirement groups(Method method, Class<?> targetClass) {
+        var groups = new java.util.ArrayList<top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionRequirement>();
+        for (AnnotatedElement element : List.of(org.springframework.util.ClassUtils.getUserClass(targetClass), method.getDeclaringClass(), method,
+                org.springframework.aop.support.AopUtils.getMostSpecificMethod(method, targetClass))) {
+            var annotations = org.springframework.core.annotation.AnnotatedElementUtils.findMergedRepeatableAnnotations(element,
+                    top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.RequiresPermissions.class);
+            for (var annotation : annotations) {
+                var group = new top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionRequirement(
+                        annotation.mode(), List.of(annotation.codes()));
+                if (!groups.contains(group)) groups.add(group);
+            }
+        }
+        if (groups.isEmpty()) return null;
+        return groups.size() == 1 ? groups.getFirst()
+                : top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionRequirement.allOf(groups);
     }
 
     private void addApi(

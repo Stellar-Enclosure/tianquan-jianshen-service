@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.dto;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -44,6 +50,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `applicationId` 时应保持 `CreateRoleRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `applicationId`, preserve `CreateRoleRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.role.domain.dto.CreateRoleRequestDTO.applicationId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.applicationId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:role:create"}))
             @NotBlank String applicationId,
             /**
              * 字段 `roleCode` 表示 `CreateRoleRequestDTO` 中与 `role Code` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -52,6 +62,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `roleCode` 时应保持 `CreateRoleRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `roleCode`, preserve `CreateRoleRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.role.domain.dto.CreateRoleRequestDTO.roleCode", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.roleCode")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:role:create"}))
             @NotBlank String roleCode,
             /**
              * 字段 `roleName` 表示 `CreateRoleRequestDTO` 中与 `role Name` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -60,6 +74,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `roleName` 时应保持 `CreateRoleRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `roleName`, preserve `CreateRoleRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.role.domain.dto.CreateRoleRequestDTO.roleName", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.roleName")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:role:create"}))
             @NotBlank String roleName,
             /**
              * 字段 `roleType` 表示 `CreateRoleRequestDTO` 中与 `role Type` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -68,6 +86,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `roleType` 时应保持 `CreateRoleRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `roleType`, preserve `CreateRoleRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.role.domain.dto.CreateRoleRequestDTO.roleType", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.roleType")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:role:create"}))
             @NotBlank String roleType,
             /**
              * 字段 `riskLevel` 表示 `CreateRoleRequestDTO` 中与 `risk Level` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -76,6 +98,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `riskLevel` 时应保持 `CreateRoleRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `riskLevel`, preserve `CreateRoleRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.role.domain.dto.CreateRoleRequestDTO.riskLevel", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.riskLevel")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:role:create"}))
             @NotBlank String riskLevel,
             /**
              * 字段 `privileged` 表示 `CreateRoleRequestDTO` 中与 `privileged` 相关的状态、依赖、配置或结果（声明类型 `boolean`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -84,6 +110,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `privileged` 时应保持 `CreateRoleRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `privileged`, preserve `CreateRoleRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.role.domain.dto.CreateRoleRequestDTO.privileged", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.privileged")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.BOOLEAN,
+                    write = @PermissionGroup(codes = {"system:role:create"}))
             boolean privileged,
             /**
              * 字段 `landingRouteId` 表示 `CreateRoleRequestDTO` 中与 `landing Route Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -92,6 +122,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `landingRouteId` 时应保持 `CreateRoleRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `landingRouteId`, preserve `CreateRoleRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.role.domain.dto.CreateRoleRequestDTO.landingRouteId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.landingRouteId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:role:create"}))
             String landingRouteId,
             /**
              * 字段 `landingPriority` 表示 `CreateRoleRequestDTO` 中与 `landing Priority` 相关的状态、依赖、配置或结果（声明类型 `int`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -100,6 +134,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `landingPriority` 时应保持 `CreateRoleRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `landingPriority`, preserve `CreateRoleRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.role.domain.dto.CreateRoleRequestDTO.landingPriority", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.landingPriority")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    write = @PermissionGroup(codes = {"system:role:create"}))
             @PositiveOrZero int landingPriority,
             /**
              * 字段 `maximumAssignmentDays` 表示 `CreateRoleRequestDTO` 中与 `maximum Assignment Days` 相关的状态、依赖、配置或结果（声明类型 `Integer`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -108,5 +146,9 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `maximumAssignmentDays` 时应保持 `CreateRoleRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `maximumAssignmentDays`, preserve `CreateRoleRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.role.domain.dto.CreateRoleRequestDTO.maximumAssignmentDays", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.maximumAssignmentDays")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    write = @PermissionGroup(codes = {"system:role:create"}))
             Integer maximumAssignmentDays) {
     }

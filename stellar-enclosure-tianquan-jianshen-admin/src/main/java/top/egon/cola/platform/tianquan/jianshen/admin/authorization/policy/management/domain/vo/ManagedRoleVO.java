@@ -1,5 +1,9 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.management.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+
 import top.egon.cola.platform.tianquan.jianshen.core.delegation.ManagementPolicyDecisionService;
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
 import java.time.Instant;
@@ -28,6 +32,8 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `roleId` 时应保持 `ManagedRoleVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `roleId`, preserve `ManagedRoleVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.ManagedRoleVO.roleId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.roleId", access = ResourceAccess.PUBLIC)
             String roleId,
             /**
              * 字段 `roleCode` 表示 `ManagedRoleVO` 中与 `role Code` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -36,6 +42,8 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `roleCode` 时应保持 `ManagedRoleVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `roleCode`, preserve `ManagedRoleVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.ManagedRoleVO.roleCode", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.roleCode", access = ResourceAccess.PUBLIC)
             String roleCode,
             /**
              * 字段 `roleName` 表示 `ManagedRoleVO` 中与 `role Name` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -44,6 +52,8 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `roleName` 时应保持 `ManagedRoleVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `roleName`, preserve `ManagedRoleVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.ManagedRoleVO.roleName", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.roleName", access = ResourceAccess.PUBLIC)
             String roleName,
             /**
              * 字段 `riskLevel` 表示 `ManagedRoleVO` 中与 `risk Level` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -52,6 +62,8 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `riskLevel` 时应保持 `ManagedRoleVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `riskLevel`, preserve `ManagedRoleVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.ManagedRoleVO.riskLevel", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.riskLevel", access = ResourceAccess.PUBLIC)
             String riskLevel,
             /**
              * 字段 `privileged` 表示 `ManagedRoleVO` 中与 `privileged` 相关的状态、依赖、配置或结果（声明类型 `boolean`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -60,6 +72,8 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `privileged` 时应保持 `ManagedRoleVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `privileged`, preserve `ManagedRoleVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.ManagedRoleVO.privileged", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.privileged", access = ResourceAccess.PUBLIC)
             boolean privileged
     ) {
     }

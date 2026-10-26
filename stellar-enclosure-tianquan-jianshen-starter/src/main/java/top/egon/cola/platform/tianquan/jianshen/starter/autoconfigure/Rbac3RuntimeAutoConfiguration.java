@@ -6,7 +6,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Import;
 import top.egon.cola.platform.tianquan.shoubing.starter.autoconfigure.IdpStarterAutoConfiguration;
-import top.egon.cola.platform.tianquan.jianshen.starter.runtime.Rbac3RuntimeRedissonConfiguration;
 
 /**
  * 类型 `Rbac3RuntimeAutoConfiguration` 位于当前包内，是类型，用于承载 `Rbac3 Runtime Auto Configuration` 相关的职责、状态或契约；调用方通常通过其公开 API、Spring 装配或实现关系使用。
@@ -21,6 +20,5 @@ import top.egon.cola.platform.tianquan.jianshen.starter.runtime.Rbac3RuntimeRedi
         prefix = "egon.cola.platform.tianquan.jianshen",
         name = "enabled",
         havingValue = "true")
-@Import(Rbac3RuntimeRedissonConfiguration.class)
 public class Rbac3RuntimeAutoConfiguration {
 }

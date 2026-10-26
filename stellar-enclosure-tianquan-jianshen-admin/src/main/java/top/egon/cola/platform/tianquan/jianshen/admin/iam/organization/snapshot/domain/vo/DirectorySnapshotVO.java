@@ -1,4 +1,10 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.organization.snapshot.domain.vo;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -45,6 +51,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `snapshotId` 时应保持 `DirectorySnapshotVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `snapshotId`, preserve `DirectorySnapshotVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.snapshot.domain.vo.DirectorySnapshotVO.snapshotId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.snapshotId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:directory-snapshot:read"}))
             String snapshotId,
             /**
              * 字段 `providerCode` 表示 `DirectorySnapshotVO` 中与 `provider Code` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -53,6 +63,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `providerCode` 时应保持 `DirectorySnapshotVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `providerCode`, preserve `DirectorySnapshotVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.snapshot.domain.vo.DirectorySnapshotVO.providerCode", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.providerCode")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:directory-snapshot:read"}))
             String providerCode,
             /**
              * 字段 `snapshotVersion` 表示 `DirectorySnapshotVO` 中与 `snapshot Version` 相关的状态、依赖、配置或结果（声明类型 `long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -61,6 +75,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `snapshotVersion` 时应保持 `DirectorySnapshotVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `snapshotVersion`, preserve `DirectorySnapshotVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.snapshot.domain.vo.DirectorySnapshotVO.snapshotVersion", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.snapshotVersion")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    plainRead = @PermissionGroup(codes = {"system:directory-snapshot:read"}))
             long snapshotVersion,
             /**
              * 字段 `checksum` 表示 `DirectorySnapshotVO` 中与 `checksum` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -69,6 +87,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `checksum` 时应保持 `DirectorySnapshotVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `checksum`, preserve `DirectorySnapshotVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.snapshot.domain.vo.DirectorySnapshotVO.checksum", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.checksum")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:directory-snapshot:read"}))
             String checksum,
             /**
              * 字段 `status` 表示 `DirectorySnapshotVO` 中与 `status` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -77,6 +99,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `status` 时应保持 `DirectorySnapshotVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `status`, preserve `DirectorySnapshotVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.snapshot.domain.vo.DirectorySnapshotVO.status", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.status")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:directory-snapshot:read"}))
             String status,
             /**
              * 字段 `generatedAt` 表示 `DirectorySnapshotVO` 中与 `generated At` 相关的状态、依赖、配置或结果（声明类型 `Instant`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -85,6 +111,11 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `generatedAt` 时应保持 `DirectorySnapshotVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `generatedAt`, preserve `DirectorySnapshotVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.snapshot.domain.vo.DirectorySnapshotVO.generatedAt", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.generatedAt")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:directory-snapshot:read"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant generatedAt,
             /**
              * 字段 `receivedAt` 表示 `DirectorySnapshotVO` 中与 `received At` 相关的状态、依赖、配置或结果（声明类型 `Instant`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -93,6 +124,11 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `receivedAt` 时应保持 `DirectorySnapshotVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `receivedAt`, preserve `DirectorySnapshotVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.snapshot.domain.vo.DirectorySnapshotVO.receivedAt", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.receivedAt")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:directory-snapshot:read"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant receivedAt,
             /**
              * 字段 `activatedAt` 表示 `DirectorySnapshotVO` 中与 `activated At` 相关的状态、依赖、配置或结果（声明类型 `Instant`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -101,6 +137,11 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `activatedAt` 时应保持 `DirectorySnapshotVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `activatedAt`, preserve `DirectorySnapshotVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.snapshot.domain.vo.DirectorySnapshotVO.activatedAt", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.activatedAt")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:directory-snapshot:read"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant activatedAt,
             /**
              * 字段 `counts` 表示 `DirectorySnapshotVO` 中与 `counts` 相关的状态、依赖、配置或结果（声明类型 `Map&lt;String, Object&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -109,6 +150,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `counts` 时应保持 `DirectorySnapshotVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `counts`, preserve `DirectorySnapshotVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.snapshot.domain.vo.DirectorySnapshotVO.counts", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.counts")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    plainRead = @PermissionGroup(codes = {"system:directory-snapshot:read"}))
             @Schema(type = "object",
                     additionalProperties = Schema.AdditionalPropertiesValue.TRUE)
             Map<String, Object> counts

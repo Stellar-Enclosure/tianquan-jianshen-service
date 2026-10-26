@@ -1,12 +1,28 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.controller;
 
+import top.egon.cola.platform.tianquan.jianshen.starter.field.PermissionFieldBindingGuard;
+import top.egon.cola.platform.tianquan.jianshen.starter.field.SubmittedFieldSet;
+import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.vo.RuleReferenceVO;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.PositiveOrZero;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import jakarta.validation.Validator;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.bind.annotation.RequestParam;
+import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.domain.convertor.PermissionCatalogJson;
+import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
+import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,8 +39,6 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domai
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.dto.CardinalityRequestDTO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.dto.DataRuleCommandDTO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.dto.DataRuleRequestDTO;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.dto.FieldRuleCommandDTO;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.dto.FieldRuleRequestDTO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.dto.OperationSodRuleCommandDTO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.dto.OperationSodRuleRequestDTO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.dto.PrerequisiteGroupCommandDTO;
@@ -41,9 +55,8 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.servi
 import top.egon.cola.platform.tianquan.jianshen.admin.shared.tenant.domain.TenantContext;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.CurrentRbac3User;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3UserDetails;
-import top.egon.cola.platform.tianquan.jianshen.starter.security.RequiresPermission;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.RequiresPermissions;
 
-import java.time.Instant;
 import java.util.List;
 
 /**
@@ -73,6 +86,8 @@ public class ConstraintController {
      * Meaning and usage: when reading, passing, or updating `facade`, preserve `ConstraintController`'s lifecycle, immutability, and thread-safety constraints.
      */
     private final ConstraintFacade facade;
+    private final PermissionCatalogJson catalogJson;
+    private final Validator validator;
 
     /**
      * 构造器 `ConstraintController` 用于创建并初始化 `ConstraintController` 实例，建立该类型后续方法所依赖的状态和不变量。
@@ -83,8 +98,14 @@ public class ConstraintController {
      *
      * @param facade 输入参数 `facade`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      */
-    public ConstraintController(ConstraintFacade facade) {
+    private final PermissionFieldBindingGuard fieldWrites;
+
+    public ConstraintController(ConstraintFacade facade, PermissionCatalogJson catalogJson, Validator validator,
+                                PermissionFieldBindingGuard fieldWrites) {
+        this.fieldWrites = java.util.Objects.requireNonNull(fieldWrites, "fieldWrites");
         this.facade = facade;
+        this.catalogJson = catalogJson;
+        this.validator = validator;
     }
 
     /**
@@ -96,8 +117,10 @@ public class ConstraintController {
      *
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Constraint.sodSets", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Constraint.sodSets")
     @GetMapping("/sod-sets")
-    @RequiresPermission(value = "system:authorization-constraint:read")
+    @RequiresPermissions(codes = "system:authorization-constraint:read")
     @Operation(
             operationId = "tianquan-jianshen-sod-set-list-v1",
             summary = "查询SSD和DSD集合",
@@ -121,8 +144,10 @@ public class ConstraintController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Constraint.createSodSet", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Constraint.createSodSet")
     @PostMapping("/sod-sets")
-    @RequiresPermission(value = "system:authorization-constraint:manage")
+    @RequiresPermissions(codes = "system:authorization-constraint:manage")
     @Operation(
             operationId = "tianquan-jianshen-sod-set-create-v1",
             summary = "创建SSD或DSD集合",
@@ -149,8 +174,10 @@ public class ConstraintController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Constraint.updateSodSet", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Constraint.updateSodSet")
     @PutMapping("/sod-sets/{setId}")
-    @RequiresPermission(value = "system:authorization-constraint:manage")
+    @RequiresPermissions(codes = "system:authorization-constraint:manage")
     @Operation(
             operationId = "tianquan-jianshen-sod-set-update-v1",
             summary = "更新SSD或DSD集合",
@@ -178,8 +205,10 @@ public class ConstraintController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Constraint.prerequisites", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Constraint.prerequisites")
     @PostMapping("/roles/{roleId}/prerequisite-groups")
-    @RequiresPermission(value = "system:authorization-constraint:manage")
+    @RequiresPermissions(codes = "system:authorization-constraint:manage")
     @Operation(
             operationId = "tianquan-jianshen-role-prerequisite-save-v1",
             summary = "替换角色前置条件组",
@@ -215,8 +244,10 @@ public class ConstraintController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Constraint.cardinality", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Constraint.cardinality")
     @PutMapping("/roles/{roleId}/cardinality")
-    @RequiresPermission(value = "system:authorization-constraint:manage")
+    @RequiresPermissions(codes = "system:authorization-constraint:manage")
     @Operation(
             operationId = "tianquan-jianshen-role-cardinality-save-v1",
             summary = "配置角色容量",
@@ -250,8 +281,10 @@ public class ConstraintController {
      *
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Constraint.dataRules", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Constraint.dataRules")
     @GetMapping("/data-rules")
-    @RequiresPermission(value = "system:data-rule:read")
+    @RequiresPermissions(codes = "system:data-rule:read")
     @Operation(
             operationId = "tianquan-jianshen-data-rule-list-v1",
             summary = "查询数据规则",
@@ -260,8 +293,14 @@ public class ConstraintController {
     @EgonGatewayPolicy(
             exposure = EgonGatewayPolicy.Exposure.EXTERNAL
     )
-    public ResultRecord<List<DataRuleVO>> dataRules() {
-        return ResultRecord.success(facade.dataRules(tenantId()));
+    public ResultRecord<List<DataRuleVO>> dataRules(@RequestParam MultiValueMap<String, String> query) {
+        var actor = new CurrentRbac3User().require();
+        Map<String, Object> target = new LinkedHashMap<>();
+        query.forEach((key, values) -> {
+            if (values.size() != 1) throw new Rbac3RuleViolation("REQUEST_INVALID");
+            target.put(key, values.getFirst());
+        });
+        return ResultRecord.success(facade.dataRules(catalogJson.scope(target), actor));
     }
 
     /**
@@ -275,8 +314,10 @@ public class ConstraintController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
-    @PostMapping("/data-rules")
-    @RequiresPermission(value = "system:data-rule:manage")
+    @PermissionResource(key = "tianquan-jianshen.api.Constraint.createDataRule", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Constraint.createDataRule")
+    @PostMapping(path = "/data-rules", consumes = "application/json")
+    @RequiresPermissions(codes = "system:data-rule:manage")
     @Operation(
             operationId = "tianquan-jianshen-data-rule-create-v1",
             summary = "创建类型化数据规则",
@@ -285,11 +326,9 @@ public class ConstraintController {
     @EgonGatewayPolicy(
             exposure = EgonGatewayPolicy.Exposure.EXTERNAL
     )
-    public ResultRecord<MutationResultVO> createDataRule(
-            @Valid @RequestBody DataRuleRequestDTO request
-) {
-        return ResultRecord.success(facade.saveDataRule(
-                dataRuleCommand(null, request , new CurrentRbac3User().require())));
+    public ResultRecord<MutationResultVO> createDataRule(HttpServletRequest request) {
+        var actor = new CurrentRbac3User().require();
+        return ResultRecord.success(facade.saveDataRule(dataRuleCommand(null, dataRuleRequest(request), actor)));
     }
 
     /**
@@ -304,8 +343,10 @@ public class ConstraintController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
-    @PutMapping("/data-rules/{ruleId}")
-    @RequiresPermission(value = "system:data-rule:manage")
+    @PermissionResource(key = "tianquan-jianshen.api.Constraint.updateDataRule", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Constraint.updateDataRule")
+    @PutMapping(path = "/data-rules/{ruleId}", consumes = "application/json")
+    @RequiresPermissions(codes = "system:data-rule:manage")
     @Operation(
             operationId = "tianquan-jianshen-data-rule-update-v1",
             summary = "更新类型化数据规则",
@@ -314,12 +355,9 @@ public class ConstraintController {
     @EgonGatewayPolicy(
             exposure = EgonGatewayPolicy.Exposure.EXTERNAL
     )
-    public ResultRecord<MutationResultVO> updateDataRule(
-            @PathVariable String ruleId,
-            @Valid @RequestBody DataRuleRequestDTO request
-) {
-        return ResultRecord.success(facade.saveDataRule(
-                dataRuleCommand(ruleId, request , new CurrentRbac3User().require())));
+    public ResultRecord<MutationResultVO> updateDataRule(@PathVariable String ruleId, HttpServletRequest request) {
+        var actor = new CurrentRbac3User().require();
+        return ResultRecord.success(facade.saveDataRule(dataRuleCommand(ruleId, dataRuleRequest(request), actor)));
     }
 
     /**
@@ -331,8 +369,10 @@ public class ConstraintController {
      *
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Constraint.fieldRules", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Constraint.fieldRules")
     @GetMapping("/field-rules")
-    @RequiresPermission(value = "system:field-rule:read")
+    @RequiresPermissions(codes = "system:field-rule:read")
     @Operation(
             operationId = "tianquan-jianshen-field-rule-list-v1",
             summary = "查询字段规则",
@@ -346,64 +386,6 @@ public class ConstraintController {
     }
 
     /**
-     * 方法 `createFieldRule` 按照 `ConstraintController` 的职责处理输入，完成 `create Field Rule` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。
-     * Method `createFieldRule` processes its inputs according to `ConstraintController`'s responsibility, performs the `create Field Rule` operation, and returns a result or declared side effect; callers must follow its parameter and exception contract.
-     *
-     * 用法：调用 `createFieldRule` 前准备符合契约的参数，并根据返回值、异常或副作用继续业务流程。
-     * Usage: provide contract-compliant arguments before calling `createFieldRule`, then continue the business flow using its result, exception, or side effect.
-     *
-     * @param request 输入参数 `request`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
-     */
-    @PostMapping("/field-rules")
-    @RequiresPermission(value = "system:field-rule:manage")
-    @Operation(
-            operationId = "tianquan-jianshen-field-rule-create-v1",
-            summary = "创建字段访问规则",
-            tags = {"tianquan-jianshen", "field-rule"}
-    )
-    @EgonGatewayPolicy(
-            exposure = EgonGatewayPolicy.Exposure.EXTERNAL
-    )
-    public ResultRecord<MutationResultVO> createFieldRule(
-            @Valid @RequestBody FieldRuleRequestDTO request
-) {
-        return ResultRecord.success(facade.saveFieldRule(
-                fieldRuleCommand(null, request , new CurrentRbac3User().require())));
-    }
-
-    /**
-     * 方法 `updateFieldRule` 按照 `ConstraintController` 的职责处理输入，完成 `update Field Rule` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。
-     * Method `updateFieldRule` processes its inputs according to `ConstraintController`'s responsibility, performs the `update Field Rule` operation, and returns a result or declared side effect; callers must follow its parameter and exception contract.
-     *
-     * 用法：调用 `updateFieldRule` 前准备符合契约的参数，并根据返回值、异常或副作用继续业务流程。
-     * Usage: provide contract-compliant arguments before calling `updateFieldRule`, then continue the business flow using its result, exception, or side effect.
-     *
-     * @param ruleId 输入参数 `ruleId`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param request 输入参数 `request`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
-     */
-    @PutMapping("/field-rules/{ruleId}")
-    @RequiresPermission(value = "system:field-rule:manage")
-    @Operation(
-            operationId = "tianquan-jianshen-field-rule-update-v1",
-            summary = "更新字段访问规则",
-            tags = {"tianquan-jianshen", "field-rule"}
-    )
-    @EgonGatewayPolicy(
-            exposure = EgonGatewayPolicy.Exposure.EXTERNAL
-    )
-    public ResultRecord<MutationResultVO> updateFieldRule(
-            @PathVariable String ruleId,
-            @Valid @RequestBody FieldRuleRequestDTO request
-) {
-        return ResultRecord.success(facade.saveFieldRule(
-                fieldRuleCommand(ruleId, request , new CurrentRbac3User().require())));
-    }
-
-    /**
      * 方法 `operationSodRules` 按照 `ConstraintController` 的职责处理输入，完成 `operation Sod Rules` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。
      * Method `operationSodRules` processes its inputs according to `ConstraintController`'s responsibility, performs the `operation Sod Rules` operation, and returns a result or declared side effect; callers must follow its parameter and exception contract.
      *
@@ -412,8 +394,10 @@ public class ConstraintController {
      *
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Constraint.operationSodRules", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Constraint.operationSodRules")
     @GetMapping("/operation-sod-rules")
-    @RequiresPermission(value = "system:operation-sod:read")
+    @RequiresPermissions(codes = "system:operation-sod:read")
     @Operation(
             operationId = "tianquan-jianshen-operation-sod-list-v1",
             summary = "查询同对象职责分离规则",
@@ -437,8 +421,10 @@ public class ConstraintController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Constraint.createOperationSodRule", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Constraint.createOperationSodRule")
     @PostMapping("/operation-sod-rules")
-    @RequiresPermission(value = "system:operation-sod:manage")
+    @RequiresPermissions(codes = "system:operation-sod:manage")
     @Operation(
             operationId = "tianquan-jianshen-operation-sod-create-v1",
             summary = "创建同对象职责分离规则",
@@ -466,8 +452,10 @@ public class ConstraintController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Constraint.updateOperationSodRule", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Constraint.updateOperationSodRule")
     @PutMapping("/operation-sod-rules/{ruleId}")
-    @RequiresPermission(value = "system:operation-sod:manage")
+    @RequiresPermissions(codes = "system:operation-sod:manage")
     @Operation(
             operationId = "tianquan-jianshen-operation-sod-update-v1",
             summary = "更新同对象职责分离规则",
@@ -507,6 +495,33 @@ public class ConstraintController {
                 request.validFrom(), request.validTo(), request.expectedVersion(), new CurrentRbac3User().require().rbac3UserId());
     }
 
+    /** 数据规则使用与目录治理相同的严格 JSON 边界。 / Data rules share the strict catalog-governance JSON boundary. */
+    private DataRuleRequestDTO dataRuleRequest(HttpServletRequest request) {
+        try {
+            Map<String, Object> body = catalogJson.readObject(request.getInputStream());
+            if (!body.keySet().containsAll(Set.of("target", "applicationId", "roleId", "permissionId", "scopeType",
+                    "references", "validFrom", "expectedVersion"))) {
+                throw new Rbac3RuleViolation("REQUEST_INVALID");
+            }
+            catalogJson.scope(PermissionCatalogJson.object(body, "target"));
+            fieldWrites.require(DataRuleRequestDTO.class, new SubmittedFieldSet(body.keySet()),
+                    Set.of("target", "applicationId", "roleId", "permissionId", "scopeType", "directorySnapshotVersion",
+                            "references", "validFrom", "validTo", "expectedVersion"));
+            if (body.get("references") instanceof List<?> references) {
+                for (Object reference : references) {
+                    if (!(reference instanceof Map<?, ?> values)) throw new Rbac3RuleViolation("REQUEST_INVALID");
+                    Set<String> submitted = values.keySet().stream().map(String.class::cast).collect(java.util.stream.Collectors.toSet());
+                    fieldWrites.require(RuleReferenceVO.class, new SubmittedFieldSet(submitted), Set.of("referenceType", "referenceId"));
+                }
+            }
+            DataRuleRequestDTO command = catalogJson.read(catalogJson.write(body), DataRuleRequestDTO.class);
+            if (!validator.validate(command).isEmpty()) throw new Rbac3RuleViolation("REQUEST_INVALID");
+            return command;
+        } catch (IOException invalid) {
+            throw new IllegalArgumentException("invalid data rule JSON", invalid);
+        }
+    }
+
     /**
      * 方法 `dataRuleCommand` 按照 `ConstraintController` 的职责处理输入，完成 `data Rule Command` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。
      * Method `dataRuleCommand` processes its inputs according to `ConstraintController`'s responsibility, performs the `data Rule Command` operation, and returns a result or declared side effect; callers must follow its parameter and exception contract.
@@ -524,32 +539,9 @@ public class ConstraintController {
             DataRuleRequestDTO request,
             Rbac3UserDetails principal) {
         return new DataRuleCommandDTO(
-                tenantId(), ruleId, request.applicationId(), request.roleId(),
+                request.target(), principal.tenantId(), ruleId, request.applicationId(), request.roleId(),
                 request.permissionId(), request.scopeType(), request.directorySnapshotVersion(),
-                request.references(), request.validFrom(), request.validTo(),
-                request.expectedVersion(), new CurrentRbac3User().require().rbac3UserId());
-    }
-
-    /**
-     * 方法 `fieldRuleCommand` 按照 `ConstraintController` 的职责处理输入，完成 `field Rule Command` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。
-     * Method `fieldRuleCommand` processes its inputs according to `ConstraintController`'s responsibility, performs the `field Rule Command` operation, and returns a result or declared side effect; callers must follow its parameter and exception contract.
-     *
-     * 用法：调用 `fieldRuleCommand` 前准备符合契约的参数，并根据返回值、异常或副作用继续业务流程。
-     * Usage: provide contract-compliant arguments before calling `fieldRuleCommand`, then continue the business flow using its result, exception, or side effect.
-     *
-     * @param ruleId 输入参数 `ruleId`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param request 输入参数 `request`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
-     */
-    private static FieldRuleCommandDTO fieldRuleCommand(
-            String ruleId,
-            FieldRuleRequestDTO request,
-            Rbac3UserDetails principal) {
-        return new FieldRuleCommandDTO(
-                tenantId(), ruleId, request.applicationId(), request.roleId(),
-                request.permissionId(), request.fieldDefinitionId(), request.accessLevel(),
-                request.validFrom(), request.validTo(), request.expectedVersion(), new CurrentRbac3User().require().rbac3UserId());
+                request.references(), request.validFrom(), request.validTo(), request.expectedVersion(), principal);
     }
 
     /**

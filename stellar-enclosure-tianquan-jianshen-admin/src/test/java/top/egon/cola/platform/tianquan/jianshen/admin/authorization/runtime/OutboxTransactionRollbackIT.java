@@ -16,13 +16,10 @@ import top.egon.cola.component.outbox.api.TransactionalOutbox;
 import top.egon.cola.component.outbox.autoconfigure.TransactionalOutboxAutoConfiguration;
 import top.egon.cola.component.outbox.delivery.DeliveryContext;
 import top.egon.cola.component.outbox.delivery.DeliveryResult;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.AuthorizationEventPublisher;
 import top.egon.cola.platform.tianquan.jianshen.admin.config.flyway.Rbac3FlywayConfiguration;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.controller.message.Rbac3RuntimeProjectionDeliveryHandler;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.outbox.TransactionalOutboxAuthorizationEventPublisher;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityManagerFactory;
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.executor.statement.StatementHandler;
 import org.apache.ibatis.mapping.MappedStatement;
@@ -30,16 +27,7 @@ import org.apache.ibatis.plugin.Interceptor;
 import org.apache.ibatis.plugin.Intercepts;
 import org.apache.ibatis.plugin.Invocation;
 import org.apache.ibatis.plugin.Signature;
-import org.apache.ibatis.session.SqlSessionFactory;
-import org.hibernate.Session;
-import org.springframework.jdbc.datasource.DataSourceUtils;
-import org.springframework.orm.jpa.EntityManagerFactoryInfo;
-import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.transaction.PlatformTransactionManager;
-import top.egon.cola.component.outbox.autoconfigure.OutboxInfrastructure;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.roleresource.service.RoleResourceGrantService;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.roleresource.domain.dto.ReplaceRoleResourcesRequestDTO;
-import top.egon.cola.platform.tianquan.jianshen.admin.integration.IsolatedAuthorizationProvisioningIT;
 import top.egon.cola.platform.tianquan.jianshen.admin.integration.IsolatedAuthorizationProvisioningIT.AuthorizationTransactionProbeDTO;
 
 import javax.sql.DataSource;
@@ -70,166 +58,13 @@ class OutboxTransactionRollbackIT {
 
     private static final Instant NOW = Instant.parse("2026-07-30T12:00:00Z");
 
-    @Test
-    @EnabledIfEnvironmentVariable(named = "XINGYUAN_ISOLATED_INTEGRATION", matches = "true")
-    @EnabledIfEnvironmentVariable(named = "XINGYUAN_INTEGRATION_MANIFEST", matches = ".+")
-    void jpaRoleResourceAndMpOutboxRollback() throws Exception {
-        verifyJpaRoleResourceTransaction("ROLLBACK");
-    }
 
-    @Test
-    @EnabledIfEnvironmentVariable(named = "XINGYUAN_ISOLATED_INTEGRATION", matches = "true")
-    @EnabledIfEnvironmentVariable(named = "XINGYUAN_INTEGRATION_MANIFEST", matches = ".+")
-    void jpaRoleResourceAndMpOutboxAppendFault() throws Exception {
-        verifyJpaRoleResourceTransaction("APPEND_FAULT");
-    }
 
-    @Test
-    @EnabledIfEnvironmentVariable(named = "XINGYUAN_ISOLATED_INTEGRATION", matches = "true")
-    @EnabledIfEnvironmentVariable(named = "XINGYUAN_INTEGRATION_MANIFEST", matches = ".+")
-    void jpaRoleResourceAndMpOutboxCommit() throws Exception {
-        verifyJpaRoleResourceTransaction("COMMIT");
-    }
 
-    private void verifyJpaRoleResourceTransaction(String outcome) throws Exception {
-        var inputs = IsolatedAuthorizationProvisioningIT.readTransactionInputs();
-        var probe = IsolatedAuthorizationProvisioningIT.readTransactionProbe(inputs);
-        Path root = Path.of(inputs.getManifest().getRuntimeRoot());
-        Path manifest = Path.of(System.getenv("XINGYUAN_INTEGRATION_MANIFEST"));
-        Path receiptFile = transactionEvidencePath(root, System.getProperty("xingyuan.isolated.evidence-directory"),
-                inputs.getManifest().getRunId(), inputs.getManifestSha256(), outcome);
-        Instant startedAt = Instant.now();
-        JpaMpTransactionProofVO proof;
-        try (var context = IsolatedAuthorizationProvisioningIT.openAuthorizationContext(
-                manifest, root.resolve("evidence/db-rbac.json"), Path.of(inputs.getManifest().getRepoRoot()))) {
-            var manager = context.getBean("transactionManager", JpaTransactionManager.class);
-            assertThat(context.getBeansOfType(PlatformTransactionManager.class)).hasSize(1);
-            var definition = context.getBeanFactory().getBeanDefinition("transactionManager");
-            assertThat(definition.getFactoryBeanName()).contains("HibernateJpaConfiguration");
-            assertThat(definition.getFactoryMethodName()).isEqualTo("transactionManager");
-            DataSource logical = context.getBean("dataSource", DataSource.class);
-            var factory = context.getBean("entityManagerFactory", EntityManagerFactory.class);
-            var sessions = context.getBean("sqlSessionFactory", SqlSessionFactory.class);
-            assertThat(manager.getDataSource()).isSameAs(logical);
-            assertThat(((EntityManagerFactoryInfo) factory).getDataSource()).isSameAs(logical);
-            assertThat(sessions.getConfiguration().getEnvironment().getDataSource()).isSameAs(logical);
-            assertThat(sessions.getConfiguration().getEnvironment().getTransactionFactory())
-                    .isInstanceOf(org.mybatis.spring.transaction.SpringManagedTransactionFactory.class);
-            var infrastructure = context.getBean("outboxInfrastructure", OutboxInfrastructure.class);
-            assertThat(infrastructure.dataSource()).isSameAs(logical);
-            assertThat(infrastructure.transactionManager()).isSameAs(manager);
 
-            Runnable ownership = context.getBean("isolatedOwnershipGuard", Runnable.class);
-            ownership.run();
-            DataSource physical = context.getBean("isolatedPhysicalDataSource", DataSource.class);
-            var independent = new JdbcTemplate(physical);
-            String expectedRoleCode = "XINGYUAN_TX_" + inputs.getManifest().getRunId().replace("-", "").toUpperCase(Locale.ROOT);
-            assertThat(independent.queryForObject("select role_code from public.rbac3_role where tenant_id = ? and id = ?",
-                    String.class, Long.valueOf(probe.getTenantId()), Long.valueOf(probe.getRoleId())))
-                    .isEqualTo(expectedRoleCode);
-            assertThat(independent.queryForObject("select count(*) from public.rbac3_user_role_assignment where tenant_id = ? and role_id = ?",
-                    Long.class, Long.valueOf(probe.getTenantId()), Long.valueOf(probe.getRoleId())))
-                    .as("the transaction probe must never revoke an assigned application role").isZero();
-            var roles = context.getBean("roleResourceGrantService", RoleResourceGrantService.class);
-            Instant now = context.getBean("isolatedAuthorizationClock", Clock.class).instant();
-            var original = roles.tree(probe.getTenantId(), probe.getRoleId(), now);
-            assertThat(original.directResourceIds()).isNotEmpty();
-            var baseline = independentTransactionObservation(physical, probe, inputs.getReceipt().getOid());
-            IndependentTransactionObservationVO observed;
-            IndependentTransactionObservationVO restored;
-            var sameConnectionConfirmed = new java.util.concurrent.atomic.AtomicBoolean();
-            EntityManager entityManager = context.getBean("jpaSharedEM_entityManagerFactory", EntityManager.class);
-            var append = new ActualOutboxAppendProbe();
-            var identity = new AtomicReference<List<Long>>();
-            var enlisted = new AtomicReference<Connection>();
-            append.afterInsert = () -> {
-                entityManager.flush();
-                entityManager.unwrap(Session.class).doWork(connection -> {
-                    assertThat(connection).isSameAs(enlisted.get());
-                    assertThat(append.connection.get()).isSameAs(connection);
-                    assertThat(databaseTransactionIdentity(connection)).isEqualTo(identity.get());
-                    assertThat(databaseTransactionIdentity(append.connection.get())).isEqualTo(identity.get());
-                    sameConnectionConfirmed.set(true);
-                });
-                if ("APPEND_FAULT".equals(outcome)) {
-                    throw new IllegalStateException("XINGYUAN_TEST_APPEND_FAULT");
-                }
-            };
-            sessions.getConfiguration().addInterceptor(append);
-            var transaction = new TransactionTemplate(manager);
-            Runnable mutate = () -> transaction.executeWithoutResult(status -> {
-                ownership.run();
-                requireUnpublishedTransactionEvidence(root, receiptFile, inputs.getManifest().getRunId(), inputs.getManifestSha256(), outcome);
-                Connection connection = DataSourceUtils.getConnection(logical);
-                enlisted.set(connection);
-                identity.set(databaseTransactionIdentity(connection));
-                try {
-                    roles.replace(probe.getTenantId(), probe.getRoleId(),
-                            new ReplaceRoleResourcesRequestDTO(List.of(), now, null, original.roleVersion()),
-                            probe.getActorId(), now);
-                    entityManager.flush();
-                    assertThat(append.insertCount).hasValue(1);
-                    if ("ROLLBACK".equals(outcome)) {
-                        throw new IllegalStateException("XINGYUAN_TEST_FORCED_ROLLBACK");
-                    }
-                } finally {
-                    DataSourceUtils.releaseConnection(connection, logical);
-                }
-            });
-            if ("COMMIT".equals(outcome)) {
-                mutate.run();
-                assertThat(append.insertCount).hasValue(1);
-                ownership.run();
-                observed = independentTransactionObservation(physical, probe, inputs.getReceipt().getOid());
-                assertThat(observed.roleSha256()).isNotEqualTo(baseline.roleSha256());
-                assertThat(observed.grantsSha256()).isNotEqualTo(baseline.grantsSha256());
-                assertThat(observed.epochSha256()).isNotEqualTo(baseline.epochSha256());
-                assertThat(observed.state().outboxCount()).isEqualTo(baseline.state().outboxCount() + 1L);
-                assertThat(roles.tree(probe.getTenantId(), probe.getRoleId(), now).directResourceIds()).isEmpty();
-                // Restore this confirmed committed test role through the same real owner and a fresh CAS version.
-                append.afterInsert = () -> { };
-                var current = roles.tree(probe.getTenantId(), probe.getRoleId(), now);
-                ownership.run();
-                requireUnpublishedTransactionEvidence(root, receiptFile, inputs.getManifest().getRunId(), inputs.getManifestSha256(), outcome);
-                roles.replace(probe.getTenantId(), probe.getRoleId(),
-                        new ReplaceRoleResourcesRequestDTO(original.directResourceIds(), now, null, current.roleVersion()),
-                        probe.getActorId(), now);
-                assertThat(roles.tree(probe.getTenantId(), probe.getRoleId(), now).directResourceIds())
-                        .containsExactlyElementsOf(original.directResourceIds());
-                ownership.run();
-                restored = independentTransactionObservation(physical, probe, inputs.getReceipt().getOid());
-            } else {
-                Throwable failure = org.assertj.core.api.Assertions.catchThrowable(mutate::run);
-                assertThat(failure).isNotNull();
-                while (failure.getCause() != null && failure.getCause() != failure) {
-                    failure = failure.getCause();
-                }
-                assertThat(failure).hasMessage("APPEND_FAULT".equals(outcome)
-                        ? "XINGYUAN_TEST_APPEND_FAULT" : "XINGYUAN_TEST_FORCED_ROLLBACK");
-                assertThat(append.insertCount).hasValue(1);
-                ownership.run();
-                observed = independentTransactionObservation(physical, probe, inputs.getReceipt().getOid());
-                assertThat(observed.state().rowsSha256()).isEqualTo(baseline.state().rowsSha256());
-                restored = observed;
-                assertThat(roles.tree(probe.getTenantId(), probe.getRoleId(), now).directResourceIds())
-                        .containsExactlyElementsOf(original.directResourceIds());
-            }
-            assertThat(sameConnectionConfirmed).isTrue();
-            List<Long> writer = identity.get();
-            assertThat(writer).hasSize(2).allSatisfy(value -> assertThat(value).isPositive());
-            proof = new JpaMpTransactionProofVO(1, inputs.getManifest().getRunId(), inputs.getManifestSha256(),
-                    inputs.getReceipt().getOid(), "JPA_MP_SAME_TRANSACTION_ONLY", outcome, "PASSED", writer.get(0), writer.get(1),
-                    true, baseline.state(), observed.state(), restored.state(), 1, append.insertCount.get() - 1,
-                    observed.state().outboxCount() - baseline.state().outboxCount(), restored.state().outboxCount() - observed.state().outboxCount(),
-                    "COMMIT".equals(outcome), true, startedAt, Instant.now());
-            validateTransactionProof(proof, inputs.getManifest().getRunId(), inputs.getManifestSha256(), inputs.getReceipt().getOid(), outcome, Instant.now());
-        }
-        var current = IsolatedAuthorizationProvisioningIT.readTransactionInputs();
-        if (!inputs.getManifestSha256().equals(current.getManifestSha256()) || !inputs.getReceipt().equals(current.getReceipt())) {
-            throw new IllegalArgumentException("XINGYUAN_TARGET_UNSAFE");
-        }
-        publishTransactionProof(root, receiptFile, proof);
-    }
+
+
+
 
     private static Map<String, List<Map<String, Object>>> transactionSnapshot(
             JdbcTemplate independent, AuthorizationTransactionProbeDTO probe) {

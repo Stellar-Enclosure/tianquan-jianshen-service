@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
@@ -21,17 +27,29 @@ import java.util.Objects;
  *
  * 含义与用法：读取、传递或更新 `resourceId` 时应保持 `ArchiveResultVO` 的生命周期、不可变性和线程安全约束。
  * Meaning and usage: when reading, passing, or updating `resourceId`, preserve `ArchiveResultVO`'s lifecycle, immutability, and thread-safety constraints.
- */ String resourceId, /**
+ */ @PermissionResource(key = "tianquan-jianshen.field.authorization.resource.domain.vo.ArchiveResultVO.resourceId", type = ResourceType.FIELD,
+                labelPage = "tianquan-jianshen.permissions", labelKey = "field.resourceId")
+        @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                plainRead = @PermissionGroup(codes = {"system:resource:archive"}))
+        String resourceId, /**
  * 字段 `status` 表示 `ArchiveResultVO` 中与 `status` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
  * Field `status` stores the `status`-related state, dependency, configuration, or result of `ArchiveResultVO` (declared type `String`); its lifecycle and value semantics are defined by its declared type and owning object.
  *
  * 含义与用法：读取、传递或更新 `status` 时应保持 `ArchiveResultVO` 的生命周期、不可变性和线程安全约束。
  * Meaning and usage: when reading, passing, or updating `status`, preserve `ArchiveResultVO`'s lifecycle, immutability, and thread-safety constraints.
- */ String status, /**
+ */ @PermissionResource(key = "tianquan-jianshen.field.authorization.resource.domain.vo.ArchiveResultVO.status", type = ResourceType.FIELD,
+                labelPage = "tianquan-jianshen.permissions", labelKey = "field.status")
+        @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                plainRead = @PermissionGroup(codes = {"system:resource:archive"}))
+        String status, /**
  * 字段 `policyVersion` 表示 `ArchiveResultVO` 中与 `policy Version` 相关的状态、依赖、配置或结果（声明类型 `long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
  * Field `policyVersion` stores the `policy Version`-related state, dependency, configuration, or result of `ArchiveResultVO` (declared type `long`); its lifecycle and value semantics are defined by its declared type and owning object.
  *
  * 含义与用法：读取、传递或更新 `policyVersion` 时应保持 `ArchiveResultVO` 的生命周期、不可变性和线程安全约束。
  * Meaning and usage: when reading, passing, or updating `policyVersion`, preserve `ArchiveResultVO`'s lifecycle, immutability, and thread-safety constraints.
- */ long policyVersion) {
+ */ @PermissionResource(key = "tianquan-jianshen.field.authorization.resource.domain.vo.ArchiveResultVO.policyVersion", type = ResourceType.FIELD,
+                labelPage = "tianquan-jianshen.permissions", labelKey = "field.policyVersion")
+        @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                plainRead = @PermissionGroup(codes = {"system:resource:archive"}))
+        long policyVersion) {
     }

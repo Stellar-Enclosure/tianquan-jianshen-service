@@ -1,8 +1,6 @@
 package top.egon.cola.platform.tianquan.jianshen.yuheng.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import reactor.core.publisher.Mono;
 import top.egon.cola.component.yuheng.contract.protocol.AccessZone;
 import top.egon.cola.component.yuheng.contract.protocol.GatewayProtocol;
@@ -20,7 +18,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class GatewayFailClosedSecurityMatrixTest {
 
     private static final Instant NOW = Instant.parse("2026-07-30T08:00:00Z");
-    @TempDir java.nio.file.Path temporary;
 
     @Test
     void scopeRuntimeFailuresNeverBecomeAuthorizationAllow() {
@@ -58,27 +55,24 @@ class GatewayFailClosedSecurityMatrixTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void mandatoryScopeAndFineDenialsShareOneRealStrictProducerResult() throws Exception {
         var validator = new org.springframework.validation.beanvalidation.LocalValidatorFactoryBean(); validator.afterPropertiesSet();
-        var redis = org.mockito.Mockito.mock(org.redisson.api.RedissonClient.class);
-        org.redisson.api.RStream<String, String> stream = org.mockito.Mockito.mock(org.redisson.api.RStream.class);
-        org.mockito.Mockito.doReturn(stream).when(redis).getStream(org.mockito.ArgumentMatchers.eq("egon:oauth:audit:v1"),
-                org.mockito.ArgumentMatchers.eq(org.redisson.client.codec.StringCodec.INSTANCE));
-        org.mockito.Mockito.when(stream.add(org.mockito.ArgumentMatchers.any(org.redisson.api.stream.StreamAddArgs.class)))
-                .thenReturn(new org.redisson.api.stream.StreamMessageId(1, 1));
-        var key = temporary.resolve("audit.key"); java.nio.file.Files.writeString(key, "0123456789abcdef0123456789abcdef");
-        java.nio.file.Files.setPosixFilePermissions(key, Set.of(java.nio.file.attribute.PosixFilePermission.OWNER_READ, java.nio.file.attribute.PosixFilePermission.OWNER_WRITE));
+        var authority = org.mockito.Mockito.mock(top.egon.cola.platform.tianquan.shoubing.starter.state.IdentityAuthorityClient.class);
+        org.mockito.Mockito.when(authority.appendAudit(org.mockito.ArgumentMatchers.any())).thenAnswer(call -> {
+            top.egon.cola.platform.tianquan.shoubing.core.audit.TokenUsageAuditEvent event = call.getArgument(0);
+            return new top.egon.cola.platform.tianquan.shoubing.contract.state.IdentityAuditReceipt(
+                    "00000000-0000-0000-0000-000000000001", event.eventId(),
+                    top.egon.cola.platform.tianquan.shoubing.core.audit.TokenUsageAuditFingerprint.of(event),
+                    event.issuer().toASCIIString(), "reviewed-gateway", event.resource(), "STORED", NOW);
+        });
         var issuer = java.net.URI.create("https://idp.example/tenants/1001"); var resource = java.net.URI.create("https://api.example/payments");
-        var producer = new top.egon.cola.platform.tianquan.shoubing.starter.audit.TokenUsageAuditComponent(redis,
-                new ObjectMapper().findAndRegisterModules(), new top.egon.cola.platform.tianquan.shoubing.starter.audit.OAuthAuditProperties(
-                        "egon:oauth:audit:v1", temporary.resolve("spool"), 1_048_576, key),
-                new top.egon.cola.platform.tianquan.shoubing.starter.audit.AuditDeliveryProperties(), java.time.Clock.fixed(NOW, java.time.ZoneOffset.UTC), validator);
+        top.egon.cola.platform.tianquan.shoubing.core.observability.IdpSecurityMetricsRecorder metrics = sample -> { };
+        var producer = new top.egon.cola.platform.tianquan.shoubing.starter.audit.TokenUsageAuditComponent(verifiedIssuer -> authority,
+                java.time.Clock.fixed(NOW, java.time.ZoneOffset.UTC), validator, metrics);
         var converter = (top.egon.cola.platform.tianquan.shoubing.starter.security.domain.converter.TokenUsageAuditEventConverter)
                 Class.forName("top.egon.cola.platform.tianquan.shoubing.starter.security.domain.converter.TokenUsageAuditEventConverterImpl").getConstructor().newInstance();
         var usage = new top.egon.cola.platform.tianquan.shoubing.starter.audit.OAuthUsageObservationProperties(true, issuer, false,
                 top.egon.cola.platform.tianquan.shoubing.starter.observability.IdpSecurityObservationReceiverEnum.BIZ);
-        top.egon.cola.platform.tianquan.shoubing.core.observability.IdpSecurityMetricsRecorder metrics = sample -> { };
         var observations = new top.egon.cola.platform.tianquan.shoubing.starter.security.IdpObservedVerificationComponent(producer, converter,
                 usage, metrics, java.time.Clock.fixed(NOW, java.time.ZoneOffset.UTC), validator, resource);
         var proof = new top.egon.cola.platform.tianquan.shoubing.starter.security.domain.TokenAuditProofBO(issuer, resource, "a".repeat(64), null, "b".repeat(64));
@@ -95,19 +89,19 @@ class GatewayFailClosedSecurityMatrixTest {
             var decisions = Mono.from(scope.authorize(scoped)).flatMap(first -> Mono.from(fine.authorize(scoped)).map(second -> List.of(first, second)))
                     .contextWrite(context -> context.put(GatewayAuthContext.class, owner)).block();
             assertEquals(SecurityDecision.DENY, decisions.get(0).decision()); assertEquals(SecurityDecision.DENY, decisions.get(1).decision());
-            org.mockito.Mockito.verify(stream, org.mockito.Mockito.times(1)).add(org.mockito.ArgumentMatchers.any(org.redisson.api.stream.StreamAddArgs.class));
+            org.mockito.Mockito.verify(authority, org.mockito.Mockito.times(1)).appendAudit(org.mockito.ArgumentMatchers.any());
             var marker = (top.egon.cola.platform.tianquan.shoubing.starter.security.domain.IdpAuthorizationObservationContextBO)
                     states.get(top.egon.cola.platform.tianquan.shoubing.starter.security.domain.IdpAuthorizationObservationContextBO.class).getKey();
             org.junit.jupiter.api.Assertions.assertTrue(marker.isConfirmed());
             states.values().forEach(entry -> entry.getValue().run());
             org.junit.jupiter.api.Assertions.assertFalse(marker.isActive());
             states.clear();
-            org.mockito.Mockito.when(stream.add(org.mockito.ArgumentMatchers.any(org.redisson.api.stream.StreamAddArgs.class)))
-                    .thenThrow(new org.redisson.client.RedisException("controlled broker outage"));
+            org.mockito.Mockito.doThrow(new IllegalStateException("controlled identity SQL authority outage"))
+                    .when(authority).appendAudit(org.mockito.ArgumentMatchers.any());
             var failed = Mono.from(scope.authorize(scoped)).flatMap(first -> Mono.from(fine.authorize(scoped)).map(second -> List.of(first, second)))
                     .contextWrite(context -> context.put(GatewayAuthContext.class, owner)).block();
             assertEquals(SecurityDecision.ERROR, failed.get(0).decision()); assertEquals(SecurityDecision.ERROR, failed.get(1).decision());
-            org.mockito.Mockito.verify(stream, org.mockito.Mockito.times(2)).add(org.mockito.ArgumentMatchers.any(org.redisson.api.stream.StreamAddArgs.class));
+            org.mockito.Mockito.verify(authority, org.mockito.Mockito.times(2)).appendAudit(org.mockito.ArgumentMatchers.any());
         } finally { states.values().forEach(entry -> entry.getValue().run()); validator.close(); }
     }
 

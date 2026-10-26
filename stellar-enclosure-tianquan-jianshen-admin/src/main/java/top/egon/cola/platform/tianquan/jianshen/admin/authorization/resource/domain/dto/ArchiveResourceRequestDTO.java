@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.domain.dto;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.PositiveOrZero;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -26,5 +32,9 @@ import java.util.List;
  *
  * 含义与用法：读取、传递或更新 `expectedVersion` 时应保持 `ArchiveResourceRequestDTO` 的生命周期、不可变性和线程安全约束。
  * Meaning and usage: when reading, passing, or updating `expectedVersion`, preserve `ArchiveResourceRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
- */ @PositiveOrZero long expectedVersion) {
+ */ @PermissionResource(key = "tianquan-jianshen.field.authorization.resource.domain.dto.ArchiveResourceRequestDTO.expectedVersion", type = ResourceType.FIELD,
+                labelPage = "tianquan-jianshen.permissions", labelKey = "field.expectedVersion")
+        @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                write = @PermissionGroup(codes = {"system:resource:archive"}))
+        @PositiveOrZero long expectedVersion) {
     }

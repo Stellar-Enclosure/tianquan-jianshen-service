@@ -1,6 +1,9 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.dto;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.CatalogScope;
+
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
+import top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3UserDetails;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -24,9 +27,11 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domai
      * @param validFrom 记录组件 `validFrom` 表示构造该记录时传入的业务数据，其取值含义由所属记录的契约定义；record component `validFrom` carries constructor data whose meaning is defined by the record contract.
      * @param validTo 记录组件 `validTo` 表示构造该记录时传入的业务数据，其取值含义由所属记录的契约定义；record component `validTo` carries constructor data whose meaning is defined by the record contract.
      * @param expectedVersion 记录组件 `expectedVersion` 表示构造该记录时传入的业务数据，其取值含义由所属记录的契约定义；record component `expectedVersion` carries constructor data whose meaning is defined by the record contract.
-     * @param actorId 记录组件 `actorId` 表示构造该记录时传入的业务数据，其取值含义由所属记录的契约定义；record component `actorId` carries constructor data whose meaning is defined by the record contract.
+     * @param actor 已认证 USER 身份，审计操作者从该身份派生；verified USER identity used to derive the audit actor.
      */
     public record DataRuleCommandDTO(
+            /** 完整目录归属，不推导缺省 namespace 或 environment。 / Complete catalog identity without inferred defaults. */
+            CatalogScope target,
             /**
              * 字段 `tenantId` 表示 `DataRuleCommandDTO` 中与 `tenant Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
              * Field `tenantId` stores the `tenant Id`-related state, dependency, configuration, or result of `DataRuleCommandDTO` (declared type `String`); its lifecycle and value semantics are defined by its declared type and owning object.
@@ -115,14 +120,8 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domai
              * Meaning and usage: when reading, passing, or updating `expectedVersion`, preserve `DataRuleCommandDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
             long expectedVersion,
-            /**
-             * 字段 `actorId` 表示 `DataRuleCommandDTO` 中与 `actor Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
-             * Field `actorId` stores the `actor Id`-related state, dependency, configuration, or result of `DataRuleCommandDTO` (declared type `String`); its lifecycle and value semantics are defined by its declared type and owning object.
-             *
-             * 含义与用法：读取、传递或更新 `actorId` 时应保持 `DataRuleCommandDTO` 的生命周期、不可变性和线程安全约束。
-             * Meaning and usage: when reading, passing, or updating `actorId`, preserve `DataRuleCommandDTO`'s lifecycle, immutability, and thread-safety constraints.
-             */
-            String actorId
+            /** 已验证 USER 身份，授权与审计使用同一操作者。 / Verified USER used for authorization and auditing. */
+            Rbac3UserDetails actor
     ) {
 
         /**
@@ -143,9 +142,34 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domai
          * @param validFrom 输入参数 `validFrom`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
          * @param validTo 输入参数 `validTo`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
          * @param expectedVersion 输入参数 `expectedVersion`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-         * @param actorId 输入参数 `actorId`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
+         * @param actor 已认证 USER 身份，审计操作者由其派生；verified USER identity from which the audit actor is derived.
          */
         public DataRuleCommandDTO {
+            if (target == null || actor == null || references == null || validFrom == null || expectedVersion < 0
+                    || directorySnapshotVersion != null && directorySnapshotVersion < 0
+                    || validTo != null && !validTo.isAfter(validFrom)) {
+                throw new Rbac3RuleViolation("REQUEST_INVALID");
+            }
+            if (!target.tenantId().equals(tenantId) || !target.tenantId().equals(actor.tenantId())) {
+                throw new Rbac3RuleViolation("APPLICATION_BINDING_DENIED");
+            }
+            requireId(applicationId);
+            requireId(roleId);
+            requireId(permissionId);
+            if (ruleId != null) requireId(ruleId);
             references = List.copyOf(references);
+        }
+
+        public String actorId() {
+            return actor.rbac3UserId();
+        }
+
+        private static void requireId(String value) {
+            if (value == null || !value.matches("[1-9][0-9]{0,18}")) throw new Rbac3RuleViolation("REQUEST_INVALID");
+            try {
+                Long.parseLong(value);
+            } catch (NumberFormatException invalid) {
+                throw new Rbac3RuleViolation("REQUEST_INVALID");
+            }
         }
     }

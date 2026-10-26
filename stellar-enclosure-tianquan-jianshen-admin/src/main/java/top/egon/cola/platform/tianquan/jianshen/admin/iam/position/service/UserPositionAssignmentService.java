@@ -1,5 +1,12 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.position.service;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionMode;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import org.springframework.stereotype.Service;
@@ -152,28 +159,112 @@ public class UserPositionAssignmentService {
     }
 
     public record AssignCommand(
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.service.UserPositionAssignmentService.AssignCommand.orgUnitId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.orgUnitId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    write = @PermissionGroup(codes = {"system:user-position:manage"}))
             Long orgUnitId,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.service.UserPositionAssignmentService.AssignCommand.positionId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.positionId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    write = @PermissionGroup(codes = {"system:user-position:manage"}))
             Long positionId,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.service.UserPositionAssignmentService.AssignCommand.primaryAssignment", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.primaryAssignment")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.BOOLEAN,
+                    write = @PermissionGroup(codes = {"system:user-position:manage"}))
             boolean primaryAssignment,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.service.UserPositionAssignmentService.AssignCommand.validFrom", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.validFrom")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:user-position:manage"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant validFrom,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.service.UserPositionAssignmentService.AssignCommand.validTo", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.validTo")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:user-position:manage"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant validTo,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.service.UserPositionAssignmentService.AssignCommand.reason", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.reason")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:user-position:manage"}))
             String reason,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.service.UserPositionAssignmentService.AssignCommand.ticketNo", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.ticketNo")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:user-position:manage"}))
             String ticketNo) {
     }
 
     public record AssignmentView(
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.service.UserPositionAssignmentService.AssignmentView.assignmentId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.assignmentId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:user-position:manage", "system:user-position:read"}))
             String assignmentId,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.service.UserPositionAssignmentService.AssignmentView.userId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.userId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:user-position:manage", "system:user-position:read"}))
             String userId,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.service.UserPositionAssignmentService.AssignmentView.orgUnitId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.orgUnitId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:user-position:manage", "system:user-position:read"}))
             String orgUnitId,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.service.UserPositionAssignmentService.AssignmentView.positionId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.positionId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:user-position:manage", "system:user-position:read"}))
             String positionId,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.service.UserPositionAssignmentService.AssignmentView.primaryAssignment", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.primaryAssignment")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.BOOLEAN,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:user-position:manage", "system:user-position:read"}))
             boolean primaryAssignment,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.service.UserPositionAssignmentService.AssignmentView.status", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.status")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:user-position:manage", "system:user-position:read"}))
             String status,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.service.UserPositionAssignmentService.AssignmentView.validFrom", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.validFrom")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:user-position:manage", "system:user-position:read"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant validFrom,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.service.UserPositionAssignmentService.AssignmentView.validTo", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.validTo")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:user-position:manage", "system:user-position:read"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant validTo,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.service.UserPositionAssignmentService.AssignmentView.sourceType", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.sourceType")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:user-position:manage", "system:user-position:read"}))
             String sourceType,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.service.UserPositionAssignmentService.AssignmentView.sourceId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.sourceId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:user-position:manage", "system:user-position:read"}))
             String sourceId,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.service.UserPositionAssignmentService.AssignmentView.reason", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.reason")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:user-position:manage", "system:user-position:read"}))
             String reason,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.service.UserPositionAssignmentService.AssignmentView.ticketNo", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.ticketNo")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:user-position:manage", "system:user-position:read"}))
             String ticketNo,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.service.UserPositionAssignmentService.AssignmentView.version", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.version")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:user-position:manage", "system:user-position:read"}))
             long version) {
     }
 }

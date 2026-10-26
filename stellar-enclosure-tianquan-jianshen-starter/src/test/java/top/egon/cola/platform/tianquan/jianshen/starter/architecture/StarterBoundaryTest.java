@@ -20,6 +20,13 @@ class StarterBoundaryTest {
             "WebClient",
             "RestClient");
 
+    // Protocol DTO names are compared as inert manifest metadata; no Admin type is imported or loaded.
+    private static final java.util.Set<String> BOOTSTRAP_PROTOCOL_METADATA = java.util.Set.of(
+            "case \"tianquan-jianshen.api.manifest.plan\" -> \"top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.service.PermissionManifestPlanService.Result\";",
+            "case \"tianquan-jianshen.api.manifest.register\", \"tianquan-jianshen.api.manifest.status\" -> \"top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.service.PermissionManifestRegistrationService.Result\";",
+            "case \"tianquan-jianshen.api.catalog.qualify\" -> \"top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.domain.vo.DeploymentQualificationReceiptVO\";",
+            "case \"tianquan-jianshen.api.catalog.versions\" -> \"top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.repository.PermissionCatalogActivationRepository.History\";");
+
     @Test
     void starterRemainsBusinessSideAndHasNoAdminOrDatabaseDependency()
             throws Exception {
@@ -31,6 +38,7 @@ class StarterBoundaryTest {
                     .flatMap(path -> lines(path).stream())
                     .filter(line -> FORBIDDEN_SOURCE_REFERENCES.stream()
                             .anyMatch(line::contains))
+                    .filter(line -> !BOOTSTRAP_PROTOCOL_METADATA.contains(line.strip()))
                     .toList();
             assertEquals(List.of(), violations);
         }

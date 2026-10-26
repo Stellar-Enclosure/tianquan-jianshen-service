@@ -6,8 +6,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.business.repository.UserBusinessAccessRepository;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.ApplicationCatalogEntry;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.DdcCatalogGateway;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.domain.vo.ApplicationCatalogEntry;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.repository.DdcCatalogGateway;
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
 
 import java.time.Instant;

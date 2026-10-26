@@ -1,5 +1,12 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.dto;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.CatalogScope;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -36,6 +43,12 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domai
      * @param expectedVersion 记录组件 `expectedVersion` 表示构造该记录时传入的业务数据，其取值含义由所属记录的契约定义；record component `expectedVersion` carries constructor data whose meaning is defined by the record contract.
      */
     public record DataRuleRequestDTO(
+            /** 完整目录归属，仅作为已认证租户的断言。 / Complete catalog identity asserted against the verified tenant. */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.dto.DataRuleRequestDTO.target", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.target")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    write = @PermissionGroup(codes = {"system:data-rule:manage"}))
+            @Valid @NotNull CatalogScope target,
             /**
              * 字段 `applicationId` 表示 `DataRuleRequestDTO` 中与 `application Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
              * Field `applicationId` stores the `application Id`-related state, dependency, configuration, or result of `DataRuleRequestDTO` (declared type `String`); its lifecycle and value semantics are defined by its declared type and owning object.
@@ -43,6 +56,10 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domai
              * 含义与用法：读取、传递或更新 `applicationId` 时应保持 `DataRuleRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `applicationId`, preserve `DataRuleRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.dto.DataRuleRequestDTO.applicationId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.applicationId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:data-rule:manage"}))
             @NotBlank String applicationId,
             /**
              * 字段 `roleId` 表示 `DataRuleRequestDTO` 中与 `role Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -51,6 +68,10 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domai
              * 含义与用法：读取、传递或更新 `roleId` 时应保持 `DataRuleRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `roleId`, preserve `DataRuleRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.dto.DataRuleRequestDTO.roleId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.roleId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:data-rule:manage"}))
             @NotBlank String roleId,
             /**
              * 字段 `permissionId` 表示 `DataRuleRequestDTO` 中与 `permission Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -59,6 +80,10 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domai
              * 含义与用法：读取、传递或更新 `permissionId` 时应保持 `DataRuleRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `permissionId`, preserve `DataRuleRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.dto.DataRuleRequestDTO.permissionId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.permissionId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:data-rule:manage"}))
             @NotBlank String permissionId,
             /**
              * 字段 `scopeType` 表示 `DataRuleRequestDTO` 中与 `scope Type` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -67,6 +92,10 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domai
              * 含义与用法：读取、传递或更新 `scopeType` 时应保持 `DataRuleRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `scopeType`, preserve `DataRuleRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.dto.DataRuleRequestDTO.scopeType", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.scopeType")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:data-rule:manage"}))
             @NotBlank String scopeType,
             /**
              * 字段 `directorySnapshotVersion` 表示 `DataRuleRequestDTO` 中与 `directory Snapshot Version` 相关的状态、依赖、配置或结果（声明类型 `Long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -75,6 +104,10 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domai
              * 含义与用法：读取、传递或更新 `directorySnapshotVersion` 时应保持 `DataRuleRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `directorySnapshotVersion`, preserve `DataRuleRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.dto.DataRuleRequestDTO.directorySnapshotVersion", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.directorySnapshotVersion")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    write = @PermissionGroup(codes = {"system:data-rule:manage"}))
             Long directorySnapshotVersion,
             /**
              * 字段 `references` 表示 `DataRuleRequestDTO` 中与 `references` 相关的状态、依赖、配置或结果（声明类型 `List&lt;RuleReferenceVO&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -83,6 +116,10 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domai
              * 含义与用法：读取、传递或更新 `references` 时应保持 `DataRuleRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `references`, preserve `DataRuleRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.dto.DataRuleRequestDTO.references", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.references")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.ARRAY,
+                    write = @PermissionGroup(codes = {"system:data-rule:manage"}))
             @NotNull List<RuleReferenceVO> references,
             /**
              * 字段 `validFrom` 表示 `DataRuleRequestDTO` 中与 `valid From` 相关的状态、依赖、配置或结果（声明类型 `Instant`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -91,6 +128,11 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domai
              * 含义与用法：读取、传递或更新 `validFrom` 时应保持 `DataRuleRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `validFrom`, preserve `DataRuleRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.dto.DataRuleRequestDTO.validFrom", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.validFrom")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:data-rule:manage"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             @NotNull Instant validFrom,
             /**
              * 字段 `validTo` 表示 `DataRuleRequestDTO` 中与 `valid To` 相关的状态、依赖、配置或结果（声明类型 `Instant`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -99,6 +141,11 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domai
              * 含义与用法：读取、传递或更新 `validTo` 时应保持 `DataRuleRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `validTo`, preserve `DataRuleRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.dto.DataRuleRequestDTO.validTo", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.validTo")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:data-rule:manage"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant validTo,
             /**
              * 字段 `expectedVersion` 表示 `DataRuleRequestDTO` 中与 `expected Version` 相关的状态、依赖、配置或结果（声明类型 `long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -107,5 +154,9 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domai
              * 含义与用法：读取、传递或更新 `expectedVersion` 时应保持 `DataRuleRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `expectedVersion`, preserve `DataRuleRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.dto.DataRuleRequestDTO.expectedVersion", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.expectedVersion")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    write = @PermissionGroup(codes = {"system:data-rule:manage"}))
             @PositiveOrZero long expectedVersion) {
     }

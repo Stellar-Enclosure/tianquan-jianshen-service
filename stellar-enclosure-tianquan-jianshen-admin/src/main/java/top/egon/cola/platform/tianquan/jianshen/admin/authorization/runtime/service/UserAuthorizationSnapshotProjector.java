@@ -150,10 +150,9 @@ public final class UserAuthorizationSnapshotProjector {
             }
         }
         var permissions = new TreeSet<String>();
-        for (AuthorizationRuleFacts.ResourceGrantBinding binding
-                : facts.authorizationFacts().resourceGrantBindings()) {
-            if (effectiveRoles.contains(binding.roleId())
-                    && binding.permissionCode() != null) {
+        for (AuthorizationRuleFacts.PermissionGrantBinding binding
+                : facts.authorizationFacts().permissionGrantBindings()) {
+            if (effectiveRoles.contains(binding.roleId()) && applicationId.equals(binding.applicationId())) {
                 permissions.add(binding.permissionCode());
             }
         }

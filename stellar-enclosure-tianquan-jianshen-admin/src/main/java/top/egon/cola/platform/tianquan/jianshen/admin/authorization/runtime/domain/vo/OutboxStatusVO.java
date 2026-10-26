@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +29,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `state` 时应保持 `OutboxStatusVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `state`, preserve `OutboxStatusVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.OutboxStatusVO.state", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.state")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             String state,
             /**
              * 字段 `pendingCount` 表示 `OutboxStatusVO` 中与 `pending Count` 相关的状态、依赖、配置或结果（声明类型 `long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -31,6 +41,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `pendingCount` 时应保持 `OutboxStatusVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `pendingCount`, preserve `OutboxStatusVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.OutboxStatusVO.pendingCount", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.pendingCount")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             long pendingCount,
             /**
              * 字段 `oldestAgeSeconds` 表示 `OutboxStatusVO` 中与 `oldest Age Seconds` 相关的状态、依赖、配置或结果（声明类型 `long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -39,5 +53,9 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `oldestAgeSeconds` 时应保持 `OutboxStatusVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `oldestAgeSeconds`, preserve `OutboxStatusVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.OutboxStatusVO.oldestAgeSeconds", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.oldestAgeSeconds")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             long oldestAgeSeconds) {
     }

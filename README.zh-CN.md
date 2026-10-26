@@ -159,34 +159,39 @@ Operation SOD。任何必需数据缺失、版本不一致、Redis/密钥不可�
 
 ## 八、首次管理员初始化
 
-首次部署只允许使用 Admin 可执行制品内的 one-shot CLI，不提供创建首个管理员的 HTTP
-接口。命令进入 non-web Spring Context（`WebApplicationType.NONE`），成功或失败后都会
-退出，不启动 HTTP Server。可执行制品是带 `exec` classifier 的
-`stellar-enclosure-tianquan-jianshen-admin-exec.jar`，不是同名的瘦 jar：
+清洁环境通过 Admin 可执行制品内两个显式一次性命令完成权限初始化，不提供绕过目录
+激活的 HTTP 管理员入口，也不会在应用启动或普通 CI 中自动执行。完整输入、数据库
+身份校验和恢复约束见 [B0/B1 操作文档](docs/permission-catalog-bootstrap.md)。先完成已批准
+的迁移和 IdP/META B0，再执行 RBAC B0，建立完整 scope、producer owner 和有限机器授权：
 
 ```bash
-java -jar stellar-enclosure-tianquan-jianshen-admin-exec.jar \
-  bootstrap-platform-admin \
-  --tenant-id '<positive-long-tenant-id>' \
-  --identity-sub '<tianquan-shoubing-user-sub>'
+java -jar stellar-enclosure-tianquan-jianshen-admin/target/stellar-enclosure-tianquan-jianshen-admin-exec.jar \
+  bootstrap-permission-catalog \
+  --command-file /absolute/private/rbac-catalog-command.json \
+  --receipt-file /absolute/private/rbac-catalog-receipt.json
 ```
 
-CLI 只接受 `--tenant-id` 和 `--identity-sub` 这一对参数：`--tenant-id` 必须是正
-Long，两个选项各出现一次，任何其它选项（包括 `--password`）都会以
-`unsupported option` 拒绝。Tianquan-Jianshen 不创建也不管理凭据——口令属于
-Tianquan-Shoubing，因此这里不存在“从标准输入读密码”的步骤。
+首次 FULL Manifest 登记、来源回执、READY、发布资格检查和完整集合激活完成后，执行
+B1，为指定 IdP subject 的新角色授予明确列出的 ACTIVE permissionCode：
 
-执行顺序是：先用 `IdentityTenantMembershipDirectory` 校验该 `identity-sub` 在目标
-Tenant 中是**已激活**的成员，再在单个事务内取得 PostgreSQL Advisory Lock、拒绝该
-Tenant 已存在平台管理员、登记已验证 Tenant 的授权状态、要求 `tianquan-jianshen-admin`
-应用及其 Tenant 绑定已存在，随后创建 `ROLE_PLATFORM_ADMIN`（MANAGEMENT /
-CRITICAL）、为 18 个必需的 `iam.*` ACTIVE 资源补齐角色授权、写入 User、直接
-Assignment 与自身闭包，并追加 `PLATFORM_ADMIN_BOOTSTRAPPED` 审计与
-`ASSIGNMENT_CHANGED` 授权事件。
+```bash
+java -jar stellar-enclosure-tianquan-jianshen-admin/target/stellar-enclosure-tianquan-jianshen-admin-exec.jar \
+  bootstrap-permission-admin \
+  --command-file /absolute/private/rbac-admin-command.json \
+  --receipt-file /absolute/private/rbac-admin-receipt.json
+```
 
-若平台应用或任一必需资源尚未按 Manifest 激活发布，命令会直接失败，因此必须先完成
-Flyway 与资源清单发布。重复执行会被拒绝；管理员遗失必须使用独立恢复 runbook，不能
-重跑初始化命令静默创建第二个 root 账号。
+命令、数据库连接和密码文件必须处于执行用户拥有的 `0700` 目录，文件权限为 `0600`，
+使用绝对规范路径。每次连接检查实际数据库名称、OID、owner、current_user 和 schema；
+不从 YAML、环境变量或系统属性回退连接配置，不创建数据库或执行迁移。B0 不写资源、
+权限、角色或用户。B1 拒绝未激活、未知、禁用、退役和通配权限，单事务写入新角色、
+DIRECT Assignment、字符授权、authVersion/policyVersion、审计和 Outbox。可选角色激活
+要求当前 APP 无活跃角色，并保留其它 APP 的活跃角色及既有撤销状态。
+
+每个 scope 的 B1 只能首次初始化一次；另一个 operation 不能扩权。超时、提交结果不明
+或本地回执写入失败时，保留原 command/operationId 重试，从数据库审计恢复原回执，
+不会重建角色或重新授权。旧 `bootstrap-platform-admin` 不建立新目录及字符授权，不再
+作为该清洁环境权限初始化流程。
 
 ## 九、构建与验证
 

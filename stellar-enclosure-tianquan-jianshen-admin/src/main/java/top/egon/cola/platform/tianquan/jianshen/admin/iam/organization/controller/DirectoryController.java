@@ -1,5 +1,13 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.organization.controller;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -29,7 +37,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.iam.organization.snapshot.
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.position.domain.vo.PositionVO;
 import top.egon.cola.platform.tianquan.jianshen.admin.shared.tenant.domain.TenantContext;
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
-import top.egon.cola.platform.tianquan.jianshen.starter.security.RequiresPermission;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.RequiresPermissions;
 
 import java.time.Instant;
 import java.util.List;
@@ -72,8 +80,10 @@ public class DirectoryController {
      * @param status 输入参数 `status`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Directory.orgUnits", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Directory.orgUnits")
     @GetMapping("/org-units")
-    @RequiresPermission(value = "system:directory:read")
+    @RequiresPermissions(codes = "system:directory:read")
     @Operation(
             operationId = "tianquan-jianshen-directory-org-unit-list-v1",
             summary = "查询组织单元",
@@ -101,8 +111,10 @@ public class DirectoryController {
      * @param status 输入参数 `status`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Directory.positions", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Directory.positions")
     @GetMapping("/positions")
-    @RequiresPermission(value = "system:directory:read")
+    @RequiresPermissions(codes = "system:directory:read")
     @Operation(
             operationId = "tianquan-jianshen-directory-position-list-v1",
             summary = "查询岗位",
@@ -128,8 +140,10 @@ public class DirectoryController {
      * @param command 输入参数 `command`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Directory.submit", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Directory.submit")
     @PostMapping("/internal/directory-snapshots")
-    @RequiresPermission(value = "system:directory:sync")
+    @RequiresPermissions(codes = "system:directory:sync")
     @Operation(
             operationId = "tianquan-jianshen-directory-snapshot-submit-v1",
             summary = "提交单调递增的目录快照",
@@ -154,8 +168,10 @@ public class DirectoryController {
      * @param snapshotId 输入参数 `snapshotId`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Directory.snapshot", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Directory.snapshot")
     @GetMapping("/directory-snapshots/{snapshotId}")
-    @RequiresPermission(value = "system:directory-snapshot:read")
+    @RequiresPermissions(codes = "system:directory-snapshot:read")
     @Operation(
             operationId = "tianquan-jianshen-directory-snapshot-get-v1",
             summary = "读取不可变目录快照回执",

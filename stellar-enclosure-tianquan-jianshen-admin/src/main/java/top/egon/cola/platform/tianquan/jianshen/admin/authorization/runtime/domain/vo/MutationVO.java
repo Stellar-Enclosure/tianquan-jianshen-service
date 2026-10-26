@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
@@ -28,6 +34,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `mutationId` 时应保持 `MutationVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `mutationId`, preserve `MutationVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.MutationVO.mutationId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.mutationId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             String mutationId,
             /**
              * 字段 `scopeType` 表示 `MutationVO` 中与 `scope Type` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -36,6 +46,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `scopeType` 时应保持 `MutationVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `scopeType`, preserve `MutationVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.MutationVO.scopeType", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.scopeType")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             String scopeType,
             /**
              * 字段 `scopeId` 表示 `MutationVO` 中与 `scope Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -44,6 +58,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `scopeId` 时应保持 `MutationVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `scopeId`, preserve `MutationVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.MutationVO.scopeId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.scopeId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             String scopeId,
             /**
              * 字段 `commandId` 表示 `MutationVO` 中与 `command Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -52,6 +70,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `commandId` 时应保持 `MutationVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `commandId`, preserve `MutationVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.MutationVO.commandId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.commandId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             String commandId,
             /**
              * 字段 `status` 表示 `MutationVO` 中与 `status` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -60,6 +82,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `status` 时应保持 `MutationVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `status`, preserve `MutationVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.MutationVO.status", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.status")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             String status,
             /**
              * 字段 `attempt` 表示 `MutationVO` 中与 `attempt` 相关的状态、依赖、配置或结果（声明类型 `int`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -68,6 +94,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `attempt` 时应保持 `MutationVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `attempt`, preserve `MutationVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.MutationVO.attempt", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.attempt")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             int attempt,
             /**
              * 字段 `lastErrorCode` 表示 `MutationVO` 中与 `last Error Code` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -76,6 +106,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `lastErrorCode` 时应保持 `MutationVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `lastErrorCode`, preserve `MutationVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.MutationVO.lastErrorCode", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.lastErrorCode")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             String lastErrorCode,
             /**
              * 字段 `updatedAt` 表示 `MutationVO` 中与 `updated At` 相关的状态、依赖、配置或结果（声明类型 `Instant`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -84,5 +118,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `updatedAt` 时应保持 `MutationVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `updatedAt`, preserve `MutationVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.MutationVO.updatedAt", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.updatedAt")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant updatedAt) {
     }

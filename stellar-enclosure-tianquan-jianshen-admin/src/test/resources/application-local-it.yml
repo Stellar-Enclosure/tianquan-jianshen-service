@@ -13,18 +13,11 @@ tianquan-jianshen:
 egon.cola.platform:
   tianquan:
     shoubing:
-      revocation:
-        primary-endpoint: ${TIANQUAN_SHOUBING_REVOCATION_PRIMARY_ENDPOINT}
       usage-observation:
         receiver: JIANSHEN
         enabled: false
         fallback-issuer: ${TIANQUAN_SHOUBING_OAUTH_ISSUER}
         allow-local-plaintext: false
-      audit:
-        delivery:
-          receipt-ttl: PT1H
-          confirmation-timeout: PT30S
-          batch-size: 100
 
 management:
   endpoint:
@@ -47,5 +40,10 @@ egon.cola.component:
         development-plaintext: false
 
 egon.cola.platform.tianquan.jianshen.user-scope-policy:
-  enabled: false
-  permission-scopes: {}
+  enabled: true
+  permission-scopes:
+    "[system:role-permission:read]": ["system:role-permission:read"]
+    "[system:role-permission:manage]": ["system:role-permission:manage"]
+    "[system:permission-catalog:read]": ["system:permission-catalog:read"]
+    "[system:permission-catalog:manage]": ["system:permission-catalog:manage"]
+    "[system:permission-catalog:activate]": ["system:permission-catalog:activate"]

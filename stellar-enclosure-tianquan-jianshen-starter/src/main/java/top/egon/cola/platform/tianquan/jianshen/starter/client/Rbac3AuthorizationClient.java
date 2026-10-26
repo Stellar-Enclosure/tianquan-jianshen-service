@@ -11,6 +11,11 @@ import top.egon.cola.platform.tianquan.jianshen.contract.authorization.SystemAut
  */
 @FunctionalInterface
 public interface Rbac3AuthorizationClient {
+    default top.egon.cola.platform.tianquan.jianshen.contract.authorization.ServicePolicySnapshot fetchPolicy(
+            String systemCode, top.egon.cola.platform.tianquan.shoubing.contract.ServiceIdentityPrincipal caller) throws InterruptedException {
+        throw new AuthorizationUnavailableException("SERVICE_POLICY_RUNTIME_UNAVAILABLE");
+    }
+
 
     /**
      * 方法 `fetch` 按照 `Rbac3AuthorizationClient` 的职责处理输入，完成 `fetch` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。

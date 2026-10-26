@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.decision.domain.dto;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.decision.domain.enums.AuthorizationDecisionDecisionTypeEnum;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.decision.domain.vo.AuthorizationDecisionResourceVO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.decision.domain.vo.AuthorizationDecisionSubjectVO;
@@ -28,6 +34,11 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `subject` 时应保持 `DecisionRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `subject`, preserve `DecisionRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.decision.domain.dto.DecisionRequestDTO.subject", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.subject",
+                    allowedPrincipals = {PermissionManifest.PrincipalType.USER, PermissionManifest.PrincipalType.SERVICE}, oauthScopes = {"service:authorization:decide"})
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    write = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
             AuthorizationDecisionSubjectVO subject,
             /**
              * 字段 `permissionCode` 表示 `DecisionRequestDTO` 中与 `permission Code` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -36,6 +47,11 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `permissionCode` 时应保持 `DecisionRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `permissionCode`, preserve `DecisionRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.decision.domain.dto.DecisionRequestDTO.permissionCode", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.permissionCode",
+                    allowedPrincipals = {PermissionManifest.PrincipalType.USER, PermissionManifest.PrincipalType.SERVICE}, oauthScopes = {"service:authorization:decide"})
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
             String permissionCode,
             /**
              * 字段 `resource` 表示 `DecisionRequestDTO` 中与 `resource` 相关的状态、依赖、配置或结果（声明类型 `AuthorizationDecisionResourceVO`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -44,6 +60,11 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `resource` 时应保持 `DecisionRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `resource`, preserve `DecisionRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.decision.domain.dto.DecisionRequestDTO.resource", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.resource",
+                    allowedPrincipals = {PermissionManifest.PrincipalType.USER, PermissionManifest.PrincipalType.SERVICE}, oauthScopes = {"service:authorization:decide"})
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    write = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
             AuthorizationDecisionResourceVO resource,
             /**
              * 字段 `requestedDecisions` 表示 `DecisionRequestDTO` 中与 `requested Decisions` 相关的状态、依赖、配置或结果（声明类型 `Set&lt;AuthorizationDecisionDecisionTypeEnum&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -52,6 +73,11 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `requestedDecisions` 时应保持 `DecisionRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `requestedDecisions`, preserve `DecisionRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.decision.domain.dto.DecisionRequestDTO.requestedDecisions", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.requestedDecisions",
+                    allowedPrincipals = {PermissionManifest.PrincipalType.USER, PermissionManifest.PrincipalType.SERVICE}, oauthScopes = {"service:authorization:decide"})
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.ARRAY,
+                    write = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
             Set<AuthorizationDecisionDecisionTypeEnum> requestedDecisions,
             /**
              * 字段 `tokenVersions` 表示 `DecisionRequestDTO` 中与 `token Versions` 相关的状态、依赖、配置或结果（声明类型 `TokenVersionsVO`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -60,6 +86,11 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `tokenVersions` 时应保持 `DecisionRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `tokenVersions`, preserve `DecisionRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.decision.domain.dto.DecisionRequestDTO.tokenVersions", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.tokenVersions",
+                    allowedPrincipals = {PermissionManifest.PrincipalType.USER, PermissionManifest.PrincipalType.SERVICE}, oauthScopes = {"service:authorization:decide"})
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    write = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
             TokenVersionsVO tokenVersions) {
 
         /**

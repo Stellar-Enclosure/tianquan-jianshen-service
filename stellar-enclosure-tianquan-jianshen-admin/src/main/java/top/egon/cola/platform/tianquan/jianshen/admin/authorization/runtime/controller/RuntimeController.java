@@ -1,5 +1,13 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.controller;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,7 +29,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.serv
 import top.egon.cola.platform.tianquan.jianshen.admin.shared.tenant.domain.TenantContext;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.CurrentRbac3User;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3UserDetails;
-import top.egon.cola.platform.tianquan.jianshen.starter.security.RequiresPermission;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.RequiresPermissions;
 
 /**
  * 类型 `RuntimeController` 位于当前包内，是类型，用于承载 `Runtime Controller` 相关的职责、状态或契约；调用方通常通过其公开 API、Spring 装配或实现关系使用。
@@ -73,8 +81,10 @@ public class RuntimeController {
      *
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Runtime.status", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Runtime.status")
     @GetMapping("/status")
-    @RequiresPermission(value = "system:authorization-runtime:read")
+    @RequiresPermissions(codes = "system:authorization-runtime:read")
     @Operation(
             operationId = "tianquan-jianshen-runtime-status-v1",
             summary = "查询授权运行状态",
@@ -99,8 +109,10 @@ public class RuntimeController {
      * @param limit 输入参数 `limit`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Runtime.mutations", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Runtime.mutations")
     @GetMapping("/mutations")
-    @RequiresPermission(value = "system:authorization-runtime:read")
+    @RequiresPermissions(codes = "system:authorization-runtime:read")
     @Operation(
             operationId = "tianquan-jianshen-runtime-mutations-v1",
             summary = "游标查询授权 Mutation Journal",
@@ -128,8 +140,10 @@ public class RuntimeController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Runtime.retry", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Runtime.retry")
     @PostMapping("/mutations/{mutationId}/retry")
-    @RequiresPermission(value = "system:authorization-runtime:operate")
+    @RequiresPermissions(codes = "system:authorization-runtime:operate")
     @Operation(
             operationId = "tianquan-jianshen-runtime-mutation-retry-v1",
             summary = "按 Mutation ID 触发幂等受控恢复",
@@ -154,8 +168,10 @@ public class RuntimeController {
      *
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Runtime.gatewayDdcStatus", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Runtime.gatewayDdcStatus")
     @GetMapping("/yuheng-tianshu-status")
-    @RequiresPermission(value = "system:authorization-runtime:read")
+    @RequiresPermissions(codes = "system:authorization-runtime:read")
     @Operation(
             operationId = "tianquan-jianshen-runtime-yuheng-tianshu-status-v1",
             summary = "分别查询 Definition、Tianshu Lease 和 Gateway Release",

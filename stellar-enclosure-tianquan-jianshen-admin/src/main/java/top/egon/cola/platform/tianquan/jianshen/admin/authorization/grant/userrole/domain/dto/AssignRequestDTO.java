@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.userrole.domain.dto;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -40,6 +46,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `roleId` 时应保持 `AssignRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `roleId`, preserve `AssignRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.userrole.domain.dto.AssignRequestDTO.roleId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.roleId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:role-assignment:manage"}))
             @NotBlank String roleId,
             /**
              * 字段 `validFrom` 表示 `AssignRequestDTO` 中与 `valid From` 相关的状态、依赖、配置或结果（声明类型 `Instant`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -48,6 +58,11 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `validFrom` 时应保持 `AssignRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `validFrom`, preserve `AssignRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.userrole.domain.dto.AssignRequestDTO.validFrom", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.validFrom")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:role-assignment:manage"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             @NotNull Instant validFrom,
             /**
              * 字段 `validTo` 表示 `AssignRequestDTO` 中与 `valid To` 相关的状态、依赖、配置或结果（声明类型 `Instant`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -56,6 +71,11 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `validTo` 时应保持 `AssignRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `validTo`, preserve `AssignRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.userrole.domain.dto.AssignRequestDTO.validTo", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.validTo")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:role-assignment:manage"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant validTo,
             /**
              * 字段 `assignmentType` 表示 `AssignRequestDTO` 中与 `assignment Type` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -64,6 +84,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `assignmentType` 时应保持 `AssignRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `assignmentType`, preserve `AssignRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.userrole.domain.dto.AssignRequestDTO.assignmentType", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.assignmentType")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:role-assignment:manage"}))
             @NotBlank String assignmentType,
             /**
              * 字段 `reason` 表示 `AssignRequestDTO` 中与 `reason` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -72,6 +96,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `reason` 时应保持 `AssignRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `reason`, preserve `AssignRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.userrole.domain.dto.AssignRequestDTO.reason", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.reason")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:role-assignment:manage"}))
             String reason,
             /**
              * 字段 `ticketNo` 表示 `AssignRequestDTO` 中与 `ticket No` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -80,6 +108,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `ticketNo` 时应保持 `AssignRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `ticketNo`, preserve `AssignRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.userrole.domain.dto.AssignRequestDTO.ticketNo", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.ticketNo")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:role-assignment:manage"}))
             String ticketNo,
             /**
              * 字段 `expectedUserAuthVersion` 表示 `AssignRequestDTO` 中与 `expected User Auth Version` 相关的状态、依赖、配置或结果（声明类型 `long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -88,6 +120,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `expectedUserAuthVersion` 时应保持 `AssignRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `expectedUserAuthVersion`, preserve `AssignRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.userrole.domain.dto.AssignRequestDTO.expectedUserAuthVersion", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.expectedUserAuthVersion")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    write = @PermissionGroup(codes = {"system:role-assignment:manage"}))
             @PositiveOrZero long expectedUserAuthVersion
     ) {
     }

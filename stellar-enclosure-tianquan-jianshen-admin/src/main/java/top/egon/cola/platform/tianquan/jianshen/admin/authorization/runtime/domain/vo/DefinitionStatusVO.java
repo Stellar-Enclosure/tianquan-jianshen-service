@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +29,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `status` 时应保持 `DefinitionStatusVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `status`, preserve `DefinitionStatusVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.DefinitionStatusVO.status", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.status")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             String status,
             /**
              * 字段 `definitionSetId` 表示 `DefinitionStatusVO` 中与 `definition Set Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -31,6 +41,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `definitionSetId` 时应保持 `DefinitionStatusVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `definitionSetId`, preserve `DefinitionStatusVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.DefinitionStatusVO.definitionSetId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.definitionSetId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             String definitionSetId,
             /**
              * 字段 `warnings` 表示 `DefinitionStatusVO` 中与 `warnings` 相关的状态、依赖、配置或结果（声明类型 `List&lt;String&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -39,6 +53,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `warnings` 时应保持 `DefinitionStatusVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `warnings`, preserve `DefinitionStatusVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.DefinitionStatusVO.warnings", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.warnings")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.ARRAY,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             List<String> warnings) {
         /**
          * 构造器 `DefinitionStatusVO` 用于创建并初始化 `DefinitionStatusVO` 实例，建立该类型后续方法所依赖的状态和不变量。

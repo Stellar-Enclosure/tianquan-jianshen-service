@@ -67,32 +67,83 @@ management:
 egon.cola.platform:
   tianquan:
     shoubing:
-      revocation:
-        primary-endpoint: ${TIANQUAN_SHOUBING_REVOCATION_PRIMARY_ENDPOINT}
       usage-observation:
         receiver: JIANSHEN
         enabled: true
         fallback-issuer: ${TIANQUAN_SHOUBING_OAUTH_ISSUER}
         allow-local-plaintext: false
+      trusted-issuers:
+        tenant-a:
+          issuer: ${TIANQUAN_SHOUBING_TENANT_A_ISSUER}
+          jwks-uri: ${TIANQUAN_SHOUBING_TENANT_A_JWKS_URI}
+          realm-key: ${TIANQUAN_SHOUBING_TENANT_A_REALM_KEY}
+          realm-type: TENANT
+          tenant-id: ${TIANQUAN_SHOUBING_TENANT_A_ID}
+          status: ACTIVE
+          trust-version: ${TIANQUAN_SHOUBING_TENANT_A_TRUST_VERSION}
+        tenant-b:
+          issuer: ${TIANQUAN_SHOUBING_TENANT_B_ISSUER}
+          jwks-uri: ${TIANQUAN_SHOUBING_TENANT_B_JWKS_URI}
+          realm-key: ${TIANQUAN_SHOUBING_TENANT_B_REALM_KEY}
+          realm-type: TENANT
+          tenant-id: ${TIANQUAN_SHOUBING_TENANT_B_ID}
+          status: ACTIVE
+          trust-version: ${TIANQUAN_SHOUBING_TENANT_B_TRUST_VERSION}
+        platform:
+          issuer: ${TIANQUAN_SHOUBING_PLATFORM_ISSUER}
+          jwks-uri: ${TIANQUAN_SHOUBING_PLATFORM_JWKS_URI}
+          realm-key: platform
+          realm-type: PLATFORM
+          status: ACTIVE
+          trust-version: ${TIANQUAN_SHOUBING_PLATFORM_TRUST_VERSION}
+      authority:
+        base-uri: ${TIANQUAN_SHOUBING_AUTHORITY_BASE_URI}
+        timeout: PT2S
+        bindings:
+          tenant-a:
+            issuer: ${TIANQUAN_SHOUBING_TENANT_A_ISSUER}
+            registration-id: ${TIANQUAN_JIANSHEN_IDENTITY_TENANT_A_REGISTRATION_ID}
+            source-resource: ${TIANQUAN_JIANSHEN_RESOURCE_URI}
+            audience: ${TIANQUAN_SHOUBING_IDENTITY_RESOURCE_URI}
+            context: TENANT
+            tenant-id: ${TIANQUAN_SHOUBING_TENANT_A_ID}
+            scopes:
+              - tianquan-shoubing:security-state:resolve
+              - tianquan-shoubing:audit:append
+          tenant-b:
+            issuer: ${TIANQUAN_SHOUBING_TENANT_B_ISSUER}
+            registration-id: ${TIANQUAN_JIANSHEN_IDENTITY_TENANT_B_REGISTRATION_ID}
+            source-resource: ${TIANQUAN_JIANSHEN_RESOURCE_URI}
+            audience: ${TIANQUAN_SHOUBING_IDENTITY_RESOURCE_URI}
+            context: TENANT
+            tenant-id: ${TIANQUAN_SHOUBING_TENANT_B_ID}
+            scopes:
+              - tianquan-shoubing:security-state:resolve
+              - tianquan-shoubing:audit:append
+          platform:
+            issuer: ${TIANQUAN_SHOUBING_PLATFORM_ISSUER}
+            registration-id: ${TIANQUAN_JIANSHEN_IDENTITY_PLATFORM_REGISTRATION_ID}
+            source-resource: ${TIANQUAN_JIANSHEN_RESOURCE_URI}
+            audience: ${TIANQUAN_SHOUBING_IDENTITY_RESOURCE_URI}
+            context: PLATFORM
+            scopes:
+              - tianquan-shoubing:security-state:resolve
+              - tianquan-shoubing:audit:append
       enabled: ${UNIFIED_IDENTITY_ENABLED:true}
       register-filter: false
       issuer: ${TIANQUAN_SHOUBING_OAUTH_ISSUER}
       jwk-set-uri: ${TIANQUAN_SHOUBING_JWK_SET_URI}
       resource-server-id: ${TIANQUAN_JIANSHEN_RESOURCE_SERVER_ID}
       resource-uri: ${TIANQUAN_JIANSHEN_RESOURCE_URI}
-      audit:
-        delivery:
-          receipt-ttl: PT1H
-          confirmation-timeout: PT30S
-          batch-size: 100
-        stream: egon:oauth:audit:v1
-        spool-directory: ${EGON_TIANQUAN_JIANSHEN_OAUTH_AUDIT_SPOOL_DIRECTORY}
-        spool-max-bytes: ${EGON_TIANQUAN_JIANSHEN_OAUTH_AUDIT_SPOOL_MAX_BYTES:1073741824}
-        hmac-key-file: ${EGON_TIANQUAN_SHOUBING_OAUTH_AUDIT_HMAC_KEY_FILE}
     jianshen:
       user-scope-policy:
         enabled: true
         permission-scopes:
+          "[system:role-permission:read]": ["system:role-permission:read"]
+          "[system:role-permission:manage]": ["system:role-permission:manage"]
+          "[system:permission-catalog:read]": ["system:permission-catalog:read"]
+          "[system:permission-catalog:manage]": ["system:permission-catalog:manage"]
+          "[system:permission-catalog:activate]": ["system:permission-catalog:activate"]
           "[system:about:read]": ["system:about:read"]
           "[system:application:manage]": ["system:application:manage"]
           "[system:application:read]": ["system:application:read"]
@@ -147,11 +198,19 @@ egon.cola.platform:
           "[system:user:read]": ["system:user:read"]
       enabled: ${UNIFIED_IDENTITY_ENABLED:true}
       register-filter: false
-      system-code: tianquan-jianshen-admin
+      system-code: tianquan-jianshen
       runtime:
-        redis-enabled: true
-        redis-address: ${TIANQUAN_JIANSHEN_AUTHORIZATION_REDIS_ADDRESS}
-        database: ${TIANQUAN_JIANSHEN_AUTHORIZATION_REDIS_DATABASE:0}
+        artifact-digest: ${TIANQUAN_JIANSHEN_ARTIFACT_DIGEST:}
+        bootstrap-service-resource-keys:
+          - tianquan-jianshen.api.manifest.plan
+          - tianquan-jianshen.api.manifest.register
+          - tianquan-jianshen.api.manifest.status
+          - tianquan-jianshen.api.catalog.qualify
+          - tianquan-jianshen.api.catalog.activate
+          - tianquan-jianshen.api.catalog.descriptor
+          - tianquan-jianshen.api.catalog.versions
+          - tianquan-jianshen.api.runtime.userSnapshot
+          - tianquan-jianshen.api.runtime.servicePolicy
       authorization:
         endpoint: ${TIANQUAN_JIANSHEN_AUTHORIZATION_ENDPOINT}
         service-token:
@@ -164,12 +223,6 @@ egon:
   tianquan-jianshen:
     maximum-active-roots: 16
     component-keys: ${TIANQUAN_JIANSHEN_COMPONENT_KEYS}
-    runtime:
-      redis-enabled: true
-      redis-address: ${TIANQUAN_JIANSHEN_RUNTIME_REDIS_ADDRESS}
-      redis-database: ${TIANQUAN_JIANSHEN_RUNTIME_REDIS_DATABASE:0}
-      redis-timeout: ${TIANQUAN_JIANSHEN_RUNTIME_REDIS_TIMEOUT:2s}
-      redis-password-file: ${TIANQUAN_JIANSHEN_RUNTIME_REDIS_PASSWORD_FILE}
     yuheng-status:
       admin-base-url: ${YUHENG_ADMIN_BASE_URL}
       yuheng-group-id: ${YUHENG_GROUP_ID}
@@ -178,9 +231,10 @@ egon:
       timeout: ${YUHENG_STATUS_TIMEOUT:3s}
     topology:
       tianshu-registry-client-bean: ddcRedissonClient
-      runtime-client-bean: rbac3RuntimeRedissonClient
   cola:
     component:
+      cache:
+        enabled: false
       id:
         enabled: true
         machine-id: ${TIANQUAN_JIANSHEN_SNOWFLAKE_MACHINE_ID}
@@ -277,13 +331,42 @@ egon:
           access-key: ${YUHENG_REPORT_ACCESS_KEY}
           secret-key: ${YUHENG_REPORT_SECRET_KEY}
           state-file: ${YUHENG_REPORT_STATE_FILE}
+      mybatis-plus:
+        ddl:
+          enabled: true
+          lock-timeout: 30s
+          statement-timeout: 300s
+          topology-ready-timeout: 60s
+        sharding:
+          enabled: true
+          mode: SHARDING
+          config-style: NATIVE
+          native-rules-resource: classpath:rbac-sharding-native.yml
+          transaction-default-type: LOCAL
+          data-sources:
+            - name: rbac_primary
+              logical-name: rbac_primary
+              role: PRIMARY
+              driver-class-name: org.postgresql.Driver
+              jdbc-url: ${spring.datasource.url}
+              username: ${spring.datasource.username}
+              password: ${spring.datasource.password}
+          tables: {}
+        tenant-id:
+          ignored-tables:
+            - egon_cola_outbox_message
       transactional-outbox:
         enabled: true
         node-id: ${TIANQUAN_JIANSHEN_INSTANCE_ID}
         storage:
           data-source-bean-name: dataSource
           transaction-manager-bean-name: transactionManager
-          validate-schema: true
+          mp:
+            sql-session-factory-bean-name: sqlSessionFactory
+            migration-mode: false
+            auto-initialize-ddl: true
+            migration-lock-timeout: 30s
+            manifest-resource: db/egon-outbox-mp/manifest.json
         polling:
           enabled: true
           fixed-delay: 1s

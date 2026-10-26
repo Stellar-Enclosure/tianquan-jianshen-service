@@ -1,5 +1,12 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionMode;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import top.egon.cola.platform.tianquan.jianshen.core.hierarchy.RoleEdge;
 import top.egon.cola.platform.tianquan.jianshen.core.hierarchy.RoleHierarchy;
 import top.egon.cola.platform.tianquan.jianshen.core.hierarchy.RoleHierarchyValidator;
@@ -32,6 +39,10 @@ import java.util.function.Function;
              * 含义与用法：读取、传递或更新 `roleId` 时应保持 `RoleImpactVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `roleId`, preserve `RoleImpactVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.role.domain.vo.RoleImpactVO.roleId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.roleId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:authorization-simulation:execute", "system:role-inheritance:manage", "system:role:read"}))
             String roleId,
             /**
              * 字段 `activationRoots` 表示 `RoleImpactVO` 中与 `activation Roots` 相关的状态、依赖、配置或结果（声明类型 `List&lt;String&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -40,6 +51,10 @@ import java.util.function.Function;
              * 含义与用法：读取、传递或更新 `activationRoots` 时应保持 `RoleImpactVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `activationRoots`, preserve `RoleImpactVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.role.domain.vo.RoleImpactVO.activationRoots", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.activationRoots")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.ARRAY,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:authorization-simulation:execute", "system:role-inheritance:manage", "system:role:read"}))
             List<String> activationRoots,
             /**
              * 字段 `roleFamily` 表示 `RoleImpactVO` 中与 `role Family` 相关的状态、依赖、配置或结果（声明类型 `List&lt;String&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -48,6 +63,10 @@ import java.util.function.Function;
              * 含义与用法：读取、传递或更新 `roleFamily` 时应保持 `RoleImpactVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `roleFamily`, preserve `RoleImpactVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.role.domain.vo.RoleImpactVO.roleFamily", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.roleFamily")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.ARRAY,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:authorization-simulation:execute", "system:role-inheritance:manage", "system:role:read"}))
             List<String> roleFamily,
             /**
              * 字段 `effectiveFamilyRisk` 表示 `RoleImpactVO` 中与 `effective Family Risk` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -56,6 +75,10 @@ import java.util.function.Function;
              * 含义与用法：读取、传递或更新 `effectiveFamilyRisk` 时应保持 `RoleImpactVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `effectiveFamilyRisk`, preserve `RoleImpactVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.role.domain.vo.RoleImpactVO.effectiveFamilyRisk", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.effectiveFamilyRisk")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:authorization-simulation:execute", "system:role-inheritance:manage", "system:role:read"}))
             String effectiveFamilyRisk,
             /**
              * 字段 `permissionCount` 表示 `RoleImpactVO` 中与 `permission Count` 相关的状态、依赖、配置或结果（声明类型 `long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -64,6 +87,10 @@ import java.util.function.Function;
              * 含义与用法：读取、传递或更新 `permissionCount` 时应保持 `RoleImpactVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `permissionCount`, preserve `RoleImpactVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.role.domain.vo.RoleImpactVO.permissionCount", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.permissionCount")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:authorization-simulation:execute", "system:role-inheritance:manage", "system:role:read"}))
             long permissionCount,
             /**
              * 字段 `conflicts` 表示 `RoleImpactVO` 中与 `conflicts` 相关的状态、依赖、配置或结果（声明类型 `List&lt;String&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -72,6 +99,10 @@ import java.util.function.Function;
              * 含义与用法：读取、传递或更新 `conflicts` 时应保持 `RoleImpactVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `conflicts`, preserve `RoleImpactVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.role.domain.vo.RoleImpactVO.conflicts", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.conflicts")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.ARRAY,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:authorization-simulation:execute", "system:role-inheritance:manage", "system:role:read"}))
             List<String> conflicts
     ) {
 

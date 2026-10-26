@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
@@ -20,11 +26,19 @@ import java.util.Objects;
  *
  * 含义与用法：读取、传递或更新 `mutationId` 时应保持 `RetryResultVO` 的生命周期、不可变性和线程安全约束。
  * Meaning and usage: when reading, passing, or updating `mutationId`, preserve `RetryResultVO`'s lifecycle, immutability, and thread-safety constraints.
- */ String mutationId, /**
+ */ @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.RetryResultVO.mutationId", type = ResourceType.FIELD,
+                labelPage = "tianquan-jianshen.permissions", labelKey = "field.mutationId")
+        @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                plainRead = @PermissionGroup(codes = {"system:authorization-runtime:operate"}))
+        String mutationId, /**
  * 字段 `status` 表示 `RetryResultVO` 中与 `status` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
  * Field `status` stores the `status`-related state, dependency, configuration, or result of `RetryResultVO` (declared type `String`); its lifecycle and value semantics are defined by its declared type and owning object.
  *
  * 含义与用法：读取、传递或更新 `status` 时应保持 `RetryResultVO` 的生命周期、不可变性和线程安全约束。
  * Meaning and usage: when reading, passing, or updating `status`, preserve `RetryResultVO`'s lifecycle, immutability, and thread-safety constraints.
- */ String status) {
+ */ @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.RetryResultVO.status", type = ResourceType.FIELD,
+                labelPage = "tianquan-jianshen.permissions", labelKey = "field.status")
+        @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                plainRead = @PermissionGroup(codes = {"system:authorization-runtime:operate"}))
+        String status) {
     }

@@ -34,6 +34,10 @@ public class DataRulePO extends TenantScopedPO {
     @Id
     private Long id;
 
+    /** 规则所属目录，创建后不可迁移。 / Owning catalog scope; immutable after creation. */
+    @Column(name = "catalog_scope_id", nullable = false, updatable = false)
+    private Long catalogScopeId;
+
     /**
      * 字段 `applicationId` 表示 `DataRulePO` 中与 `application Id` 相关的状态、依赖、配置或结果（声明类型 `Long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
      * Field `applicationId` stores the `application Id`-related state, dependency, configuration, or result of `DataRulePO` (declared type `Long`); its lifecycle and value semantics are defined by its declared type and owning object.
@@ -148,6 +152,7 @@ public class DataRulePO extends TenantScopedPO {
     public DataRulePO(
             Long id,
             Long tenantId,
+            Long catalogScopeId,
             Long applicationId,
             Long roleId,
             Long permissionId,
@@ -161,6 +166,8 @@ public class DataRulePO extends TenantScopedPO {
         if (directorySnapshotVersion != null && directorySnapshotVersion < 0L) {
             throw new IllegalArgumentException("directorySnapshotVersion must not be negative");
         }
+        if (catalogScopeId == null || catalogScopeId <= 0) throw new IllegalArgumentException("catalogScopeId must be positive");
+        this.catalogScopeId = catalogScopeId;
         this.id = Objects.requireNonNull(id, "id");
         setTenantId(Objects.requireNonNull(tenantId, "tenantId"));
         this.applicationId = Objects.requireNonNull(applicationId, "applicationId");
@@ -214,6 +221,10 @@ public class DataRulePO extends TenantScopedPO {
      */
     public Long getId() {
         return id;
+    }
+
+    public Long getCatalogScopeId() {
+        return catalogScopeId;
     }
 
     /**

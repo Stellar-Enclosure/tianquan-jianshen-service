@@ -117,6 +117,10 @@ public final class Rbac3BearerAuthenticationFilter extends OncePerRequestFilter 
         }
         try {
             Rbac3UserDetails details = userDetailsLoader.load(user);
+            if (details.snapshot().permissionSnapshot() == null
+                    || !idp.verifiedIssuer().toASCIIString().equals(details.snapshot().permissionSnapshot().issuer())) {
+                throw new Rbac3AuthorizationClient.AuthorizationDeniedException("TIANQUAN_JIANSHEN_AUTHORIZATION_ISSUER_MISMATCH");
+            }
             List<? extends GrantedAuthority> verifiedScopeAuthorities = authentication
                     .getAuthorities()
                     .stream()

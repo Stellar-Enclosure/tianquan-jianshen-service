@@ -1,5 +1,12 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.organization.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionMode;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -45,6 +52,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `orgUnitId` 时应保持 `OrgUnitVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `orgUnitId`, preserve `OrgUnitVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.domain.vo.OrgUnitVO.orgUnitId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.orgUnitId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:directory:read", "system:organization:manage", "system:organization:read"}))
             String orgUnitId,
             /**
              * 字段 `snapshotId` 表示 `OrgUnitVO` 中与 `snapshot Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -53,6 +64,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `snapshotId` 时应保持 `OrgUnitVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `snapshotId`, preserve `OrgUnitVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.domain.vo.OrgUnitVO.snapshotId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.snapshotId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:directory:read", "system:organization:manage", "system:organization:read"}))
             String snapshotId,
             /**
              * 字段 `type` 表示 `OrgUnitVO` 中与 `type` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -61,6 +76,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `type` 时应保持 `OrgUnitVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `type`, preserve `OrgUnitVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.domain.vo.OrgUnitVO.type", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.type")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:directory:read", "system:organization:manage", "system:organization:read"}))
             String type,
             /**
              * 字段 `code` 表示 `OrgUnitVO` 中与 `code` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -69,6 +88,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `code` 时应保持 `OrgUnitVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `code`, preserve `OrgUnitVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.domain.vo.OrgUnitVO.code", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.code")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:directory:read", "system:organization:manage", "system:organization:read"}))
             String code,
             /**
              * 字段 `name` 表示 `OrgUnitVO` 中与 `name` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -77,6 +100,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `name` 时应保持 `OrgUnitVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `name`, preserve `OrgUnitVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.domain.vo.OrgUnitVO.name", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.name")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:directory:read", "system:organization:manage", "system:organization:read"}))
             String name,
             /**
              * 字段 `parentId` 表示 `OrgUnitVO` 中与 `parent Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -85,6 +112,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `parentId` 时应保持 `OrgUnitVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `parentId`, preserve `OrgUnitVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.domain.vo.OrgUnitVO.parentId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.parentId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:directory:read", "system:organization:manage", "system:organization:read"}))
             String parentId,
             /**
              * 字段 `path` 表示 `OrgUnitVO` 中与 `path` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -93,6 +124,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `path` 时应保持 `OrgUnitVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `path`, preserve `OrgUnitVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.domain.vo.OrgUnitVO.path", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.path")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:directory:read", "system:organization:manage", "system:organization:read"}))
             String path,
             /**
              * 字段 `depth` 表示 `OrgUnitVO` 中与 `depth` 相关的状态、依赖、配置或结果（声明类型 `int`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -101,6 +136,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `depth` 时应保持 `OrgUnitVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `depth`, preserve `OrgUnitVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.domain.vo.OrgUnitVO.depth", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.depth")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:directory:read", "system:organization:manage", "system:organization:read"}))
             int depth,
             /**
              * 字段 `status` 表示 `OrgUnitVO` 中与 `status` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -109,10 +148,32 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `status` 时应保持 `OrgUnitVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `status`, preserve `OrgUnitVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.domain.vo.OrgUnitVO.status", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.status")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:directory:read", "system:organization:manage", "system:organization:read"}))
             String status,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.domain.vo.OrgUnitVO.externalId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.externalId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:directory:read", "system:organization:manage", "system:organization:read"}))
             String externalId,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.domain.vo.OrgUnitVO.validFrom", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.validFrom")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:directory:read", "system:organization:manage", "system:organization:read"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant validFrom,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.domain.vo.OrgUnitVO.validTo", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.validTo")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:directory:read", "system:organization:manage", "system:organization:read"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant validTo,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.domain.vo.OrgUnitVO.version", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.version")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:directory:read", "system:organization:manage", "system:organization:read"}))
             long version
     ) {
     }

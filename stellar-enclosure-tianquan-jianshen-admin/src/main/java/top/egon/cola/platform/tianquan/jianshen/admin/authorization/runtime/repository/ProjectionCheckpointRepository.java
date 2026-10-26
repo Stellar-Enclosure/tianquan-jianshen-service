@@ -12,6 +12,18 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.doma
      */
     public interface ProjectionCheckpointRepository {
 
+        record Claim(RuntimeSnapshotRebuildClaimEnum outcome, String leaseToken) { }
+
+        default Claim claimOwned(String tenantId, String eventId, String aggregateType, String aggregateId,
+                long aggregateVersion) { throw new IllegalStateException("SQL_PROJECTION_CLAIM_REQUIRED"); }
+
+        default void completeOwned(String tenantId, String eventId, String aggregateType, String aggregateId,
+                long aggregateVersion, String leaseToken) { throw new IllegalStateException("SQL_PROJECTION_CLAIM_REQUIRED"); }
+
+        default void releaseOwned(String tenantId, String eventId, String aggregateType, String aggregateId,
+                long aggregateVersion, String leaseToken) { throw new IllegalStateException("SQL_PROJECTION_CLAIM_REQUIRED"); }
+
+
         /**
          * 方法 `claim` 按照 `ProjectionCheckpointRepository` 的职责处理输入，完成 `claim` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。
          * Method `claim` processes its inputs according to `ProjectionCheckpointRepository`'s responsibility, performs the `claim` operation, and returns a result or declared side effect; callers must follow its parameter and exception contract.

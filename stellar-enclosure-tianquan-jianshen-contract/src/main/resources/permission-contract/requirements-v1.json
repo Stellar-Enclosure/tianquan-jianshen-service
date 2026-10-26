@@ -1,0 +1,133 @@
+[
+  {
+    "name": "all-complete",
+    "requirement": {
+      "mode": "ALL",
+      "codes": [
+        "order:read",
+        "order:write"
+      ]
+    },
+    "effective": [
+      "order:read",
+      "order:write"
+    ],
+    "allow": true
+  },
+  {
+    "name": "all-missing",
+    "requirement": {
+      "mode": "ALL",
+      "codes": [
+        "order:read",
+        "order:write"
+      ]
+    },
+    "effective": [
+      "order:read"
+    ],
+    "allow": false
+  },
+  {
+    "name": "any-one",
+    "requirement": {
+      "mode": "ANY",
+      "codes": [
+        "order:read",
+        "order:write"
+      ]
+    },
+    "effective": [
+      "order:write"
+    ],
+    "allow": true
+  },
+  {
+    "name": "unknown-code",
+    "requirement": {
+      "mode": "ANY",
+      "codes": [
+        "order:unknown"
+      ]
+    },
+    "effective": [
+      "order:read"
+    ],
+    "allow": false
+  },
+  {
+    "name": "outer-and",
+    "requirement": {
+      "allOf": [
+        {
+          "mode": "ALL",
+          "codes": [
+            "order:read"
+          ]
+        },
+        {
+          "mode": "ANY",
+          "codes": [
+            "order:write",
+            "order:approve"
+          ]
+        }
+      ]
+    },
+    "effective": [
+      "order:read",
+      "order:approve"
+    ],
+    "allow": true
+  },
+  {
+    "name": "outer-and-denies",
+    "requirement": {
+      "allOf": [
+        {
+          "mode": "ALL",
+          "codes": [
+            "order:read"
+          ]
+        },
+        {
+          "mode": "ANY",
+          "codes": [
+            "order:write",
+            "order:approve"
+          ]
+        }
+      ]
+    },
+    "effective": [
+      "order:approve"
+    ],
+    "allow": false
+  },
+  {
+    "name": "explicit-public",
+    "requirement": {
+      "access": "PUBLIC"
+    },
+    "effective": [],
+    "allow": true
+  },
+  {
+    "name": "public-does-not-remove-type",
+    "requirement": {
+      "allOf": [
+        {
+          "mode": "ALL",
+          "codes": [
+            "order:read"
+          ]
+        },
+        {
+          "access": "PUBLIC"
+        }
+      ]
+    },
+    "effective": [],
+    "allow": false
+  }
+]

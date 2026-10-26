@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
 import java.util.HashSet;
 import java.util.List;
@@ -29,6 +35,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `ruleId` 时应保持 `FieldRuleVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `ruleId`, preserve `FieldRuleVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.FieldRuleVO.ruleId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.ruleId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:field-rule:read"}))
             String ruleId,
             /**
              * 字段 `applicationId` 表示 `FieldRuleVO` 中与 `application Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -37,6 +47,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `applicationId` 时应保持 `FieldRuleVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `applicationId`, preserve `FieldRuleVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.FieldRuleVO.applicationId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.applicationId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:field-rule:read"}))
             String applicationId,
             /**
              * 字段 `roleId` 表示 `FieldRuleVO` 中与 `role Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -45,6 +59,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `roleId` 时应保持 `FieldRuleVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `roleId`, preserve `FieldRuleVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.FieldRuleVO.roleId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.roleId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:field-rule:read"}))
             String roleId,
             /**
              * 字段 `permissionId` 表示 `FieldRuleVO` 中与 `permission Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -53,6 +71,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `permissionId` 时应保持 `FieldRuleVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `permissionId`, preserve `FieldRuleVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.FieldRuleVO.permissionId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.permissionId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:field-rule:read"}))
             String permissionId,
             /**
              * 字段 `fieldDefinitionId` 表示 `FieldRuleVO` 中与 `field Definition Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -61,6 +83,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `fieldDefinitionId` 时应保持 `FieldRuleVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `fieldDefinitionId`, preserve `FieldRuleVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.FieldRuleVO.fieldDefinitionId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.fieldDefinitionId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:field-rule:read"}))
             String fieldDefinitionId,
             /**
              * 字段 `accessLevel` 表示 `FieldRuleVO` 中与 `access Level` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -69,6 +95,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `accessLevel` 时应保持 `FieldRuleVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `accessLevel`, preserve `FieldRuleVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.FieldRuleVO.accessLevel", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.accessLevel")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:field-rule:read"}))
             String accessLevel,
             /**
              * 字段 `status` 表示 `FieldRuleVO` 中与 `status` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -77,6 +107,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `status` 时应保持 `FieldRuleVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `status`, preserve `FieldRuleVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.FieldRuleVO.status", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.status")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:field-rule:read"}))
             String status,
             /**
              * 字段 `version` 表示 `FieldRuleVO` 中与 `version` 相关的状态、依赖、配置或结果（声明类型 `long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -85,6 +119,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `version` 时应保持 `FieldRuleVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `version`, preserve `FieldRuleVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.FieldRuleVO.version", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.version")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    plainRead = @PermissionGroup(codes = {"system:field-rule:read"}))
             long version
     ) {
     }

@@ -18,7 +18,7 @@ class ConstraintPersistenceEntityTest {
     void typedRulesRejectInvalidWindowsAndExposeStableFacts() {
         Instant start = Instant.parse("2026-07-30T00:00:00Z");
         DataRulePO dataRule = new DataRulePO(
-                1L, 10L, 20L, 30L, 40L,
+                1L, 10L, 15L, 20L, 30L, 40L,
                 DataRuleScopeTypeEnum.DEPT_TREE, 5L,
                 start, null, "actor", start);
         FieldRulePO fieldRule = new FieldRulePO(
@@ -26,6 +26,7 @@ class ConstraintPersistenceEntityTest {
                 FieldRuleAccessLevelEnum.MASKED_READ,
                 start, null, "actor", start);
 
+        assertEquals(15L, dataRule.getCatalogScopeId());
         assertEquals(DataRuleScopeTypeEnum.DEPT_TREE, dataRule.getScopeType());
         assertEquals(FieldRuleAccessLevelEnum.MASKED_READ, fieldRule.getAccessLevel());
         assertThrows(IllegalArgumentException.class,

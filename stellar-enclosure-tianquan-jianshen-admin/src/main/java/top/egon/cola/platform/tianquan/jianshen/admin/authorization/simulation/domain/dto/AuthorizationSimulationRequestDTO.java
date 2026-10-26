@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.simulation.domain.dto;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -34,6 +40,10 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.deci
              * 含义与用法：读取、传递或更新 `decisionRequest` 时应保持 `AuthorizationSimulationRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `decisionRequest`, preserve `AuthorizationSimulationRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.simulation.domain.dto.AuthorizationSimulationRequestDTO.decisionRequest", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.decisionRequest")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    write = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
             @NotNull DecisionRequestDTO decisionRequest,
             /**
              * 字段 `hypothesis` 表示 `AuthorizationSimulationRequestDTO` 中与 `hypothesis` 相关的状态、依赖、配置或结果（声明类型 `HypothesisDTO`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -42,6 +52,10 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.deci
              * 含义与用法：读取、传递或更新 `hypothesis` 时应保持 `AuthorizationSimulationRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `hypothesis`, preserve `AuthorizationSimulationRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.simulation.domain.dto.AuthorizationSimulationRequestDTO.hypothesis", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.hypothesis")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    write = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
             @NotNull HypothesisDTO hypothesis,
             /**
              * 字段 `at` 表示 `AuthorizationSimulationRequestDTO` 中与 `at` 相关的状态、依赖、配置或结果（声明类型 `Instant`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -50,5 +64,10 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.deci
              * 含义与用法：读取、传递或更新 `at` 时应保持 `AuthorizationSimulationRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `at`, preserve `AuthorizationSimulationRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.simulation.domain.dto.AuthorizationSimulationRequestDTO.at", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.at")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             @NotNull Instant at) {
     }

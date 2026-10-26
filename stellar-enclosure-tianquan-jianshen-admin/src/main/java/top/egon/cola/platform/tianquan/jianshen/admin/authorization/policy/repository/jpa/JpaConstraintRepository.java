@@ -2,6 +2,10 @@ package top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.repo
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
+import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.repository.CatalogAdministrationGuard;
+import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.repository.PermissionCatalogScopeRepository;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.CatalogScope;
+import top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3UserDetails;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import top.egon.cola.component.common.id.snowflake.SnowflakeIdGenerator;
@@ -29,7 +33,6 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domai
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.dto.PrerequisiteGroupCommandDTO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.dto.CardinalityCommandDTO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.dto.DataRuleCommandDTO;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.dto.FieldRuleCommandDTO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.dto.OperationSodRuleCommandDTO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.vo.RuleReferenceVO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.vo.MutationResultVO;
@@ -39,7 +42,6 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domai
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.vo.OperationSodRuleVO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.enums.DataRuleScopeTypeEnum;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.enums.DataRuleReferenceReferenceTypeEnum;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.enums.FieldRuleAccessLevelEnum;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.enums.RoleCardinalityScopeTypeEnum;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.enums.RoleCardinalityStatusEnum;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.enums.RolePrerequisiteMatchModeEnum;
@@ -83,6 +85,7 @@ public class JpaConstraintRepository implements
      */
     private final AuthorizationEventPublisher eventPort;
     private final TenantAuthorizationStateRepository authorizationState;
+    private final CatalogAdministrationGuard catalogGuard;
 
     /**
      * 构造器 `JpaConstraintRepository` 用于创建并初始化 `JpaConstraintRepository` 实例，建立该类型后续方法所依赖的状态和不变量。
@@ -100,11 +103,13 @@ public class JpaConstraintRepository implements
             EntityManager entityManager,
             DatabaseClock databaseClock,
             AuthorizationEventPublisher eventPort,
-            TenantAuthorizationStateRepository authorizationState) {
+            TenantAuthorizationStateRepository authorizationState,
+            CatalogAdministrationGuard catalogGuard) {
         this.entityManager = entityManager;
         this.databaseClock = databaseClock;
         this.eventPort = eventPort;
         this.authorizationState = authorizationState;
+        this.catalogGuard = catalogGuard;
     }
 
     /**
@@ -327,18 +332,24 @@ public class JpaConstraintRepository implements
      * 用法：调用 `dataRules` 前准备符合契约的参数，并根据返回值、异常或副作用继续业务流程。
      * Usage: provide contract-compliant arguments before calling `dataRules`, then continue the business flow using its result, exception, or side effect.
      *
-     * @param tenantId 输入参数 `tenantId`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
+     * @param target 已验证租户下的完整目录归属；complete catalog identity in the verified tenant.
+     * @param actor 已认证 USER 身份；verified USER identity.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
     @Override
-    @Transactional(readOnly = true)
-    public List<DataRuleVO> dataRules(String tenantId) {
+    @Transactional
+    public List<DataRuleVO> dataRules(CatalogScope target, Rbac3UserDetails actor) {
+        if (target == null) throw new Rbac3RuleViolation("REQUEST_INVALID");
+        var scope = catalogGuard.require(target, actor, "system:data-rule:read", databaseClock.transactionNow());
         return entityManager.createQuery("""
                         select r from DataRuleEntity r
-                         where r.tenantId = :tenantId order by r.id
+                         where r.tenantId = :tenantId and r.catalogScopeId = :scopeId
+                           and r.applicationId = :applicationId order by r.id
                         """, DataRulePO.class)
-                .setParameter("tenantId", Long.valueOf(tenantId))
-                .getResultList().stream().map(this::toDataRuleView).toList();
+                .setParameter("tenantId", Long.parseLong(target.tenantId()))
+                .setParameter("scopeId", Long.parseLong(target.catalogScopeId()))
+                .setParameter("applicationId", scope.applicationId())
+                .getResultList().stream().map(rule -> toDataRuleView(rule, target)).toList();
     }
 
     /**
@@ -357,13 +368,14 @@ public class JpaConstraintRepository implements
             DataRuleCommandDTO command) {
         Instant now = databaseClock.transactionNow();
         Long tenantId = Long.valueOf(command.tenantId());
-        verifySameApplicationFacts(command.tenantId(), command.applicationId(),
-                command.roleId(), command.permissionId(), null);
+        var scope = catalogGuard.require(command.target(), command.actor(), "system:data-rule:manage", now);
+        verifyDataRuleCatalogFacts(scope, command);
         Long ruleId;
         if (command.ruleId() == null) {
+            requireVersion(0, command.expectedVersion());
             ruleId = SnowflakeIdGenerator.nextLongId();
             entityManager.persist(new DataRulePO(
-                    ruleId, tenantId, Long.valueOf(command.applicationId()),
+                    ruleId, tenantId, Long.parseLong(command.target().catalogScopeId()), Long.valueOf(command.applicationId()),
                     Long.valueOf(command.roleId()), Long.valueOf(command.permissionId()),
                     DataRuleScopeTypeEnum.valueOf(command.scopeType()),
                     command.directorySnapshotVersion(), command.validFrom(), command.validTo(),
@@ -373,6 +385,12 @@ public class JpaConstraintRepository implements
             DataRulePO rule = entityManager.find(
                     DataRulePO.class, ruleId, LockModeType.PESSIMISTIC_WRITE);
             requireTenant(rule, tenantId);
+            if (!rule.getCatalogScopeId().equals(Long.parseLong(command.target().catalogScopeId()))
+                    || !rule.getApplicationId().equals(scope.applicationId())
+                    || !rule.getRoleId().equals(Long.parseLong(command.roleId()))
+                    || !rule.getPermissionId().equals(Long.parseLong(command.permissionId()))) {
+                throw new Rbac3RuleViolation("APPLICATION_BINDING_DENIED");
+            }
             requireVersion(rule.getVersion(), command.expectedVersion());
             rule.update(
                     DataRuleScopeTypeEnum.valueOf(command.scopeType()),
@@ -419,46 +437,6 @@ public class JpaConstraintRepository implements
                         rule.getRoleId().toString(), rule.getPermissionId().toString(),
                         rule.getFieldDefinitionId().toString(), rule.getAccessLevel().name(),
                         rule.getStatus().name(), rule.getVersion())).toList();
-    }
-
-    /**
-     * 方法 `saveFieldRule` 按照 `JpaConstraintRepository` 的职责处理输入，完成 `save Field Rule` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。
-     * Method `saveFieldRule` processes its inputs according to `JpaConstraintRepository`'s responsibility, performs the `save Field Rule` operation, and returns a result or declared side effect; callers must follow its parameter and exception contract.
-     *
-     * 用法：调用 `saveFieldRule` 前准备符合契约的参数，并根据返回值、异常或副作用继续业务流程。
-     * Usage: provide contract-compliant arguments before calling `saveFieldRule`, then continue the business flow using its result, exception, or side effect.
-     *
-     * @param command 输入参数 `command`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
-     */
-    @Override
-    @Transactional
-    public MutationResultVO saveFieldRule(
-            FieldRuleCommandDTO command) {
-        Instant now = databaseClock.transactionNow();
-        Long tenantId = Long.valueOf(command.tenantId());
-        verifySameApplicationFacts(command.tenantId(), command.applicationId(),
-                command.roleId(), command.permissionId(), command.fieldDefinitionId());
-        Long ruleId;
-        if (command.ruleId() == null) {
-            ruleId = SnowflakeIdGenerator.nextLongId();
-            entityManager.persist(new FieldRulePO(
-                    ruleId, tenantId, Long.valueOf(command.applicationId()),
-                    Long.valueOf(command.roleId()), Long.valueOf(command.permissionId()),
-                    Long.valueOf(command.fieldDefinitionId()),
-                    FieldRuleAccessLevelEnum.valueOf(command.accessLevel()),
-                    command.validFrom(), command.validTo(), command.actorId(), now));
-        } else {
-            ruleId = Long.valueOf(command.ruleId());
-            FieldRulePO rule = entityManager.find(
-                    FieldRulePO.class, ruleId, LockModeType.PESSIMISTIC_WRITE);
-            requireTenant(rule, tenantId);
-            requireVersion(rule.getVersion(), command.expectedVersion());
-            rule.update(
-                    FieldRuleAccessLevelEnum.valueOf(command.accessLevel()),
-                    command.validFrom(), command.validTo(), command.actorId(), now);
-        }
-        return policyMutation(command.tenantId(), "FIELD_RULE", ruleId.toString(), command.actorId(), now);
     }
 
     /**
@@ -565,7 +543,7 @@ public class JpaConstraintRepository implements
      * @param rule 输入参数 `rule`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
-    private DataRuleVO toDataRuleView(DataRulePO rule) {
+    private DataRuleVO toDataRuleView(DataRulePO rule, CatalogScope target) {
         List<RuleReferenceVO> references = entityManager.createQuery("""
                         select r from DataRuleReferenceEntity r
                          where r.tenantId = :tenantId and r.dataRuleId = :ruleId
@@ -576,9 +554,33 @@ public class JpaConstraintRepository implements
                         reference.getReferenceType().name(),
                         reference.getReferenceId().toString())).toList();
         return new DataRuleVO(
-                rule.getId().toString(), rule.getApplicationId().toString(),
+                target, rule.getId().toString(), rule.getApplicationId().toString(),
                 rule.getRoleId().toString(), rule.getPermissionId().toString(),
                 rule.getScopeType().name(), references, rule.getStatus().name(), rule.getVersion());
+    }
+
+    /** 校验目录角色与权限同属已锁定作用域。 / Verify role and permission ownership in the locked catalog scope. */
+    private void verifyDataRuleCatalogFacts(PermissionCatalogScopeRepository.ScopeState scope, DataRuleCommandDTO command) {
+        if (scope.applicationId() != Long.parseLong(command.applicationId())) {
+            throw new Rbac3RuleViolation("APPLICATION_BINDING_DENIED");
+        }
+        List<?> facts = entityManager.createNativeQuery("""
+                select r.id, p.id
+                  from rbac3_catalog_role_binding b
+                  join rbac3_role r on r.id=b.role_id and r.tenant_id=b.tenant_id and r.application_id=b.application_id
+                  join rbac3_catalog_permission p on p.catalog_scope_id=b.catalog_scope_id
+                 where b.catalog_scope_id=:scope and b.tenant_id=:tenant and b.application_id=:application
+                   and b.role_id=:role and p.id=:permission and b.enabled and r.status='ACTIVE'
+                   and p.governance_state='ACTIVE'
+                 for share of b, r, p
+                """)
+                .setParameter("scope", Long.parseLong(command.target().catalogScopeId()))
+                .setParameter("tenant", Long.parseLong(command.tenantId()))
+                .setParameter("application", scope.applicationId())
+                .setParameter("role", Long.parseLong(command.roleId()))
+                .setParameter("permission", Long.parseLong(command.permissionId()))
+                .getResultList();
+        if (facts.size() != 1) throw new Rbac3RuleViolation("APPLICATION_BINDING_DENIED");
     }
 
     /**

@@ -1,4 +1,10 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.audit.domain.vo;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -48,6 +54,10 @@ import java.util.TreeMap;
              * 含义与用法：读取、传递或更新 `id` 时应保持 `AuditVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `id`, preserve `AuditVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.audit.domain.vo.AuditVO.id", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.id")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:audit:read"}))
             String id,
             /**
              * 字段 `tenantId` 表示 `AuditVO` 中与 `tenant Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -56,6 +66,10 @@ import java.util.TreeMap;
              * 含义与用法：读取、传递或更新 `tenantId` 时应保持 `AuditVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `tenantId`, preserve `AuditVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.audit.domain.vo.AuditVO.tenantId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.tenantId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:audit:read"}))
             String tenantId,
             /**
              * 字段 `eventType` 表示 `AuditVO` 中与 `event Type` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -64,6 +78,10 @@ import java.util.TreeMap;
              * 含义与用法：读取、传递或更新 `eventType` 时应保持 `AuditVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `eventType`, preserve `AuditVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.audit.domain.vo.AuditVO.eventType", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.eventType")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:audit:read"}))
             String eventType,
             /**
              * 字段 `outcome` 表示 `AuditVO` 中与 `outcome` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -72,6 +90,10 @@ import java.util.TreeMap;
              * 含义与用法：读取、传递或更新 `outcome` 时应保持 `AuditVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `outcome`, preserve `AuditVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.audit.domain.vo.AuditVO.outcome", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.outcome")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:audit:read"}))
             String outcome,
             /**
              * 字段 `severity` 表示 `AuditVO` 中与 `severity` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -80,6 +102,10 @@ import java.util.TreeMap;
              * 含义与用法：读取、传递或更新 `severity` 时应保持 `AuditVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `severity`, preserve `AuditVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.audit.domain.vo.AuditVO.severity", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.severity")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:audit:read"}))
             String severity,
             /**
              * 字段 `actorType` 表示 `AuditVO` 中与 `actor Type` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -88,6 +114,10 @@ import java.util.TreeMap;
              * 含义与用法：读取、传递或更新 `actorType` 时应保持 `AuditVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `actorType`, preserve `AuditVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.audit.domain.vo.AuditVO.actorType", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.actorType")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:audit:read"}))
             String actorType,
             /**
              * 字段 `actorId` 表示 `AuditVO` 中与 `actor Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -96,6 +126,10 @@ import java.util.TreeMap;
              * 含义与用法：读取、传递或更新 `actorId` 时应保持 `AuditVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `actorId`, preserve `AuditVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.audit.domain.vo.AuditVO.actorId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.actorId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:audit:read"}))
             String actorId,
             /**
              * 字段 `targetType` 表示 `AuditVO` 中与 `target Type` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -104,6 +138,10 @@ import java.util.TreeMap;
              * 含义与用法：读取、传递或更新 `targetType` 时应保持 `AuditVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `targetType`, preserve `AuditVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.audit.domain.vo.AuditVO.targetType", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.targetType")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:audit:read"}))
             String targetType,
             /**
              * 字段 `targetId` 表示 `AuditVO` 中与 `target Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -112,6 +150,10 @@ import java.util.TreeMap;
              * 含义与用法：读取、传递或更新 `targetId` 时应保持 `AuditVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `targetId`, preserve `AuditVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.audit.domain.vo.AuditVO.targetId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.targetId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:audit:read"}))
             String targetId,
             /**
              * 字段 `managementPolicyId` 表示 `AuditVO` 中与 `management Policy Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -120,6 +162,10 @@ import java.util.TreeMap;
              * 含义与用法：读取、传递或更新 `managementPolicyId` 时应保持 `AuditVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `managementPolicyId`, preserve `AuditVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.audit.domain.vo.AuditVO.managementPolicyId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.managementPolicyId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:audit:read"}))
             String managementPolicyId,
             /**
              * 字段 `reasonCode` 表示 `AuditVO` 中与 `reason Code` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -128,6 +174,10 @@ import java.util.TreeMap;
              * 含义与用法：读取、传递或更新 `reasonCode` 时应保持 `AuditVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `reasonCode`, preserve `AuditVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.audit.domain.vo.AuditVO.reasonCode", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.reasonCode")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:audit:read"}))
             String reasonCode,
             /**
              * 字段 `requestId` 表示 `AuditVO` 中与 `request Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -136,6 +186,10 @@ import java.util.TreeMap;
              * 含义与用法：读取、传递或更新 `requestId` 时应保持 `AuditVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `requestId`, preserve `AuditVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.audit.domain.vo.AuditVO.requestId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.requestId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:audit:read"}))
             String requestId,
             /**
              * 字段 `traceId` 表示 `AuditVO` 中与 `trace Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -144,6 +198,10 @@ import java.util.TreeMap;
              * 含义与用法：读取、传递或更新 `traceId` 时应保持 `AuditVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `traceId`, preserve `AuditVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.audit.domain.vo.AuditVO.traceId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.traceId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:audit:read"}))
             String traceId,
             /**
              * 字段 `beforeSnapshot` 表示 `AuditVO` 中与 `before Snapshot` 相关的状态、依赖、配置或结果（声明类型 `Map&lt;String, Object&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -152,6 +210,10 @@ import java.util.TreeMap;
              * 含义与用法：读取、传递或更新 `beforeSnapshot` 时应保持 `AuditVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `beforeSnapshot`, preserve `AuditVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.audit.domain.vo.AuditVO.beforeSnapshot", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.beforeSnapshot")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    plainRead = @PermissionGroup(codes = {"system:audit:read"}))
             @Schema(type = "object",
                     additionalProperties = Schema.AdditionalPropertiesValue.TRUE)
             Map<String, Object> beforeSnapshot,
@@ -162,6 +224,10 @@ import java.util.TreeMap;
              * 含义与用法：读取、传递或更新 `afterSnapshot` 时应保持 `AuditVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `afterSnapshot`, preserve `AuditVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.audit.domain.vo.AuditVO.afterSnapshot", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.afterSnapshot")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    plainRead = @PermissionGroup(codes = {"system:audit:read"}))
             @Schema(type = "object",
                     additionalProperties = Schema.AdditionalPropertiesValue.TRUE)
             Map<String, Object> afterSnapshot,
@@ -172,6 +238,10 @@ import java.util.TreeMap;
              * 含义与用法：读取、传递或更新 `payloadChecksum` 时应保持 `AuditVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `payloadChecksum`, preserve `AuditVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.audit.domain.vo.AuditVO.payloadChecksum", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.payloadChecksum")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:audit:read"}))
             String payloadChecksum,
             /**
              * 字段 `createdAt` 表示 `AuditVO` 中与 `created At` 相关的状态、依赖、配置或结果（声明类型 `Instant`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -180,5 +250,10 @@ import java.util.TreeMap;
              * 含义与用法：读取、传递或更新 `createdAt` 时应保持 `AuditVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `createdAt`, preserve `AuditVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.audit.domain.vo.AuditVO.createdAt", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.createdAt")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:audit:read"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant createdAt) {
     }

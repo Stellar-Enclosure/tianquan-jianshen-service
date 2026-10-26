@@ -4,8 +4,8 @@ import top.egon.cola.platform.tianquan.jianshen.admin.iam.application.domain.com
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.application.domain.command.ChangeApplicationAuthorizationScopeStatusCommand;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.application.domain.vo.ApplicationAuthorizationScopeVO;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.application.repository.ApplicationResourceRepository;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.ApplicationCatalogEntry;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.DdcCatalogGateway;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.domain.vo.ApplicationCatalogEntry;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.repository.DdcCatalogGateway;
 
 import java.util.List;
 import java.util.Objects;

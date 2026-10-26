@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
@@ -20,13 +26,21 @@ import java.util.Objects;
  *
  * 含义与用法：读取、传递或更新 `items` 时应保持 `AuthorizationMutationPageVO` 的生命周期、不可变性和线程安全约束。
  * Meaning and usage: when reading, passing, or updating `items`, preserve `AuthorizationMutationPageVO`'s lifecycle, immutability, and thread-safety constraints.
- */ List<MutationVO> items, /**
+ */ @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.AuthorizationMutationPageVO.items", type = ResourceType.FIELD,
+                labelPage = "tianquan-jianshen.permissions", labelKey = "field.items")
+        @FieldPermissions(valueType = PermissionManifest.JsonFieldType.ARRAY,
+                plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
+        List<MutationVO> items, /**
  * 字段 `nextCursor` 表示 `AuthorizationMutationPageVO` 中与 `next Cursor` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
  * Field `nextCursor` stores the `next Cursor`-related state, dependency, configuration, or result of `AuthorizationMutationPageVO` (declared type `String`); its lifecycle and value semantics are defined by its declared type and owning object.
  *
  * 含义与用法：读取、传递或更新 `nextCursor` 时应保持 `AuthorizationMutationPageVO` 的生命周期、不可变性和线程安全约束。
  * Meaning and usage: when reading, passing, or updating `nextCursor`, preserve `AuthorizationMutationPageVO`'s lifecycle, immutability, and thread-safety constraints.
- */ String nextCursor) {
+ */ @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.AuthorizationMutationPageVO.nextCursor", type = ResourceType.FIELD,
+                labelPage = "tianquan-jianshen.permissions", labelKey = "field.nextCursor")
+        @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
+        String nextCursor) {
         /**
          * 构造器 `AuthorizationMutationPageVO` 用于创建并初始化 `AuthorizationMutationPageVO` 实例，建立该类型后续方法所依赖的状态和不变量。
          * Constructor `AuthorizationMutationPageVO` creates and initializes `AuthorizationMutationPageVO`, establishing the state and invariants required by subsequent operations.

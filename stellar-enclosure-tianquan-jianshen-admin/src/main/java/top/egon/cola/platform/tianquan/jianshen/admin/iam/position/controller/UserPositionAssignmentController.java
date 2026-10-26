@@ -1,5 +1,13 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.position.controller;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -19,7 +27,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.iam.position.service.UserP
 import top.egon.cola.platform.tianquan.jianshen.admin.shared.tenant.domain.TenantContext;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.CurrentRbac3User;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3UserDetails;
-import top.egon.cola.platform.tianquan.jianshen.starter.security.RequiresPermission;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.RequiresPermissions;
 
 import java.util.List;
 
@@ -42,8 +50,10 @@ public class UserPositionAssignmentController {
         this.service = service;
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.UserPositionAssignment.list", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.UserPositionAssignment.list")
     @GetMapping
-    @RequiresPermission(value = "system:user-position:read")
+    @RequiresPermissions(codes = "system:user-position:read")
     @Operation(
             operationId = "tianquan-jianshen-iam-user-position-list-v1",
             summary = "查询用户岗位任职",
@@ -57,8 +67,10 @@ public class UserPositionAssignmentController {
         return ResultRecord.success(service.list(tenantId(), userId));
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.UserPositionAssignment.assign", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.UserPositionAssignment.assign")
     @PostMapping
-    @RequiresPermission(value = "system:user-position:manage")
+    @RequiresPermissions(codes = "system:user-position:manage")
     @Operation(
             operationId = "tianquan-jianshen-iam-user-position-create-v1",
             summary = "新增用户岗位任职",
@@ -75,8 +87,10 @@ public class UserPositionAssignmentController {
                 tenantId(), userId, command, new CurrentRbac3User().require().rbac3UserId()));
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.UserPositionAssignment.revoke", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.UserPositionAssignment.revoke")
     @DeleteMapping("/{assignmentId}")
-    @RequiresPermission(value = "system:user-position:manage")
+    @RequiresPermissions(codes = "system:user-position:manage")
     @Operation(
             operationId = "tianquan-jianshen-iam-user-position-revoke-v1",
             summary = "撤销用户岗位任职",

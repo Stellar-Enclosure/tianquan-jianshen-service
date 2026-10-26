@@ -48,9 +48,10 @@ public class Rbac3AdminSecurityConfiguration {
                 List.of(),
                 List.of(
                         "/internal/**",
+                        "/api/v1/permission-manifests/**",
                         "/api/tianquan-jianshen/v1/internal/**",
                         "/v3/api-docs/**"
-                ));
+                ), List.of("/api/v1/permission-catalogs/activations", "/api/v1/permission-catalogs/versions"), true);
     }
 
     /**
@@ -222,7 +223,7 @@ public class Rbac3AdminSecurityConfiguration {
         return builder -> builder.featuresToEnable(
                 DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
     }
-    private static void authenticationFailure(jakarta.servlet.http.HttpServletRequest request, jakarta.servlet.http.HttpServletResponse response,
+    static void authenticationFailure(jakarta.servlet.http.HttpServletRequest request, jakarta.servlet.http.HttpServletResponse response,
             ObjectMapper mapper) throws java.io.IOException {
         boolean delivered = IdpSecurityObservationFilter.beforeAuthenticationFailure(request);
         response.setStatus(delivered ? 401 : 503); response.setHeader("Cache-Control", "no-store");
@@ -232,7 +233,7 @@ public class Rbac3AdminSecurityConfiguration {
                 "message", delivered ? "Tianquan-Shoubing authentication failed" : "Tianquan-Shoubing authentication state is temporarily unavailable"));
     }
 
-    private static void authorizationFailure(jakarta.servlet.http.HttpServletRequest request, jakarta.servlet.http.HttpServletResponse response,
+    static void authorizationFailure(jakarta.servlet.http.HttpServletRequest request, jakarta.servlet.http.HttpServletResponse response,
             ObjectMapper mapper) throws java.io.IOException {
         boolean delivered = IdpSecurityObservationFilter.beforeAuthorizationDenied(request);
         response.setStatus(delivered ? 403 : 503); response.setHeader("Cache-Control", "no-store"); response.setContentType("application/json");

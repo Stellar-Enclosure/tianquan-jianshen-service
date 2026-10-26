@@ -216,7 +216,11 @@ class UserAuthorizationSnapshotProjectorTest {
                         new AuthorizationRuleFacts.ResourceFact(
                                 "101", "resource-a", "API", null, "permission-a"),
                         new AuthorizationRuleFacts.ResourceFact(
-                                "201", "resource-b", "API", null, "permission-b")));
+                                "201", "resource-b", "API", null, "permission-b")),
+                List.of(), List.of(
+                        new AuthorizationRuleFacts.PermissionGrantBinding("scope-a", "1", "10", "permission-a"),
+                        new AuthorizationRuleFacts.PermissionGrantBinding(sameApplication ? "scope-a" : "scope-b",
+                                sameApplication ? "1" : "2", "20", "permission-b")));
         ActivationFactsVO facts = new ActivationFactsVO(
                 "7", "9", hierarchy,
                 List.of(
@@ -274,7 +278,10 @@ class UserAuthorizationSnapshotProjectorTest {
                                         "20", "finance:read"),
                                 new AuthorizationRuleFacts.ResourceGrantBinding(
                                         "30", "finance:report")),
-                        List.of(), List.of(), List.of(), List.of()),
+                        List.of(), List.of(), List.of(), List.of(), List.of(), List.of(
+                                new AuthorizationRuleFacts.PermissionGrantBinding("scope-sales", "1", "10", "sales:read"),
+                                new AuthorizationRuleFacts.PermissionGrantBinding("scope-finance", "2", "20", "finance:read"),
+                                new AuthorizationRuleFacts.PermissionGrantBinding("scope-report", "3", "30", "finance:report"))),
                 3, 8, "directory:12",
                 Map.of(
                         "1", new ApplicationFactVO("1", "sales-app", "Sales"),

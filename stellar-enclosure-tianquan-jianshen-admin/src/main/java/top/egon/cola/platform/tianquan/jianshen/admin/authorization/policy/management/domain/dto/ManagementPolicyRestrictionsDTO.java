@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.management.domain.dto;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -44,6 +50,10 @@ import java.util.stream.Collectors;
              * 含义与用法：读取、传递或更新 `maximumAssignmentDays` 时应保持 `ManagementPolicyRestrictionsDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `maximumAssignmentDays`, preserve `ManagementPolicyRestrictionsDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.dto.ManagementPolicyRestrictionsDTO.maximumAssignmentDays", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.maximumAssignmentDays")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    write = @PermissionGroup(codes = {"system:management-policy:manage"}))
             Integer maximumAssignmentDays,
             /**
              * 字段 `maximumRiskLevel` 表示 `ManagementPolicyRestrictionsDTO` 中与 `maximum Risk Level` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -52,6 +62,10 @@ import java.util.stream.Collectors;
              * 含义与用法：读取、传递或更新 `maximumRiskLevel` 时应保持 `ManagementPolicyRestrictionsDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `maximumRiskLevel`, preserve `ManagementPolicyRestrictionsDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.dto.ManagementPolicyRestrictionsDTO.maximumRiskLevel", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.maximumRiskLevel")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:management-policy:manage"}))
             @NotBlank String maximumRiskLevel,
             /**
              * 字段 `requiredAuthenticationStrength` 表示 `ManagementPolicyRestrictionsDTO` 中与 `required Authentication Strength` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -60,6 +74,10 @@ import java.util.stream.Collectors;
              * 含义与用法：读取、传递或更新 `requiredAuthenticationStrength` 时应保持 `ManagementPolicyRestrictionsDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `requiredAuthenticationStrength`, preserve `ManagementPolicyRestrictionsDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.dto.ManagementPolicyRestrictionsDTO.requiredAuthenticationStrength", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.requiredAuthenticationStrength")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:management-policy:manage"}))
             @NotBlank String requiredAuthenticationStrength,
             /**
              * 字段 `requireReason` 表示 `ManagementPolicyRestrictionsDTO` 中与 `require Reason` 相关的状态、依赖、配置或结果（声明类型 `boolean`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -68,6 +86,10 @@ import java.util.stream.Collectors;
              * 含义与用法：读取、传递或更新 `requireReason` 时应保持 `ManagementPolicyRestrictionsDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `requireReason`, preserve `ManagementPolicyRestrictionsDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.dto.ManagementPolicyRestrictionsDTO.requireReason", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.requireReason")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.BOOLEAN,
+                    write = @PermissionGroup(codes = {"system:management-policy:manage"}))
             boolean requireReason,
             /**
              * 字段 `requireTicket` 表示 `ManagementPolicyRestrictionsDTO` 中与 `require Ticket` 相关的状态、依赖、配置或结果（声明类型 `boolean`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -76,6 +98,10 @@ import java.util.stream.Collectors;
              * 含义与用法：读取、传递或更新 `requireTicket` 时应保持 `ManagementPolicyRestrictionsDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `requireTicket`, preserve `ManagementPolicyRestrictionsDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.dto.ManagementPolicyRestrictionsDTO.requireTicket", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.requireTicket")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.BOOLEAN,
+                    write = @PermissionGroup(codes = {"system:management-policy:manage"}))
             boolean requireTicket,
             /**
              * 字段 `includeInheritedSubjectRoles` 表示 `ManagementPolicyRestrictionsDTO` 中与 `include Inherited ManagementPolicySubjectDTO Roles` 相关的状态、依赖、配置或结果（声明类型 `boolean`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -84,6 +110,10 @@ import java.util.stream.Collectors;
              * 含义与用法：读取、传递或更新 `includeInheritedSubjectRoles` 时应保持 `ManagementPolicyRestrictionsDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `includeInheritedSubjectRoles`, preserve `ManagementPolicyRestrictionsDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.dto.ManagementPolicyRestrictionsDTO.includeInheritedSubjectRoles", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.includeInheritedSubjectRoles")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.BOOLEAN,
+                    write = @PermissionGroup(codes = {"system:management-policy:manage"}))
             boolean includeInheritedSubjectRoles,
             /**
              * 字段 `requireAllAffiliationsInScope` 表示 `ManagementPolicyRestrictionsDTO` 中与 `require All Affiliations In ManagementPolicyScopeDTO` 相关的状态、依赖、配置或结果（声明类型 `boolean`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -92,6 +122,10 @@ import java.util.stream.Collectors;
              * 含义与用法：读取、传递或更新 `requireAllAffiliationsInScope` 时应保持 `ManagementPolicyRestrictionsDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `requireAllAffiliationsInScope`, preserve `ManagementPolicyRestrictionsDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.dto.ManagementPolicyRestrictionsDTO.requireAllAffiliationsInScope", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.requireAllAffiliationsInScope")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.BOOLEAN,
+                    write = @PermissionGroup(codes = {"system:management-policy:manage"}))
             boolean requireAllAffiliationsInScope
     ) {
     }

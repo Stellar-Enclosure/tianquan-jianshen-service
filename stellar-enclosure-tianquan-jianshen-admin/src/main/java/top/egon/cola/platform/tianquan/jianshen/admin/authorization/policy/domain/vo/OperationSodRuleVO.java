@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
 import java.util.HashSet;
 import java.util.List;
@@ -28,6 +34,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `ruleId` 时应保持 `OperationSodRuleVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `ruleId`, preserve `OperationSodRuleVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.OperationSodRuleVO.ruleId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.ruleId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:operation-sod:read"}))
             String ruleId,
             /**
              * 字段 `applicationCode` 表示 `OperationSodRuleVO` 中与 `application Code` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -36,6 +46,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `applicationCode` 时应保持 `OperationSodRuleVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `applicationCode`, preserve `OperationSodRuleVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.OperationSodRuleVO.applicationCode", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.applicationCode")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:operation-sod:read"}))
             String applicationCode,
             /**
              * 字段 `businessResource` 表示 `OperationSodRuleVO` 中与 `business Resource` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -44,6 +58,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `businessResource` 时应保持 `OperationSodRuleVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `businessResource`, preserve `OperationSodRuleVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.OperationSodRuleVO.businessResource", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.businessResource")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:operation-sod:read"}))
             String businessResource,
             /**
              * 字段 `priorActionCode` 表示 `OperationSodRuleVO` 中与 `prior Action Code` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -52,6 +70,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `priorActionCode` 时应保持 `OperationSodRuleVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `priorActionCode`, preserve `OperationSodRuleVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.OperationSodRuleVO.priorActionCode", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.priorActionCode")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:operation-sod:read"}))
             String priorActionCode,
             /**
              * 字段 `forbiddenLaterActionCode` 表示 `OperationSodRuleVO` 中与 `forbidden Later Action Code` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -60,6 +82,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `forbiddenLaterActionCode` 时应保持 `OperationSodRuleVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `forbiddenLaterActionCode`, preserve `OperationSodRuleVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.OperationSodRuleVO.forbiddenLaterActionCode", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.forbiddenLaterActionCode")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:operation-sod:read"}))
             String forbiddenLaterActionCode,
             /**
              * 字段 `status` 表示 `OperationSodRuleVO` 中与 `status` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -68,6 +94,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `status` 时应保持 `OperationSodRuleVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `status`, preserve `OperationSodRuleVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.OperationSodRuleVO.status", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.status")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:operation-sod:read"}))
             String status,
             /**
              * 字段 `version` 表示 `OperationSodRuleVO` 中与 `version` 相关的状态、依赖、配置或结果（声明类型 `long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -76,6 +106,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `version` 时应保持 `OperationSodRuleVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `version`, preserve `OperationSodRuleVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.OperationSodRuleVO.version", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.version")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    plainRead = @PermissionGroup(codes = {"system:operation-sod:read"}))
             long version
     ) {
     }

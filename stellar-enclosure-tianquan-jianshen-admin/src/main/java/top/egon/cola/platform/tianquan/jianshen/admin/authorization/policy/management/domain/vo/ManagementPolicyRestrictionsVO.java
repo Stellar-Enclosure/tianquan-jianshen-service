@@ -1,5 +1,12 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.management.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionMode;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import top.egon.cola.platform.tianquan.jianshen.core.delegation.ManagementPolicyDecisionService;
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
 import java.time.Instant;
@@ -30,6 +37,10 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `maximumAssignmentDays` 时应保持 `ManagementPolicyRestrictionsVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `maximumAssignmentDays`, preserve `ManagementPolicyRestrictionsVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.ManagementPolicyRestrictionsVO.maximumAssignmentDays", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.maximumAssignmentDays")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:management-policy:manage", "system:management-policy:read"}))
             Integer maximumAssignmentDays,
             /**
              * 字段 `maximumRiskLevel` 表示 `ManagementPolicyRestrictionsVO` 中与 `maximum Risk Level` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -38,6 +49,10 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `maximumRiskLevel` 时应保持 `ManagementPolicyRestrictionsVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `maximumRiskLevel`, preserve `ManagementPolicyRestrictionsVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.ManagementPolicyRestrictionsVO.maximumRiskLevel", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.maximumRiskLevel")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:management-policy:manage", "system:management-policy:read"}))
             String maximumRiskLevel,
             /**
              * 字段 `requiredAuthenticationStrength` 表示 `ManagementPolicyRestrictionsVO` 中与 `required Authentication Strength` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -46,6 +61,10 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `requiredAuthenticationStrength` 时应保持 `ManagementPolicyRestrictionsVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `requiredAuthenticationStrength`, preserve `ManagementPolicyRestrictionsVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.ManagementPolicyRestrictionsVO.requiredAuthenticationStrength", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.requiredAuthenticationStrength")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:management-policy:manage", "system:management-policy:read"}))
             String requiredAuthenticationStrength,
             /**
              * 字段 `requireReason` 表示 `ManagementPolicyRestrictionsVO` 中与 `require Reason` 相关的状态、依赖、配置或结果（声明类型 `boolean`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -54,6 +73,10 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `requireReason` 时应保持 `ManagementPolicyRestrictionsVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `requireReason`, preserve `ManagementPolicyRestrictionsVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.ManagementPolicyRestrictionsVO.requireReason", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.requireReason")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.BOOLEAN,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:management-policy:manage", "system:management-policy:read"}))
             boolean requireReason,
             /**
              * 字段 `requireTicket` 表示 `ManagementPolicyRestrictionsVO` 中与 `require Ticket` 相关的状态、依赖、配置或结果（声明类型 `boolean`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -62,6 +85,10 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `requireTicket` 时应保持 `ManagementPolicyRestrictionsVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `requireTicket`, preserve `ManagementPolicyRestrictionsVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.ManagementPolicyRestrictionsVO.requireTicket", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.requireTicket")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.BOOLEAN,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:management-policy:manage", "system:management-policy:read"}))
             boolean requireTicket,
             /**
              * 字段 `includeInheritedSubjectRoles` 表示 `ManagementPolicyRestrictionsVO` 中与 `include Inherited ManagementPolicySubjectVO Roles` 相关的状态、依赖、配置或结果（声明类型 `boolean`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -70,6 +97,10 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `includeInheritedSubjectRoles` 时应保持 `ManagementPolicyRestrictionsVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `includeInheritedSubjectRoles`, preserve `ManagementPolicyRestrictionsVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.ManagementPolicyRestrictionsVO.includeInheritedSubjectRoles", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.includeInheritedSubjectRoles")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.BOOLEAN,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:management-policy:manage", "system:management-policy:read"}))
             boolean includeInheritedSubjectRoles,
             /**
              * 字段 `requireAllAffiliationsInScope` 表示 `ManagementPolicyRestrictionsVO` 中与 `require All Affiliations In ManagementPolicyScopeVO` 相关的状态、依赖、配置或结果（声明类型 `boolean`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -78,6 +109,10 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `requireAllAffiliationsInScope` 时应保持 `ManagementPolicyRestrictionsVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `requireAllAffiliationsInScope`, preserve `ManagementPolicyRestrictionsVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.ManagementPolicyRestrictionsVO.requireAllAffiliationsInScope", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.requireAllAffiliationsInScope")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.BOOLEAN,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:management-policy:manage", "system:management-policy:read"}))
             boolean requireAllAffiliationsInScope
     ) {
     }

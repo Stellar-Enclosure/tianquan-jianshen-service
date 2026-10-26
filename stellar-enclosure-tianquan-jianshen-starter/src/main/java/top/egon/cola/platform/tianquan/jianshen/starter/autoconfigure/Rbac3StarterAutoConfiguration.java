@@ -9,7 +9,6 @@ import top.egon.cola.platform.tianquan.jianshen.starter.field.FieldWriteAuthoriz
 import top.egon.cola.platform.tianquan.jianshen.starter.field.Rbac3FieldWriteAuthorizationComponent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.aop.support.StaticMethodMatcherPointcut;
-import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -32,7 +31,6 @@ import top.egon.cola.platform.tianquan.jianshen.starter.authorization.Authorizat
 import top.egon.cola.platform.tianquan.jianshen.starter.authorization.DefaultAuthorizationService;
 import top.egon.cola.platform.tianquan.jianshen.starter.authorization.Rbac3AboutService;
 import top.egon.cola.platform.tianquan.jianshen.starter.cache.AuthorizationSnapshotCache;
-import top.egon.cola.platform.tianquan.jianshen.starter.cache.RedisAuthorizationSnapshotCache;
 import top.egon.cola.platform.tianquan.jianshen.starter.cache.SingleFlightSnapshotLoader;
 import top.egon.cola.platform.tianquan.jianshen.starter.client.HttpRbac3AuthorizationClient;
 import top.egon.cola.platform.tianquan.jianshen.starter.client.HttpTenantServiceTokenSupplier;
@@ -78,20 +76,113 @@ public class Rbac3StarterAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    public top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionPolicyRegistry permissionPolicyRegistry(
+            Rbac3StarterProperties properties, @Qualifier("rbac3Clock") Clock clock) {
+        return top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionPolicyRegistry.load(
+                new ObjectMapper().findAndRegisterModules(),
+                properties.getRuntime().getArtifactDigest(), clock, properties.getRuntime().getCatalogScopes(),
+                properties.getRuntime().getBootstrapServiceResourceKeys(), properties.getRuntime().getAnonymousResourceKeys());
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public top.egon.cola.platform.tianquan.jianshen.starter.permission.CurrentEffectivePermissionView currentEffectivePermissionView(
+            CurrentRbac3User users, top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionPolicyRegistry policies,
+            @Qualifier("rbac3Clock") Clock clock) {
+        return new top.egon.cola.platform.tianquan.jianshen.starter.permission.CurrentEffectivePermissionView(users, policies, clock);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionFieldCatalog permissionFieldCatalog(
+            top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionPolicyRegistry policies,
+            top.egon.cola.platform.tianquan.jianshen.starter.permission.CurrentEffectivePermissionView views,
+            CurrentRbac3User users) {
+        return new top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionFieldCatalog(policies, views, users);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionAnonymousBoundary permissionAnonymousBoundary(
+            top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionPolicyRegistry registry,
+            ObjectProvider<top.egon.cola.platform.tianquan.shoubing.starter.security.IdpEndpointAuthenticationPolicy> endpointPolicy) {
+        return new top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionAnonymousBoundary(registry, endpointPolicy::getIfAvailable);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionDenialAudit permissionDenialAudit(
+            ObjectProvider<top.egon.cola.platform.tianquan.shoubing.starter.security.IdpObservedVerificationComponent> observations) {
+        return new top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionDenialAudit(observations::getIfAvailable);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionServicePolicyGuard permissionServicePolicyGuard(
+            top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionPolicyRegistry registry,
+            Rbac3AuthorizationClient client, Rbac3StarterProperties properties, @Qualifier("rbac3Clock") Clock clock) {
+        return new top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionServicePolicyGuard(
+                registry, client, properties.getSystemCode(), clock);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionExecutionGuard permissionExecutionGuard(
+            top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionPolicyRegistry registry,
+            CurrentRbac3User users, SingleFlightSnapshotLoader snapshots,
+            top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionServicePolicyGuard services,
+            Rbac3StarterProperties properties,
+            top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionDenialAudit audit,
+            top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionAnonymousBoundary anonymous) {
+        return new top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionExecutionGuard(
+                registry, users, snapshots, services, properties.getUserScopePolicy(), audit, anonymous);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public top.egon.cola.platform.tianquan.jianshen.starter.field.PermissionFieldBindingGuard permissionFieldBindingGuard(
+            top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionPolicyRegistry registry, CurrentRbac3User users,
+            ObjectProvider<top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionServicePolicyGuard> services,
+            Rbac3StarterProperties properties,
+            top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionDenialAudit audit,
+            top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionAnonymousBoundary anonymous) {
+        return new top.egon.cola.platform.tianquan.jianshen.starter.field.PermissionFieldBindingGuard(
+                registry, users, services::getObject, properties.getUserScopePolicy(), audit, anonymous);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public top.egon.cola.platform.tianquan.jianshen.starter.field.PermissionOutputProjection permissionOutputProjection(
+            top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionExecutionGuard guard, ObjectMapper mapper,
+            top.egon.cola.platform.tianquan.jianshen.starter.field.PermissionJsonMapperFactory fields) {
+        return new top.egon.cola.platform.tianquan.jianshen.starter.field.PermissionOutputProjection(guard, fields.forTransport(mapper));
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
     public Rbac3AboutService rbac3AboutService(CurrentRbac3User currentUser) {
         return new Rbac3AboutService(currentUser);
     }
 
     /** Registers the single response-side Jackson module for RBAC field decisions. */
     @Bean
-    @ConditionalOnBean(ObjectMapper.class)
-    @ConditionalOnMissingBean(Rbac3FieldJacksonModule.class)
+    @ConditionalOnMissingBean
+    public top.egon.cola.platform.tianquan.jianshen.starter.field.PermissionJsonMapperFactory permissionJsonMapperFactory(
+            CurrentRbac3User users, ObjectProvider<SensitiveStrategyRegistry> masks,
+            top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionPolicyRegistry policies,
+            top.egon.cola.platform.tianquan.jianshen.starter.field.PermissionFieldBindingGuard writes) {
+        return new top.egon.cola.platform.tianquan.jianshen.starter.field.PermissionJsonMapperFactory(
+                users, masks.getIfAvailable(SensitiveStrategyRegistry::defaults), policies, writes);
+    }
+
     public Rbac3FieldJacksonModule rbac3FieldJacksonModule(
             CurrentRbac3User currentUser,
-            ObjectProvider<SensitiveStrategyRegistry> registryProvider) {
+            ObjectProvider<SensitiveStrategyRegistry> registryProvider,
+            top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionPolicyRegistry policies,
+            top.egon.cola.platform.tianquan.jianshen.starter.field.PermissionFieldBindingGuard writes) {
         SensitiveStrategyRegistry registry = registryProvider.getIfAvailable(
                 SensitiveStrategyRegistry::defaults);
-        return new Rbac3FieldJacksonModule(currentUser, registry);
+        return new Rbac3FieldJacksonModule(currentUser, registry, policies, writes);
     }
 
     /**
@@ -107,54 +198,6 @@ public class Rbac3StarterAutoConfiguration {
     @ConditionalOnMissingBean(name = "rbac3Clock")
     public Clock rbac3Clock() {
         return Clock.systemUTC();
-    }
-
-    /**
-     * 方法 `redisAuthorizationSnapshotCache` 按照 `Rbac3StarterAutoConfiguration` 的职责处理输入，完成 `redis Authorization Snapshot Cache` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。
-     * Method `redisAuthorizationSnapshotCache` processes its inputs according to `Rbac3StarterAutoConfiguration`'s responsibility, performs the `redis Authorization Snapshot Cache` operation, and returns a result or declared side effect; callers must follow its parameter and exception contract.
-     *
-     * 用法：调用 `redisAuthorizationSnapshotCache` 前准备符合契约的参数，并根据返回值、异常或副作用继续业务流程。
-     * Usage: provide contract-compliant arguments before calling `redisAuthorizationSnapshotCache`, then continue the business flow using its result, exception, or side effect.
-     *
-     * @param redisson 输入参数 `redisson`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param objectMapper 输入参数 `objectMapper`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param properties 输入参数 `properties`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
-     */
-    @Bean
-    @ConditionalOnBean(name = "rbac3RuntimeRedissonClient")
-    @ConditionalOnMissingBean
-    public RedisAuthorizationSnapshotCache redisAuthorizationSnapshotCache(
-            @Qualifier("rbac3RuntimeRedissonClient") RedissonClient redisson,
-            ObjectMapper objectMapper,
-            Rbac3StarterProperties properties) {
-        return new RedisAuthorizationSnapshotCache(
-                redisson, objectMapper,
-                properties.getAuthorization().getMaximumJitter());
-    }
-
-    /**
-     * 方法 `authorizationSnapshotCache` 按照 `Rbac3StarterAutoConfiguration` 的职责处理输入，完成 `authorization Snapshot Cache` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。
-     * Method `authorizationSnapshotCache` processes its inputs according to `Rbac3StarterAutoConfiguration`'s responsibility, performs the `authorization Snapshot Cache` operation, and returns a result or declared side effect; callers must follow its parameter and exception contract.
-     *
-     * 用法：调用 `authorizationSnapshotCache` 前准备符合契约的参数，并根据返回值、异常或副作用继续业务流程。
-     * Usage: provide contract-compliant arguments before calling `authorizationSnapshotCache`, then continue the business flow using its result, exception, or side effect.
-     *
-     * @param store 输入参数 `store`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param clock 输入参数 `clock`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param properties 输入参数 `properties`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
-     */
-    @Bean
-    @ConditionalOnBean(RedisAuthorizationSnapshotCache.class)
-    @ConditionalOnMissingBean
-    public AuthorizationSnapshotCache authorizationSnapshotCache(
-            RedisAuthorizationSnapshotCache store,
-            @Qualifier("rbac3Clock") Clock clock,
-            Rbac3StarterProperties properties) {
-        return new AuthorizationSnapshotCache(
-                store, clock,
-                properties.getAuthorization().getNearCacheTtl());
     }
 
     /**
@@ -216,17 +259,13 @@ public class Rbac3StarterAutoConfiguration {
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
     @Bean
-    @ConditionalOnBean({AuthorizationSnapshotCache.class,
-            Rbac3AuthorizationClient.class})
+    @ConditionalOnBean(Rbac3AuthorizationClient.class)
     @ConditionalOnMissingBean
     public SingleFlightSnapshotLoader singleFlightSnapshotLoader(
-            AuthorizationSnapshotCache cache,
             Rbac3AuthorizationClient client,
             Rbac3StarterProperties properties,
             @Qualifier("rbac3Clock") Clock clock) {
-        return new SingleFlightSnapshotLoader(
-                cache, client, required(properties.getSystemCode(), "systemCode"),
-                properties.getAuthorization().getCacheTtl(), clock);
+        return new SingleFlightSnapshotLoader(client, required(properties.getSystemCode(), "systemCode"), clock);
     }
 
     /**
@@ -302,9 +341,25 @@ public class Rbac3StarterAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public AuthorizationService.FenceVerifier rbac3FenceVerifier(
+            CurrentRbac3User currentUser, SingleFlightSnapshotLoader snapshots,
             @Qualifier("rbac3Clock") Clock clock) {
-        return request -> new AuthorizationService.FenceResult(
-                false, "FENCE_VERIFIER_UNAVAILABLE", clock.instant(), List.of());
+        return request -> {
+            var current = currentUser.require();
+            var before = current.snapshot().permissionSnapshot();
+            var fresh = snapshots.load(current.identity());
+            var after = fresh.permissionSnapshot();
+            boolean same = before != null && after != null && before.issuer().equals(after.issuer())
+                    && before.subject().equals(after.subject()) && before.catalogScope().equals(after.catalogScope())
+                    && before.catalogVersion().equals(after.catalogVersion()) && before.authVersion().equals(after.authVersion())
+                    && before.policyVersion().equals(after.policyVersion()) && before.activeRoleContext().equals(after.activeRoleContext())
+                    && fresh.permissions().contains(request.permissionCode())
+                    && java.util.Objects.equals(current.snapshot().policyBinding(), fresh.policyBinding());
+            return new AuthorizationService.FenceResult(same, same ? "ALLOW" : "AUTHORIZATION_FENCED", clock.instant(), List.of());
+        };
+    }
+
+    public AuthorizationService.FenceVerifier rbac3FenceVerifier(Clock clock) {
+        return request -> new AuthorizationService.FenceResult(false, "FENCE_VERIFIER_UNAVAILABLE", clock.instant(), List.of());
     }
 
     /**
@@ -381,6 +436,7 @@ public class Rbac3StarterAutoConfiguration {
     public AuthorizationManagerBeforeMethodInterceptor
             rbac3MethodAuthorizationInterceptor(
                     AuthorizationService authorizationService,
+                    top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionExecutionGuard compiledPolicy,
                     @org.springframework.beans.factory.annotation.Qualifier("egon.cola.platform.tianquan.jianshen-top.egon.cola.platform.tianquan.jianshen.starter.autoconfigure.Rbac3StarterProperties") Rbac3StarterProperties properties,
                     @org.springframework.beans.factory.annotation.Qualifier("idpObservedVerificationComponent")
                     org.springframework.beans.factory.ObjectProvider<top.egon.cola.platform.tianquan.shoubing.starter.security.IdpObservedVerificationComponent> observations,
@@ -388,11 +444,7 @@ public class Rbac3StarterAutoConfiguration {
                     org.springframework.beans.factory.ObjectProvider<top.egon.cola.platform.tianquan.shoubing.core.observability.IdpSecurityMetricsRecorder> metrics,
                     @org.springframework.beans.factory.annotation.Qualifier("defaultValidator")
                     org.springframework.beans.factory.ObjectProvider<jakarta.validation.Validator> validators) {
-        var policy = properties.getUserScopePolicy();
-        Rbac3MethodAuthorizationManager manager = policy.isEnabled()
-                ? Rbac3MethodAuthorizationManager.createConfigured(authorizationService, policy, observations.getIfAvailable(),
-                        metrics.getIfAvailable(() -> top.egon.cola.platform.tianquan.shoubing.core.observability.IdpSecurityMetricsRecorder.NOOP), validators.getObject())
-                : new Rbac3MethodAuthorizationManager(authorizationService);
+        Rbac3MethodAuthorizationManager manager = new Rbac3MethodAuthorizationManager(authorizationService, compiledPolicy);
         return methodAuthorizationInterceptor(manager);
     }
 

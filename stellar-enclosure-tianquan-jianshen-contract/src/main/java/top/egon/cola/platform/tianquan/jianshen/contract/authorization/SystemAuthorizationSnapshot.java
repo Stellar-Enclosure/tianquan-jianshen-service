@@ -27,8 +27,21 @@ public record SystemAuthorizationSnapshot(
         Map<String, FieldPolicyDecision> fieldPolicies,
         String checksum,
         Instant generatedAt,
-        Instant expiresAt
+        Instant expiresAt,
+        top.egon.cola.platform.tianquan.jianshen.contract.permission.EffectivePermissionSnapshot permissionSnapshot,
+        RuntimePolicyBinding policyBinding
 ) {
+
+    /** Retains source compatibility for callers that cannot yet produce a catalog-bound runtime view. */
+    public SystemAuthorizationSnapshot(String tenantId, String identitySub, String rbac3UserId,
+            String systemCode, long authVersion, long policyVersion, List<String> activeRoleIds,
+            List<ActiveRoleDescriptor> activeRoles, String landingRouteCode, Set<String> permissions,
+            Set<String> resourceCodes, Map<String, DataScopeDecision> dataScopes,
+            Map<String, FieldPolicyDecision> fieldPolicies, String checksum, Instant generatedAt, Instant expiresAt) {
+        this(tenantId, identitySub, rbac3UserId, systemCode, authVersion, policyVersion, activeRoleIds,
+                activeRoles, landingRouteCode, permissions, resourceCodes, dataScopes, fieldPolicies,
+                checksum, generatedAt, expiresAt, null, null);
+    }
 
     public SystemAuthorizationSnapshot {
         tenantId = required(tenantId, "tenantId");
@@ -49,6 +62,15 @@ public record SystemAuthorizationSnapshot(
         checksum = required(checksum, "checksum");
         generatedAt = Objects.requireNonNull(generatedAt, "generatedAt");
         expiresAt = Objects.requireNonNull(expiresAt, "expiresAt");
+        if (permissionSnapshot != null && (!tenantId.equals(permissionSnapshot.catalogScope().tenantId())
+                || !identitySub.equals(permissionSnapshot.subject())
+                || !systemCode.equals(permissionSnapshot.catalogScope().applicationCode())
+                || !Long.toString(authVersion).equals(permissionSnapshot.authVersion())
+                || !Long.toString(policyVersion).equals(permissionSnapshot.policyVersion())
+                || !permissions.equals(Set.copyOf(permissionSnapshot.permissionCodes()))
+                || !expiresAt.equals(permissionSnapshot.snapshotExpiresAt()))) {
+            throw new IllegalArgumentException("catalog permission view does not match authorization snapshot");
+        }
         if (!expiresAt.isAfter(generatedAt)) {
             throw new IllegalArgumentException("expiresAt must be after generatedAt");
         }

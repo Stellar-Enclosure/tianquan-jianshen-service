@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.roleinheritance.domain.dto;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -38,6 +44,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `applicationId` 时应保持 `InheritanceRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `applicationId`, preserve `InheritanceRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.roleinheritance.domain.dto.InheritanceRequestDTO.applicationId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.applicationId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:role-inheritance:manage"}))
             @NotBlank String applicationId,
             /**
              * 字段 `juniorRoleId` 表示 `InheritanceRequestDTO` 中与 `junior Role Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -46,6 +56,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `juniorRoleId` 时应保持 `InheritanceRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `juniorRoleId`, preserve `InheritanceRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.roleinheritance.domain.dto.InheritanceRequestDTO.juniorRoleId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.juniorRoleId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:role-inheritance:manage"}))
             @NotBlank String juniorRoleId,
             /**
              * 字段 `expectedRoleVersion` 表示 `InheritanceRequestDTO` 中与 `expected Role Version` 相关的状态、依赖、配置或结果（声明类型 `long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -54,5 +68,9 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `expectedRoleVersion` 时应保持 `InheritanceRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `expectedRoleVersion`, preserve `InheritanceRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.roleinheritance.domain.dto.InheritanceRequestDTO.expectedRoleVersion", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.expectedRoleVersion")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    write = @PermissionGroup(codes = {"system:role-inheritance:manage"}))
             @PositiveOrZero long expectedRoleVersion) {
     }

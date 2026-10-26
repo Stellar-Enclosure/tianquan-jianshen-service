@@ -60,7 +60,7 @@ class AuthorizationMergeAlgebraTest {
     }
 
     @Test
-    void derivesResourceAndApiUnionWithoutGrantingAnUnmappedResource() {
+    void resourceLinksNeverGrantPermissionCharacters() {
         RoleNode role = new RoleNode("r1", "app", "ADMIN", true,
                 RoleNode.RiskLevel.LOW, false, null, 0);
         AuthorizationRuleFacts facts = new AuthorizationRuleFacts(
@@ -85,7 +85,7 @@ class AuthorizationMergeAlgebraTest {
                 Set.of("r1"), new RoleHierarchy(List.of(role), List.of()), facts,
                 1L, 2L, 3L);
 
-        assertEquals(Set.of("users:read", "users:list"), snapshot.permissionCodes());
+        assertEquals(Set.of(), snapshot.permissionCodes());
         assertEquals(Set.of("directory", "users", "users.list"), snapshot.resourceCodes());
         assertFalse(snapshot.permissionCodes().contains("internal:menu"));
     }

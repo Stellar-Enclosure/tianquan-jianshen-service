@@ -30,6 +30,7 @@ public final class Rbac3RuntimeProjectionDeliveryHandler implements DeliveryHand
      * Meaning and usage: when reading, passing, or updating `DESTINATIONS`, preserve `Rbac3RuntimeProjectionDeliveryHandler`'s lifecycle, immutability, and thread-safety constraints.
      */
     private static final Set<String> DESTINATIONS = Set.of(
+            "tianquan-jianshen.catalog.changed.v1",
             "tianquan-jianshen.directory.snapshot-activated.v1",
             "tianquan-jianshen.user.status-changed.v1",
             "tianquan-jianshen.assignment.changed.v1",

@@ -1,5 +1,12 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionMode;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
 import java.util.HashSet;
 import java.util.List;
@@ -25,6 +32,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `resourceId` 时应保持 `MutationResultVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `resourceId`, preserve `MutationResultVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.MutationResultVO.resourceId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.resourceId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:authorization-constraint:manage", "system:data-rule:manage", "system:operation-sod:manage"}))
             String resourceId,
             /**
              * 字段 `policyVersion` 表示 `MutationResultVO` 中与 `policy Version` 相关的状态、依赖、配置或结果（声明类型 `long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -33,6 +44,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `policyVersion` 时应保持 `MutationResultVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `policyVersion`, preserve `MutationResultVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.MutationResultVO.policyVersion", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.policyVersion")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:authorization-constraint:manage", "system:data-rule:manage", "system:operation-sod:manage"}))
             long policyVersion,
             /**
              * 字段 `propagationId` 表示 `MutationResultVO` 中与 `propagation Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -41,6 +56,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `propagationId` 时应保持 `MutationResultVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `propagationId`, preserve `MutationResultVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.MutationResultVO.propagationId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.propagationId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:authorization-constraint:manage", "system:data-rule:manage", "system:operation-sod:manage"}))
             String propagationId,
             /**
              * 字段 `propagationPending` 表示 `MutationResultVO` 中与 `propagation Pending` 相关的状态、依赖、配置或结果（声明类型 `boolean`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -49,6 +68,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `propagationPending` 时应保持 `MutationResultVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `propagationPending`, preserve `MutationResultVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.MutationResultVO.propagationPending", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.propagationPending")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.BOOLEAN,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:authorization-constraint:manage", "system:data-rule:manage", "system:operation-sod:manage"}))
             boolean propagationPending
     ) {
     }

@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.decision.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.AuthorizationDecision;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.DataScopeDecision;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.FieldPolicyDecision;
@@ -23,6 +29,11 @@ import top.egon.cola.platform.tianquan.jianshen.contract.authorization.FieldPoli
              * 含义与用法：读取、传递或更新 `functionDecision` 时应保持 `DecisionBundleVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `functionDecision`, preserve `DecisionBundleVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.decision.domain.vo.DecisionBundleVO.functionDecision", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.functionDecision",
+                    allowedPrincipals = {PermissionManifest.PrincipalType.USER, PermissionManifest.PrincipalType.SERVICE}, oauthScopes = {"service:authorization:decide"})
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
             AuthorizationDecision functionDecision,
             /**
              * 字段 `dataScopeDecision` 表示 `DecisionBundleVO` 中与 `data Scope Decision` 相关的状态、依赖、配置或结果（声明类型 `DataScopeDecision`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -31,6 +42,11 @@ import top.egon.cola.platform.tianquan.jianshen.contract.authorization.FieldPoli
              * 含义与用法：读取、传递或更新 `dataScopeDecision` 时应保持 `DecisionBundleVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `dataScopeDecision`, preserve `DecisionBundleVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.decision.domain.vo.DecisionBundleVO.dataScopeDecision", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.dataScopeDecision",
+                    allowedPrincipals = {PermissionManifest.PrincipalType.USER, PermissionManifest.PrincipalType.SERVICE}, oauthScopes = {"service:authorization:decide"})
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
             DataScopeDecision dataScopeDecision,
             /**
              * 字段 `fieldPolicyDecision` 表示 `DecisionBundleVO` 中与 `field Policy Decision` 相关的状态、依赖、配置或结果（声明类型 `FieldPolicyDecision`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -39,6 +55,11 @@ import top.egon.cola.platform.tianquan.jianshen.contract.authorization.FieldPoli
              * 含义与用法：读取、传递或更新 `fieldPolicyDecision` 时应保持 `DecisionBundleVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `fieldPolicyDecision`, preserve `DecisionBundleVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.decision.domain.vo.DecisionBundleVO.fieldPolicyDecision", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.fieldPolicyDecision",
+                    allowedPrincipals = {PermissionManifest.PrincipalType.USER, PermissionManifest.PrincipalType.SERVICE}, oauthScopes = {"service:authorization:decide"})
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
             FieldPolicyDecision fieldPolicyDecision,
             /**
              * 字段 `snapshotChecksum` 表示 `DecisionBundleVO` 中与 `snapshot Checksum` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -47,5 +68,10 @@ import top.egon.cola.platform.tianquan.jianshen.contract.authorization.FieldPoli
              * 含义与用法：读取、传递或更新 `snapshotChecksum` 时应保持 `DecisionBundleVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `snapshotChecksum`, preserve `DecisionBundleVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.decision.domain.vo.DecisionBundleVO.snapshotChecksum", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.snapshotChecksum",
+                    allowedPrincipals = {PermissionManifest.PrincipalType.USER, PermissionManifest.PrincipalType.SERVICE}, oauthScopes = {"service:authorization:decide"})
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
             String snapshotChecksum) {
     }

@@ -2,7 +2,6 @@ package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.ser
 
 import jakarta.persistence.EntityManager;
 import org.flywaydb.core.Flyway;
-import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -59,22 +58,9 @@ public class Rbac3OperationalRuntimeStatusService {
      * Meaning and usage: when reading, passing, or updating `rbac3Flyway`, preserve `Rbac3OperationalRuntimeStatusService`'s lifecycle, immutability, and thread-safety constraints.
      */
     private final Flyway rbac3Flyway;
-    /**
-     * 字段 `outboxFlyway` 表示 `Rbac3OperationalRuntimeStatusService` 中与 `outbox Flyway` 相关的状态、依赖、配置或结果（声明类型 `Flyway`）；其生命周期和取值含义由声明类型及所属对象共同确定。
-     * Field `outboxFlyway` stores the `outbox Flyway`-related state, dependency, configuration, or result of `Rbac3OperationalRuntimeStatusService` (declared type `Flyway`); its lifecycle and value semantics are defined by its declared type and owning object.
-     *
-     * 含义与用法：读取、传递或更新 `outboxFlyway` 时应保持 `Rbac3OperationalRuntimeStatusService` 的生命周期、不可变性和线程安全约束。
-     * Meaning and usage: when reading, passing, or updating `outboxFlyway`, preserve `Rbac3OperationalRuntimeStatusService`'s lifecycle, immutability, and thread-safety constraints.
-     */
-    private final Flyway outboxFlyway;
-    /**
-     * 字段 `redisson` 表示 `Rbac3OperationalRuntimeStatusService` 中与 `redisson` 相关的状态、依赖、配置或结果（声明类型 `RedissonClient`）；其生命周期和取值含义由声明类型及所属对象共同确定。
-     * Field `redisson` stores the `redisson`-related state, dependency, configuration, or result of `Rbac3OperationalRuntimeStatusService` (declared type `RedissonClient`); its lifecycle and value semantics are defined by its declared type and owning object.
-     *
-     * 含义与用法：读取、传递或更新 `redisson` 时应保持 `Rbac3OperationalRuntimeStatusService` 的生命周期、不可变性和线程安全约束。
-     * Meaning and usage: when reading, passing, or updating `redisson`, preserve `Rbac3OperationalRuntimeStatusService`'s lifecycle, immutability, and thread-safety constraints.
-     */
-    private final RedissonClient redisson;
+    /** Managed Outbox owns its schema history independently of the immutable RBAC Flyway history. */
+    private final top.egon.cola.component.outbox.persistence.OutboxSchemaMetadataValidator outboxSchema;
+
     /**
      * 字段 `clock` 表示 `Rbac3OperationalRuntimeStatusService` 中与 `clock` 相关的状态、依赖、配置或结果（声明类型 `Clock`）；其生命周期和取值含义由声明类型及所属对象共同确定。
      * Field `clock` stores the `clock`-related state, dependency, configuration, or result of `Rbac3OperationalRuntimeStatusService` (declared type `Clock`); its lifecycle and value semantics are defined by its declared type and owning object.
@@ -93,20 +79,17 @@ public class Rbac3OperationalRuntimeStatusService {
      *
      * @param entityManager 输入参数 `entityManager`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @param rbac3Flyway 输入参数 `rbac3Flyway`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param outboxFlyway 输入参数 `outboxFlyway`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param redisson 输入参数 `redisson`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
+     * @param outboxSchema 托管 Outbox 的元数据校验器；managed Outbox schema validator.
      * @param clock 输入参数 `clock`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      */
     public Rbac3OperationalRuntimeStatusService(
             EntityManager entityManager,
             @Qualifier(Rbac3FlywayConfiguration.TIANQUAN_JIANSHEN_FLYWAY) Flyway rbac3Flyway,
-            @Qualifier(Rbac3FlywayConfiguration.OUTBOX_FLYWAY) Flyway outboxFlyway,
-            @Qualifier("rbac3RuntimeRedissonClient") RedissonClient redisson,
+            @Qualifier("outboxSchemaMetadataValidator") top.egon.cola.component.outbox.persistence.OutboxSchemaMetadataValidator outboxSchema,
             Clock clock) {
         this.entityManager = entityManager;
         this.rbac3Flyway = rbac3Flyway;
-        this.outboxFlyway = outboxFlyway;
-        this.redisson = redisson;
+        this.outboxSchema = outboxSchema;
         this.clock = clock;
     }
 
@@ -124,8 +107,8 @@ public class Rbac3OperationalRuntimeStatusService {
         MutationFacts mutations = mutationFacts();
         return new OperationalStatusVO(
                 new FlywayStatusVO(
-                        flywayState(rbac3Flyway), flywayState(outboxFlyway)),
-                redisStatus(mutations.projectionLag()),
+                        flywayState(rbac3Flyway), managedOutboxState()),
+                sqlProjectionStatus(mutations.projectionLag()),
                 new FenceMutationStatusVO(
                         mutationState(mutations), mutations.pendingCount(),
                         mutations.recoveryRequiredCount(), mutations.oldestAgeSeconds()),
@@ -142,6 +125,11 @@ public class Rbac3OperationalRuntimeStatusService {
      * @param flyway 输入参数 `flyway`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    private String managedOutboxState() {
+        try { outboxSchema.validate(); return "UP_TO_DATE"; }
+        catch (RuntimeException unavailable) { return "UNAVAILABLE"; }
+    }
+
     private String flywayState(Flyway flyway) {
         try {
             return flyway.info().pending().length == 0 && flyway.info().current() != null
@@ -161,9 +149,9 @@ public class Rbac3OperationalRuntimeStatusService {
      * @param lag 输入参数 `lag`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
-    private RedisProjectionStatusVO redisStatus(long lag) {
+    private RedisProjectionStatusVO sqlProjectionStatus(long lag) {
         try {
-            redisson.getKeys().count();
+            entityManager.createNativeQuery("select count(*) from rbac3_catalog_runtime_projection").getSingleResult();
             return new RedisProjectionStatusVO(
                     lag == 0 ? "HEALTHY" : "LAGGING", lag);
         } catch (RuntimeException unavailable) {
@@ -246,17 +234,17 @@ public class Rbac3OperationalRuntimeStatusService {
     private OutboxStatusVO outboxStatus() {
         try {
             long pending = ((Number) entityManager.createNativeQuery("""
-                            select count(*) from egon_cola_outbox_message
-                             where status in ('PENDING', 'PROCESSING', 'RETRY_WAIT')
+                            select count(*) from egon_outbox.egon_cola_outbox_message
+                             where tenant_id = 0 and deleted_at is null and status in ('PENDING', 'PROCESSING', 'RETRY_WAIT')
                             """)
                     .getSingleResult()).longValue();
             long dead = ((Number) entityManager.createNativeQuery("""
-                            select count(*) from egon_cola_outbox_message where status = 'DEAD'
+                            select count(*) from egon_outbox.egon_cola_outbox_message where tenant_id = 0 and deleted_at is null and status = 'DEAD'
                             """)
                     .getSingleResult()).longValue();
             Object oldestValue = entityManager.createNativeQuery("""
-                            select min(created_at) from egon_cola_outbox_message
-                             where status in ('PENDING', 'PROCESSING', 'RETRY_WAIT')
+                            select min(created_at) from egon_outbox.egon_cola_outbox_message
+                             where tenant_id = 0 and deleted_at is null and status in ('PENDING', 'PROCESSING', 'RETRY_WAIT')
                             """)
                     .getSingleResult();
             Instant oldest = oldestValue instanceof Instant instant

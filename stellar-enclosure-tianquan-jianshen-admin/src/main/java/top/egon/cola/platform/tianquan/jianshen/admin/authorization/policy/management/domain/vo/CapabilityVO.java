@@ -1,5 +1,9 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.management.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+
 import top.egon.cola.platform.tianquan.jianshen.core.delegation.ManagementPolicyDecisionService;
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
 import java.time.Instant;
@@ -26,6 +30,8 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `policyIds` 时应保持 `CapabilityVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `policyIds`, preserve `CapabilityVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.CapabilityVO.policyIds", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.policyIds", access = ResourceAccess.PUBLIC)
             List<String> policyIds,
             /**
              * 字段 `operations` 表示 `CapabilityVO` 中与 `operations` 相关的状态、依赖、配置或结果（声明类型 `Set&lt;String&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -34,6 +40,8 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `operations` 时应保持 `CapabilityVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `operations`, preserve `CapabilityVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.CapabilityVO.operations", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.operations", access = ResourceAccess.PUBLIC)
             Set<String> operations,
             /**
              * 字段 `activationRootRoleIds` 表示 `CapabilityVO` 中与 `activation Root Role Ids` 相关的状态、依赖、配置或结果（声明类型 `List&lt;String&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -42,6 +50,8 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `activationRootRoleIds` 时应保持 `CapabilityVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `activationRootRoleIds`, preserve `CapabilityVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.CapabilityVO.activationRootRoleIds", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.activationRootRoleIds", access = ResourceAccess.PUBLIC)
             List<String> activationRootRoleIds
     ) {
         /**

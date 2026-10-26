@@ -22,6 +22,7 @@ import java.util.Map;
  */
 @Slf4j
 @RestControllerAdvice(name = "rbac3AuthorizationExceptionHandler")
+@org.springframework.core.annotation.Order(org.springframework.core.Ordered.HIGHEST_PRECEDENCE + 10)
 public final class Rbac3AuthorizationExceptionHandler {
 
     /**
@@ -68,6 +69,41 @@ public final class Rbac3AuthorizationExceptionHandler {
         String reason = "FIELD_ACCESS_DENIED".equals(exception.getMessage()) ? "FIELD_ACCESS_DENIED" : "AUTHORIZATION_DENIED";
         return ResponseEntity.status(HttpStatus.FORBIDDEN).header("Cache-Control", "no-store").body(Map.of(
                 "code", reason, "message", "Tianquan-Jianshen authorization denied"));
+    }
+
+    @ExceptionHandler(top.egon.cola.platform.tianquan.jianshen.starter.client.Rbac3AuthorizationClient.AuthorizationUnavailableException.class)
+    public ResponseEntity<Map<String, Object>> runtimeUnavailable(RuntimeException exception) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).header("Cache-Control", "no-store")
+                .body(Map.of("code", "AUTH_RUNTIME_UNAVAILABLE", "message", "Authorization state is unavailable"));
+    }
+
+    @ExceptionHandler(top.egon.cola.platform.tianquan.jianshen.starter.client.Rbac3AuthorizationClient.AuthorizationDeniedException.class)
+    public ResponseEntity<Map<String, Object>> runtimeDenied(RuntimeException exception) {
+        if (!deniedHandoff()) return auditUnavailable();
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).header("Cache-Control", "no-store")
+                .body(Map.of("code", "AUTHORIZATION_DENIED", "message", "Authorization policy rejected the request"));
+    }
+
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> rejectedInput(org.springframework.http.converter.HttpMessageNotReadableException exception) {
+        Throwable cause = exception;
+        for (int depth = 0; cause != null && depth < 32; depth++) {
+            if (cause instanceof org.springframework.security.authorization.AuthorizationDeniedException denied) return fieldDenied(denied);
+            if (cause instanceof top.egon.cola.platform.tianquan.jianshen.starter.client.Rbac3AuthorizationClient.AuthorizationDeniedException denied) return runtimeDenied(denied);
+            if (cause instanceof top.egon.cola.platform.tianquan.jianshen.starter.client.Rbac3AuthorizationClient.AuthorizationUnavailableException unavailable) return runtimeUnavailable(unavailable);
+            if (cause instanceof AuthorizationService.RuntimeUnavailableException unavailable) return unavailable(unavailable);
+            Throwable next = cause.getCause(); if (next == cause) break; cause = next;
+        }
+        return ResponseEntity.badRequest().header("Cache-Control", "no-store")
+                .body(Map.of("code", "REQUEST_INVALID", "message", "Request payload is invalid"));
+    }
+
+    @ExceptionHandler(org.springframework.security.authentication.AuthenticationCredentialsNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> identityMissing(org.springframework.security.authentication.AuthenticationCredentialsNotFoundException exception) {
+        if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes servlet
+                && !IdpSecurityObservationFilter.beforeAuthenticationFailure(servlet.getRequest())) return auditUnavailable();
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).header("Cache-Control", "no-store").header("WWW-Authenticate", "Bearer")
+                .body(Map.of("code", "AUTHENTICATION_REQUIRED", "message", "Verified USER credentials are required"));
     }
 
     private boolean deniedHandoff() {

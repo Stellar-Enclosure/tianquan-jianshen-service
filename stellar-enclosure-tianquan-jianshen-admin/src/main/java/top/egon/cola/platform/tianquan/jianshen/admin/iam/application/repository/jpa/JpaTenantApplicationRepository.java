@@ -10,7 +10,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.iam.application.domain.po.
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.application.domain.po.TenantApplicationPO;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.application.domain.vo.ApplicationAuthorizationScopeVO;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.application.repository.ApplicationResourceRepository;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.ApplicationCatalogEntry;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.domain.vo.ApplicationCatalogEntry;
 import top.egon.cola.platform.tianquan.jianshen.admin.shared.domain.DatabaseClock;
 
 import java.time.Instant;

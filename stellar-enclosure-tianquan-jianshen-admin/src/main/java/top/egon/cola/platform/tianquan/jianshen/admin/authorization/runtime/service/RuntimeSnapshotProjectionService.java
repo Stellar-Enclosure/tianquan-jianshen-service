@@ -63,28 +63,28 @@ public final class RuntimeSnapshotProjectionService
     @Override
     public Rbac3RuntimeProjectionDeliveryHandlerProjectionOutcomeEnum project(
             EventEnvelopeVO event) {
-        RuntimeSnapshotRebuildClaimEnum claim = checkpoints.claim(
+        var claim = checkpoints.claimOwned(
                 event.tenantId(), event.eventId(), event.aggregateType(),
                 event.aggregateId(), event.aggregateVersion());
-        if (claim == RuntimeSnapshotRebuildClaimEnum.ALREADY_APPLIED) {
+        if (claim.outcome() == RuntimeSnapshotRebuildClaimEnum.ALREADY_APPLIED) {
             return Rbac3RuntimeProjectionDeliveryHandlerProjectionOutcomeEnum.ALREADY_APPLIED;
         }
-        if (claim == RuntimeSnapshotRebuildClaimEnum.STALE) {
+        if (claim.outcome() == RuntimeSnapshotRebuildClaimEnum.STALE) {
             return Rbac3RuntimeProjectionDeliveryHandlerProjectionOutcomeEnum.PERMANENT_FAILURE;
         }
-        if (claim == RuntimeSnapshotRebuildClaimEnum.BUSY) {
+        if (claim.outcome() == RuntimeSnapshotRebuildClaimEnum.BUSY) {
             return Rbac3RuntimeProjectionDeliveryHandlerProjectionOutcomeEnum.RETRYABLE_FAILURE;
         }
         try {
             rebuildPort.rebuild(event);
-            checkpoints.complete(
+            checkpoints.completeOwned(
                     event.tenantId(), event.eventId(), event.aggregateType(),
-                    event.aggregateId(), event.aggregateVersion());
+                    event.aggregateId(), event.aggregateVersion(), claim.leaseToken());
             return Rbac3RuntimeProjectionDeliveryHandlerProjectionOutcomeEnum.APPLIED;
         } catch (RuntimeException unavailable) {
-            checkpoints.release(
+            checkpoints.releaseOwned(
                     event.tenantId(), event.eventId(), event.aggregateType(),
-                    event.aggregateId(), event.aggregateVersion());
+                    event.aggregateId(), event.aggregateVersion(), claim.leaseToken());
             return Rbac3RuntimeProjectionDeliveryHandlerProjectionOutcomeEnum.RETRYABLE_FAILURE;
         }
     }

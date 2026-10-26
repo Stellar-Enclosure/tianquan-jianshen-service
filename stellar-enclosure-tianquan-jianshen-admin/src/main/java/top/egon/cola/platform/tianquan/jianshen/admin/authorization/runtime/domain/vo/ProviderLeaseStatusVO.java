@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +29,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `state` 时应保持 `ProviderLeaseStatusVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `state`, preserve `ProviderLeaseStatusVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.ProviderLeaseStatusVO.state", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.state")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             String state,
             /**
              * 字段 `instanceId` 表示 `ProviderLeaseStatusVO` 中与 `instance Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -31,6 +41,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `instanceId` 时应保持 `ProviderLeaseStatusVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `instanceId`, preserve `ProviderLeaseStatusVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.ProviderLeaseStatusVO.instanceId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.instanceId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             String instanceId,
             /**
              * 字段 `leaseExpireAt` 表示 `ProviderLeaseStatusVO` 中与 `lease Expire At` 相关的状态、依赖、配置或结果（声明类型 `Instant`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -39,5 +53,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `leaseExpireAt` 时应保持 `ProviderLeaseStatusVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `leaseExpireAt`, preserve `ProviderLeaseStatusVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.ProviderLeaseStatusVO.leaseExpireAt", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.leaseExpireAt")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant leaseExpireAt) {
     }

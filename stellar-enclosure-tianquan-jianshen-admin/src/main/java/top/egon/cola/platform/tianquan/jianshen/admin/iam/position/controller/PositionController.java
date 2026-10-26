@@ -1,5 +1,13 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.position.controller;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -21,7 +29,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.iam.position.service.Posit
 import top.egon.cola.platform.tianquan.jianshen.admin.shared.tenant.domain.TenantContext;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.CurrentRbac3User;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3UserDetails;
-import top.egon.cola.platform.tianquan.jianshen.starter.security.RequiresPermission;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.RequiresPermissions;
 
 import java.util.List;
 
@@ -44,8 +52,10 @@ public class PositionController {
         this.facade = facade;
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.Position.list", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Position.list")
     @GetMapping
-    @RequiresPermission(value = "system:position:read")
+    @RequiresPermissions(codes = "system:position:read")
     @Operation(
             operationId = "tianquan-jianshen-iam-position-list-v1",
             summary = "查询手工岗位",
@@ -59,8 +69,10 @@ public class PositionController {
         return ResultRecord.success(facade.list(tenantId(), orgUnitId));
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.Position.create", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Position.create")
     @PostMapping
-    @RequiresPermission(value = "system:position:manage")
+    @RequiresPermissions(codes = "system:position:manage")
     @Operation(
             operationId = "tianquan-jianshen-iam-position-create-v1",
             summary = "创建手工岗位",
@@ -76,8 +88,10 @@ public class PositionController {
                 tenantId(), command, new CurrentRbac3User().require().rbac3UserId()));
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.Position.update", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Position.update")
     @PutMapping("/{positionId}")
-    @RequiresPermission(value = "system:position:manage")
+    @RequiresPermissions(codes = "system:position:manage")
     @Operation(
             operationId = "tianquan-jianshen-iam-position-update-v1",
             summary = "更新手工岗位",
@@ -94,8 +108,10 @@ public class PositionController {
                 tenantId(), positionId, command, new CurrentRbac3User().require().rbac3UserId()));
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.Position.remove", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Position.remove")
     @DeleteMapping("/{positionId}")
-    @RequiresPermission(value = "system:position:manage")
+    @RequiresPermissions(codes = "system:position:manage")
     @Operation(
             operationId = "tianquan-jianshen-iam-position-delete-v1",
             summary = "停用手工岗位",

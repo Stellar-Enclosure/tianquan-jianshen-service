@@ -9,8 +9,8 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.doma
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.domain.vo.MutationResultVO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.domain.vo.MutationScopeVO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.service.AuthorizationMutationCoordinator;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.BusinessCatalogEntry;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.DdcCatalogGateway;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.domain.vo.BusinessCatalogEntry;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.repository.DdcCatalogGateway;
 import top.egon.cola.platform.tianquan.jianshen.admin.shared.domain.DatabaseClock;
 
 import java.time.Instant;

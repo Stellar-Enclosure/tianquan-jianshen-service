@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +34,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `state` 时应保持 `DdcConfigClientStatusVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `state`, preserve `DdcConfigClientStatusVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.DdcConfigClientStatusVO.state", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.state")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             String state,
             /**
              * 字段 `instanceId` 表示 `DdcConfigClientStatusVO` 中与 `instance Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -36,6 +46,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `instanceId` 时应保持 `DdcConfigClientStatusVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `instanceId`, preserve `DdcConfigClientStatusVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.DdcConfigClientStatusVO.instanceId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.instanceId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             String instanceId,
             /**
              * 字段 `leaseIdFingerprint` 表示 `DdcConfigClientStatusVO` 中与 `lease Id Fingerprint` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -44,6 +58,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `leaseIdFingerprint` 时应保持 `DdcConfigClientStatusVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `leaseIdFingerprint`, preserve `DdcConfigClientStatusVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.DdcConfigClientStatusVO.leaseIdFingerprint", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.leaseIdFingerprint")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             String leaseIdFingerprint,
             /**
              * 字段 `leaseExpireAt` 表示 `DdcConfigClientStatusVO` 中与 `lease Expire At` 相关的状态、依赖、配置或结果（声明类型 `Instant`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -52,6 +70,11 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `leaseExpireAt` 时应保持 `DdcConfigClientStatusVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `leaseExpireAt`, preserve `DdcConfigClientStatusVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.DdcConfigClientStatusVO.leaseExpireAt", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.leaseExpireAt")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant leaseExpireAt,
             /**
              * 字段 `configVersions` 表示 `DdcConfigClientStatusVO` 中与 `config Versions` 相关的状态、依赖、配置或结果（声明类型 `Map&lt;String, Long&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -60,6 +83,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `configVersions` 时应保持 `DdcConfigClientStatusVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `configVersions`, preserve `DdcConfigClientStatusVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.DdcConfigClientStatusVO.configVersions", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.configVersions")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             Map<String, Long> configVersions,
             /**
              * 字段 `lastApplyFailureKey` 表示 `DdcConfigClientStatusVO` 中与 `last Apply Failure Key` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -68,6 +95,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `lastApplyFailureKey` 时应保持 `DdcConfigClientStatusVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `lastApplyFailureKey`, preserve `DdcConfigClientStatusVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.DdcConfigClientStatusVO.lastApplyFailureKey", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.lastApplyFailureKey")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             String lastApplyFailureKey,
             /**
              * 字段 `lastApplyFailureVersion` 表示 `DdcConfigClientStatusVO` 中与 `last Apply Failure Version` 相关的状态、依赖、配置或结果（声明类型 `Long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -76,6 +107,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `lastApplyFailureVersion` 时应保持 `DdcConfigClientStatusVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `lastApplyFailureVersion`, preserve `DdcConfigClientStatusVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.DdcConfigClientStatusVO.lastApplyFailureVersion", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.lastApplyFailureVersion")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             Long lastApplyFailureVersion,
             /**
              * 字段 `lastApplyFailureCode` 表示 `DdcConfigClientStatusVO` 中与 `last Apply Failure Code` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -84,6 +119,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `lastApplyFailureCode` 时应保持 `DdcConfigClientStatusVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `lastApplyFailureCode`, preserve `DdcConfigClientStatusVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.DdcConfigClientStatusVO.lastApplyFailureCode", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.lastApplyFailureCode")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             String lastApplyFailureCode) {
 
         /**

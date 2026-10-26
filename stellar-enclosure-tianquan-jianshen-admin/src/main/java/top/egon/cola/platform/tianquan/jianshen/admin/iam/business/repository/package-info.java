@@ -1,4 +1,2 @@
-/**
- * User Business authorization persistence ports. / 用户 Business 授权持久化端口。
- */
+/** Read-only catalog boundaries used by the Tianquan-Jianshen control plane. */
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.business.repository;

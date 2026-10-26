@@ -30,6 +30,7 @@ import static org.mockito.Mockito.when;
 
 class Rbac3BearerAuthenticationFilterTest {
 
+    private static final URI VERIFIED_ISSUER = URI.create("https://idp.example/tenants/1001");
     private static final Instant NOW = Instant.parse("2026-08-02T05:00:00Z");
 
     @AfterEach
@@ -60,7 +61,7 @@ class Rbac3BearerAuthenticationFilterTest {
         Rbac3BearerAuthenticationFilter filter = new Rbac3BearerAuthenticationFilter(
                 loader, new ObjectMapper());
         SecurityContextHolder.getContext().setAuthentication(
-                new IdpAuthenticationToken(principal));
+                new IdpAuthenticationToken(principal, List.of(), VERIFIED_ISSUER));
         AtomicReference<Object> seenPrincipal = new AtomicReference<>();
 
         filter.doFilter(new MockHttpServletRequest(), new MockHttpServletResponse(),
@@ -82,7 +83,7 @@ class Rbac3BearerAuthenticationFilterTest {
         Rbac3BearerAuthenticationFilter filter = new Rbac3BearerAuthenticationFilter(
                 loader, new ObjectMapper());
         SecurityContextHolder.getContext().setAuthentication(
-                new IdpAuthenticationToken(principal));
+                new IdpAuthenticationToken(principal, List.of(), VERIFIED_ISSUER));
         AtomicReference<org.springframework.security.core.Authentication> seen =
                 new AtomicReference<>();
 
@@ -109,7 +110,7 @@ class Rbac3BearerAuthenticationFilterTest {
         SecurityContextHolder.getContext().setAuthentication(
                 new IdpAuthenticationToken(principal, List.of(
                         new SimpleGrantedAuthority("SCOPE_finance:read"),
-                        new SimpleGrantedAuthority("ROLE_ADMIN"))));
+                        new SimpleGrantedAuthority("ROLE_ADMIN")), VERIFIED_ISSUER));
         AtomicReference<org.springframework.security.core.Authentication> seen =
                 new AtomicReference<>();
 
@@ -155,7 +156,7 @@ class Rbac3BearerAuthenticationFilterTest {
                 "finance", "finance-web", "prod", "credential-1",
                 NOW.minusSeconds(30), NOW.plusSeconds(300));
         SecurityContextHolder.getContext().setAuthentication(
-                new IdpAuthenticationToken(principal));
+                new IdpAuthenticationToken(principal, List.of(), VERIFIED_ISSUER));
         AtomicReference<Object> seenPrincipal = new AtomicReference<>();
 
         filter.doFilter(new MockHttpServletRequest(), new MockHttpServletResponse(),
@@ -177,7 +178,7 @@ class Rbac3BearerAuthenticationFilterTest {
         Rbac3BearerAuthenticationFilter filter = new Rbac3BearerAuthenticationFilter(
                 loader, new ObjectMapper());
         SecurityContextHolder.getContext().setAuthentication(
-                new IdpAuthenticationToken(principal));
+                new IdpAuthenticationToken(principal, List.of(), VERIFIED_ISSUER));
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilter(new MockHttpServletRequest(), response, new MockFilterChain());
@@ -188,15 +189,20 @@ class Rbac3BearerAuthenticationFilterTest {
 
     private IdentityPrincipal principal() {
         return new IdentityPrincipal(
-                "alice-sub", "tenant-a", "token-1", Set.of("finance"),
+                "alice-sub", "1001", "token-1", Set.of("finance"),
                 NOW.minusSeconds(30), NOW.plusSeconds(300),
                 AuthenticationContext.password());
     }
 
     private SystemAuthorizationSnapshot snapshot() {
-        return new SystemAuthorizationSnapshot(
-                "tenant-a", "alice-sub", "101", "finance",
-                7, 11, List.of("role-1"), Set.of("payment:read"),
-                Map.of(), Map.of(), "sha256:sid-1", NOW, NOW.plusSeconds(300));
+        var view = new top.egon.cola.platform.tianquan.jianshen.contract.permission.EffectivePermissionSnapshot(
+                VERIFIED_ISSUER.toASCIIString(), "alice-sub",
+                new top.egon.cola.platform.tianquan.jianshen.contract.permission.CatalogScope("10", "1001", "finance", "finance", "default", "test"),
+                "1", "7", "11", new top.egon.cola.platform.tianquan.jianshen.contract.permission.EffectivePermissionSnapshot.ActiveRoleContext(
+                        "finance", List.of("5001"), List.of("5001")), List.of("payment:read"), NOW.plusSeconds(300));
+        return new SystemAuthorizationSnapshot("1001", "alice-sub", "101", "finance", 7, 11, List.of("5001"), null, null,
+                Set.of("payment:read"), Set.of(), Map.of(), Map.of(), "sha256:fixture", NOW, NOW.plusSeconds(300), view,
+                new top.egon.cola.platform.tianquan.jianshen.contract.authorization.RuntimePolicyBinding(
+                        "finance-java", "1", "a".repeat(64), "b".repeat(64), "c".repeat(64)));
     }
 }

@@ -1,5 +1,13 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.decision.controller;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -10,7 +18,7 @@ import top.egon.cola.component.yuheng.openapi.annotation.EgonApiCatalog;
 import top.egon.cola.component.yuheng.openapi.annotation.EgonGatewayPolicy;
 import top.egon.cola.platform.tianquan.jianshen.contract.auth.Rbac3AboutView;
 import top.egon.cola.platform.tianquan.jianshen.starter.authorization.Rbac3AboutService;
-import top.egon.cola.platform.tianquan.jianshen.starter.security.RequiresPermission;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.RequiresPermissions;
 
 /** Returns only the current user's RBAC authorization facts for local frontend filtering. */
 @RestController
@@ -31,8 +39,10 @@ public class Rbac3AboutController {
         this.aboutService = aboutService;
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.Rbac3About.about", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Rbac3About.about")
     @GetMapping("/about")
-    @RequiresPermission(value = "system:about:read")
+    @RequiresPermissions(codes = "system:about:read")
     @Operation(
             operationId = "tianquan-jianshen-auth-about-v1",
             summary = "查询当前授权上下文",

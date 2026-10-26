@@ -53,15 +53,75 @@ Target-tenant headers are never honored on ordinary tenant business routes.
 
 | Area | Routes |
 | --- | --- |
-| Application/resource | `GET /applications`, `GET /applications/{id}/resources`, `POST /resources/{id}/archive` |
-| Manifest | `POST /internal/resource-manifests`, `GET /resource-manifests/{id}`, `GET /resource-manifests/{id}/validation`, `POST /resource-manifests/{id}/impact-analysis`, `POST /resource-manifests/{id}/activate` |
-| Role graph/permission | `GET/POST /roles`, `PUT /roles/{id}`, permission batch add/remove, inheritance add/remove, impact analysis |
-| Constraints | SOD sets, prerequisite groups, cardinality, Data Rules, Field Rules and Operation-SOD Rules under their `/api/tianquan-jianshen/v1` collections |
+| Historical application/resource reads | `GET /iam/resource-catalog/applications`, `GET /iam/resource-catalog/applications/{id}/resources`, `GET /iam/resource-catalog/applications/{id}/fields`, `GET /iam/resource-catalog/resources/{id}/fields`; legacy resource archive remains an audited historical operation |
+| Permission manifests/catalogs | `/api/v1/permission-manifests/**` for scoped machine registration; `/api/v1/permission-catalogs/**` for candidate, Diff, governance and qualified activation |
+| Role graph/permission | Existing role/inheritance/impact APIs; explicit permission-code read/replace at `/api/v1/roles/{id}/permissions` with complete target and version |
+| Constraints | Existing SOD sets, prerequisite groups, cardinality, scoped Data Rules and Operation-SOD Rules; historical Field Rule reads remain available |
 
-Manifest submission is immutable. Activation checks definition identity,
-application/current-manifest versions and idempotency, then atomically changes
-the active definition. Missing resources become stale first; archival is an
-explicit, audited action.
+The current [permission catalog contract](permission-catalog-api.md) defines exact paths, six-part targets, producer ownership, source receipts and deployment qualifications. Registration saves an immutable candidate; the complete qualified activation set changes the active pointer with CAS. Absence from an activated producer cannot preserve runtime access through a historical row. The former CI resource registration, resource-permission mapping, resource-role grant and manual FIELD write chains are retired. Definitions and FIELD rules are code-owned; roles grant explicit permission codes. First installation follows the explicit [B0/B1 commands](permission-catalog-bootstrap.md).
+
+### Data Rule catalog scope
+
+Data Rule endpoints remain under `/api/tianquan-jianshen/v1/iam/policies/data-rules`.
+They now require the complete catalog identity: `catalogScopeId`, `tenantId`,
+`businessCode`, `applicationCode`, `namespaceCode`, and `environment`. Tenant is
+an assertion against the authenticated USER; it is never a selectable authority.
+
+- `GET /data-rules` requires all six single-valued query parameters. Missing,
+  duplicate or unknown target parameters are rejected. Results contain only that
+  tenant/catalog scope/application and each `DataRuleVO` includes its full `target`.
+- `POST /data-rules` and `PUT /data-rules/{ruleId}` require `application/json` and
+  the body below. `target` is mandatory. The shared strict catalog JSON codec
+  rejects duplicate/unknown fields, trailing JSON and numeric IDs.
+- `applicationId` must equal the application bound to the target scope. `roleId`
+  must have an enabled catalog role binding in that scope and refer to an active
+  role in the same tenant/application. `permissionId` now identifies a permission
+  in `rbac3_catalog_permission` in that exact scope, with active governance state;
+  it is not an ID in the retired global permission source.
+- Existing rule updates cannot move catalog scope, application, role or permission.
+  `expectedVersion` still performs the existing optimistic version check. The
+  Data Rule request `expectedVersion` and response `version` deliberately retain
+  their existing JSON integer representation; they differ from the decimal-string
+  binding version used by the new API-007 role-permission endpoint.
+
+```json
+{
+  "target": {
+    "catalogScopeId": "100",
+    "tenantId": "10",
+    "businessCode": "trade",
+    "applicationCode": "orders",
+    "namespaceCode": "default",
+    "environment": "test"
+  },
+  "applicationId": "20",
+  "roleId": "30",
+  "permissionId": "40",
+  "scopeType": "DEPT_TREE",
+  "directorySnapshotVersion": 5,
+  "references": [{"referenceType": "DEPT", "referenceId": "50"}],
+  "validFrom": "2026-10-25T00:00:00Z",
+  "validTo": null,
+  "expectedVersion": 0
+}
+```
+
+The command derives its audit actor from the authenticated USER. Within the
+existing SQL transaction it reuses `CatalogAdministrationGuard` to lock the
+scope, tenant policy state and bound user in the shared order and reject stale
+snapshots. It then checks same-scope role/permission facts before any insert or
+reference replacement. Policy-version increment and the existing
+`DATA_RULE_CHANGED` Outbox event remain in that transaction. No default scope is
+inferred for an old request and no legacy permission lookup is used on this path.
+
+The existing rule kinds, time-window checks and nonnegative optional directory
+snapshot version remain unchanged. These source and unit changes do not prove
+external directory readiness, PostgreSQL foreign-key/rollback behavior or deployed
+Runtime decisions. Eighteen focused tests passed, including real MockMvc/strict
+JSON binding and direct repository scope/CAS failure checks; their persistence
+collaborators are test doubles. The corresponding RW constraint client/page still
+requires the new `target` and scoped GET query integration before the browser flow
+can be accepted.
 
 ## 5. Assignment and delegated management
 

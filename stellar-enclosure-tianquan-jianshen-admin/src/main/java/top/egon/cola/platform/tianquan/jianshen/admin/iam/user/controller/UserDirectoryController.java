@@ -1,5 +1,13 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.user.controller;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -29,7 +37,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.shared.tenant.domain.Tenan
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.CurrentRbac3User;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3UserDetails;
-import top.egon.cola.platform.tianquan.jianshen.starter.security.RequiresPermission;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.RequiresPermissions;
 
 import java.time.Instant;
 import java.util.List;
@@ -75,8 +83,10 @@ public class UserDirectoryController {
      * @param size 输入参数 `size`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.UserDirectory.users", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.UserDirectory.users")
     @GetMapping("/users")
-    @RequiresPermission(value = "system:user:read")
+    @RequiresPermissions(codes = "system:user:read")
     @Operation(
             operationId = "tianquan-jianshen-directory-user-list-v1",
             summary = "分页查询租户用户",
@@ -106,8 +116,10 @@ public class UserDirectoryController {
      * @param userId 输入参数 `userId`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.UserDirectory.user", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.UserDirectory.user")
     @GetMapping("/users/{userId}")
-    @RequiresPermission(value = "system:user:read")
+    @RequiresPermissions(codes = "system:user:read")
     @Operation(
             operationId = "tianquan-jianshen-directory-user-get-v1",
             summary = "读取租户用户详情",
@@ -132,8 +144,10 @@ public class UserDirectoryController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.UserDirectory.changeUserStatus", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.UserDirectory.changeUserStatus")
     @PutMapping("/users/{userId}/status")
-    @RequiresPermission(value = "system:user-status:manage")
+    @RequiresPermissions(codes = "system:user-status:manage")
     @Operation(
             operationId = "tianquan-jianshen-directory-user-status-v1",
             summary = "按授权版本变更租户用户状态",

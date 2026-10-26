@@ -12,7 +12,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.validation.annotation.Validated;
 import top.egon.cola.platform.tianquan.jianshen.admin.bootstrap.domain.dto.ResolvedPlatformBootstrapCommandDTO;
 import top.egon.cola.platform.tianquan.jianshen.admin.bootstrap.domain.dto.ResolvedPlatformBootstrapCommandDTO.PlatformCatalogBindingDTO;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.DdcCatalogGateway;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.repository.DdcCatalogGateway;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import top.egon.cola.component.common.id.snowflake.SnowflakeIdGenerator;
@@ -21,12 +21,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.bootstrap.domain.Rbac3Deve
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.state.repository.TenantAuthorizationStateRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.user.domain.po.UserPO;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.application.domain.po.ApplicationPO;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.permission.domain.po.PermissionPO;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.po.RolePO;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.domain.enums.ResourceStatusEnum;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.domain.po.ResourcePO;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.roleresource.domain.enums.RoleResourceGrantStatusEnum;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.roleresource.domain.po.RoleResourceGrantPO;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -243,7 +238,7 @@ public class JpaDevelopmentTopologyBootstrapRepository
         entityManager.flush();
     }
 
-    /** Reuses the existing role/grant algorithm only after the platform resources exist. */
+    /** Creates application, user and role topology; permission codes are granted only by the explicit catalog initializer. */
     @Override
     @Transactional(timeout = 30)
     public void bootstrapResolved(@NotNull @Valid ResolvedPlatformBootstrapCommandDTO command) {
@@ -471,14 +466,6 @@ public class JpaDevelopmentTopologyBootstrapRepository
             insertSelfClosure(tenantId, application.getId(), role.getId());
             changed = true;
         }
-        for (String permissionCode : definition.permissions()) {
-            changed |= ensureResourceGrants(
-                    tenantId, application.getId(), role.getId(), permissionCode, now);
-        }
-        if (definition.roleCode().endsWith("_LOCAL_ADMIN")) {
-            changed |= ensureAllResourceGrants(
-                    tenantId, application.getId(), role.getId(), now);
-        }
         if (!hasAssignment(tenantId, userId, role.getId())) {
             entityManager.persist(new UserRoleAssignmentPO(
                     SnowflakeIdGenerator.nextLongId(), tenantId, userId, role.getId(),
@@ -533,145 +520,6 @@ public class JpaDevelopmentTopologyBootstrapRepository
                 .setParameter("applicationId", applicationId)
                 .setParameter("roleCode", roleCode)
                 .getResultList(), "role");
-    }
-
-    /**
-     * 方法 `ensureResourceGrants` 按照 `JpaDevelopmentTopologyBootstrapRepository` 的职责处理输入，完成 `ensure Resource Grants` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。
-     * Method `ensureResourceGrants` processes its inputs according to `JpaDevelopmentTopologyBootstrapRepository`'s responsibility, performs the `ensure Resource Grants` operation, and returns a result or declared side effect; callers must follow its parameter and exception contract.
-     *
-     * 用法：调用 `ensureResourceGrants` 前准备符合契约的参数，并根据返回值、异常或副作用继续业务流程。
-     * Usage: provide contract-compliant arguments before calling `ensureResourceGrants`, then continue the business flow using its result, exception, or side effect.
-     *
-     * @param tenantId 输入参数 `tenantId`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param applicationId 输入参数 `applicationId`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param roleId 输入参数 `roleId`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param permissionCode 输入参数 `permissionCode`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param now 输入参数 `now`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
-     */
-    private boolean ensureResourceGrants(
-            Long tenantId,
-            Long applicationId,
-            Long roleId,
-            String permissionCode,
-            Instant now) {
-        PermissionPO permission = singleOrNull(entityManager.createQuery("""
-                        select permission from PermissionEntity permission
-                         where permission.permissionCode = :permissionCode
-                        """, PermissionPO.class)
-                .setParameter("permissionCode", permissionCode)
-                .getResultList(), "permission");
-        boolean changed = false;
-        if (permission == null) {
-            permission = new PermissionPO(
-                    SnowflakeIdGenerator.nextLongId(), tenantId, applicationId,
-                    permissionCode, permissionCode, risk(permissionCode),
-                    "Unified identity local administrative capability", ACTOR, now);
-            entityManager.persist(permission);
-            changed = true;
-        } else if (!permission.getApplicationId().equals(applicationId)) {
-            throw new IllegalStateException(
-                    "permission code is already owned by another application: "
-                            + permissionCode);
-        }
-        List<ResourcePO> resources = entityManager.createQuery("""
-                        select resource from ResourceEntity resource
-                         where resource.applicationId = :applicationId
-                           and resource.requiredPermissionId = :permissionId
-                           and resource.status = :status
-                        """, ResourcePO.class)
-                .setParameter("applicationId", applicationId)
-                .setParameter("permissionId", permission.getId())
-                .setParameter("status", ResourceStatusEnum.ACTIVE)
-                .getResultList();
-        if (resources.isEmpty()) {
-            throw new IllegalStateException(
-                    "required mapped development resource is missing: " + permissionCode);
-        }
-        for (ResourcePO resource : resources) {
-            if (!hasRoleResourceGrant(tenantId, roleId, resource.getId(), now)) {
-                entityManager.persist(new RoleResourceGrantPO(
-                        SnowflakeIdGenerator.nextLongId(), tenantId, applicationId,
-                        roleId, resource.getId(), now, null, ACTOR, now));
-                changed = true;
-            }
-        }
-        return changed;
-    }
-
-    /**
-     * 为 local administrator role 补齐当前应用的全部 ACTIVE 资源。
-     *
-     * <p>Local resource bootstrap may add menu/page/action/API facts beyond the minimum
-     * capability list. The administrator role is intentionally the only built-in role that
-     * receives those newly registered resources; the mock entry role remains least-privilege.</p>
-     *
-     * @param tenantId 租户标识；tenant identifier
-     * @param applicationId 应用标识；application identifier
-     * @param roleId 角色标识；role identifier
-     * @param now 当前数据库时间；current database time
-     * @return 是否产生持久化变更；whether persistence changed
-     */
-    private boolean ensureAllResourceGrants(
-            Long tenantId,
-            Long applicationId,
-            Long roleId,
-            Instant now) {
-        boolean changed = false;
-        List<ResourcePO> resources = entityManager.createQuery("""
-                        select resource from ResourceEntity resource
-                         where resource.applicationId = :applicationId
-                           and resource.status = :status
-                         order by resource.id
-                        """, ResourcePO.class)
-                .setParameter("applicationId", applicationId)
-                .setParameter("status", ResourceStatusEnum.ACTIVE)
-                .getResultList();
-        for (ResourcePO resource : resources) {
-            if (!hasRoleResourceGrant(tenantId, roleId, resource.getId(), now)) {
-                entityManager.persist(new RoleResourceGrantPO(
-                        SnowflakeIdGenerator.nextLongId(), tenantId, applicationId,
-                        roleId, resource.getId(), now, null, ACTOR, now));
-                changed = true;
-            }
-        }
-        return changed;
-    }
-
-    /**
-     * 方法 `hasRoleResourceGrant` 按照 `JpaDevelopmentTopologyBootstrapRepository` 的职责处理输入，完成 `has Role Resource Grant` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。
-     * Method `hasRoleResourceGrant` processes its inputs according to `JpaDevelopmentTopologyBootstrapRepository`'s responsibility, performs the `has Role Resource Grant` operation, and returns a result or declared side effect; callers must follow its parameter and exception contract.
-     *
-     * 用法：调用 `hasRoleResourceGrant` 前准备符合契约的参数，并根据返回值、异常或副作用继续业务流程。
-     * Usage: provide contract-compliant arguments before calling `hasRoleResourceGrant`, then continue the business flow using its result, exception, or side effect.
-     *
-     * @param tenantId 输入参数 `tenantId`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param roleId 输入参数 `roleId`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param resourceId 输入参数 `resourceId`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param now 输入参数 `now`，用于确定有效窗口；input value used to determine the effective window.
-     * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
-     */
-    private boolean hasRoleResourceGrant(
-            Long tenantId,
-            Long roleId,
-            Long resourceId,
-            Instant now) {
-        Number count = (Number) entityManager.createQuery("""
-                        select count(grant) from RoleResourceGrantEntity grant
-                         where grant.tenantId = :tenantId
-                           and grant.roleId = :roleId
-                           and grant.resourceId = :resourceId
-                           and grant.status = :status
-                           and grant.validFrom <= :now
-                           and (grant.validTo is null or grant.validTo > :now)
-                        """)
-                .setParameter("tenantId", tenantId)
-                .setParameter("roleId", roleId)
-                .setParameter("resourceId", resourceId)
-                .setParameter("status", RoleResourceGrantStatusEnum.ACTIVE)
-                .setParameter("now", now)
-                .getSingleResult();
-        return count.longValue() > 0;
     }
 
     /**

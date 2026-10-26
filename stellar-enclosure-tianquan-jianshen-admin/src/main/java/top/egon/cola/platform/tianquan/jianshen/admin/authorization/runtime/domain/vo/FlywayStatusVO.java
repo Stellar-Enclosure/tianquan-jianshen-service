@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -20,11 +26,19 @@ import java.util.Map;
  *
  * 含义与用法：读取、传递或更新 `rbac3History` 时应保持 `FlywayStatusVO` 的生命周期、不可变性和线程安全约束。
  * Meaning and usage: when reading, passing, or updating `rbac3History`, preserve `FlywayStatusVO`'s lifecycle, immutability, and thread-safety constraints.
- */ String rbac3History, /**
+ */ @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.FlywayStatusVO.rbac3History", type = ResourceType.FIELD,
+                labelPage = "tianquan-jianshen.permissions", labelKey = "field.rbac3History")
+        @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
+        String rbac3History, /**
  * 字段 `outboxHistory` 表示 `FlywayStatusVO` 中与 `outbox History` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
  * Field `outboxHistory` stores the `outbox History`-related state, dependency, configuration, or result of `FlywayStatusVO` (declared type `String`); its lifecycle and value semantics are defined by its declared type and owning object.
  *
  * 含义与用法：读取、传递或更新 `outboxHistory` 时应保持 `FlywayStatusVO` 的生命周期、不可变性和线程安全约束。
  * Meaning and usage: when reading, passing, or updating `outboxHistory`, preserve `FlywayStatusVO`'s lifecycle, immutability, and thread-safety constraints.
- */ String outboxHistory) {
+ */ @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.FlywayStatusVO.outboxHistory", type = ResourceType.FIELD,
+                labelPage = "tianquan-jianshen.permissions", labelKey = "field.outboxHistory")
+        @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
+        String outboxHistory) {
     }

@@ -1,5 +1,7 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.architecture;
 
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.domain.vo.ApplicationCatalogEntry;
+
 import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.util.JavacTask;
@@ -173,7 +175,7 @@ class AdminLayerBoundaryTest {
                     .noneMatch(name -> name.contains(".controller.")
                             || (name.contains(".service.")
                             && !name.endsWith(".iam.role.service.RoleEligibilityService")
-                            && !name.endsWith(".iam.business.service.ApplicationCatalogEntry")));
+                            && !name.endsWith(".iam.business.domain.vo.ApplicationCatalogEntry")));
         }
     }
 

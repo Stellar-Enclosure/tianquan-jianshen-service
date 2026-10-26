@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.userrole.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import top.egon.cola.platform.tianquan.jianshen.core.constraint.PrerequisiteRoleSpecification;
 import top.egon.cola.platform.tianquan.jianshen.core.constraint.RoleCardinalitySpecification;
 import top.egon.cola.platform.tianquan.jianshen.core.constraint.SsdSpecification;
@@ -34,6 +40,10 @@ import java.util.function.Supplier;
              * 含义与用法：读取、传递或更新 `assignmentId` 时应保持 `AssignmentResultVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `assignmentId`, preserve `AssignmentResultVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.userrole.domain.vo.AssignmentResultVO.assignmentId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.assignmentId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:role-assignment:manage"}))
             String assignmentId,
             /**
              * 字段 `mutationId` 表示 `AssignmentResultVO` 中与 `mutation Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -42,6 +52,10 @@ import java.util.function.Supplier;
              * 含义与用法：读取、传递或更新 `mutationId` 时应保持 `AssignmentResultVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `mutationId`, preserve `AssignmentResultVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.userrole.domain.vo.AssignmentResultVO.mutationId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.mutationId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:role-assignment:manage"}))
             String mutationId,
             /**
              * 字段 `completed` 表示 `AssignmentResultVO` 中与 `completed` 相关的状态、依赖、配置或结果（声明类型 `boolean`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -50,6 +64,10 @@ import java.util.function.Supplier;
              * 含义与用法：读取、传递或更新 `completed` 时应保持 `AssignmentResultVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `completed`, preserve `AssignmentResultVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.userrole.domain.vo.AssignmentResultVO.completed", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.completed")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.BOOLEAN,
+                    plainRead = @PermissionGroup(codes = {"system:role-assignment:manage"}))
             boolean completed,
             /**
              * 字段 `reasonCode` 表示 `AssignmentResultVO` 中与 `reason Code` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -58,6 +76,10 @@ import java.util.function.Supplier;
              * 含义与用法：读取、传递或更新 `reasonCode` 时应保持 `AssignmentResultVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `reasonCode`, preserve `AssignmentResultVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.userrole.domain.vo.AssignmentResultVO.reasonCode", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.reasonCode")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:role-assignment:manage"}))
             String reasonCode,
             /**
              * 字段 `authVersion` 表示 `AssignmentResultVO` 中与 `auth Version` 相关的状态、依赖、配置或结果（声明类型 `Long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -66,6 +88,10 @@ import java.util.function.Supplier;
              * 含义与用法：读取、传递或更新 `authVersion` 时应保持 `AssignmentResultVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `authVersion`, preserve `AssignmentResultVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.userrole.domain.vo.AssignmentResultVO.authVersion", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.authVersion")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    plainRead = @PermissionGroup(codes = {"system:role-assignment:manage"}))
             Long authVersion
     ) {
     }

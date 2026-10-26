@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import org.flywaydb.core.Flyway;
-import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -353,10 +352,10 @@ public class Rbac3PlatformIntegrationConfiguration {
             name = "enabled", havingValue = "true")
     Rbac3ReadinessIndicator rbac3ReadinessIndicator(
             @Qualifier(Rbac3FlywayConfiguration.TIANQUAN_JIANSHEN_FLYWAY) Flyway rbac3Flyway,
-            @Qualifier(Rbac3FlywayConfiguration.OUTBOX_FLYWAY) Flyway outboxFlyway,
+            @Qualifier("outboxSchemaMetadataValidator") top.egon.cola.component.outbox.persistence.OutboxSchemaMetadataValidator outboxSchema,
             EntityManagerFactory entityManagerFactory,
             TransactionalOutbox outbox,
-            @Qualifier("rbac3RuntimeRedissonClient") RedissonClient runtimeRedis,
+            EntityManager entityManager,
             GatewayDefinitionStatusRepository definition,
             DdcProviderLeaseStatusRepository lease,
             ObjectProvider<DdcConfigClientStatusRepository> ddcConfigStatus,
@@ -366,17 +365,18 @@ public class Rbac3PlatformIntegrationConfiguration {
         boolean production = !List.of("local", "test").contains(
                 reportingProperties.getEnv().toLowerCase(java.util.Locale.ROOT));
         return new Rbac3ReadinessIndicator(List.of(
-                new ReadinessCheckVO("oauthAudit", () -> auditReady.getIfAvailable(() -> () -> true).getAsBoolean()),
+                new ReadinessCheckVO("oauthAudit", () -> auditReady.getIfAvailable(() -> () -> false).getAsBoolean()),
                 new ReadinessCheckVO(
                         "rbac3Flyway", () -> migrated(rbac3Flyway)),
                 new ReadinessCheckVO(
-                        "outboxFlyway", () -> migrated(outboxFlyway)),
+                        "outboxManagedSchema", () -> { outboxSchema.validate(); return true; }),
                 new ReadinessCheckVO(
                         "jpa", entityManagerFactory::isOpen),
                 new ReadinessCheckVO(
                         "outboxSchema", () -> outbox != null),
                 new ReadinessCheckVO(
-                        "rbac3RuntimeRedis", () -> redisAvailable(runtimeRedis)),
+                        "rbac3RuntimePostgresql", () -> { entityManager.createNativeQuery(
+                                "select count(*) from rbac3_catalog_runtime_projection").getSingleResult(); return true; }),
                 new ReadinessCheckVO(
                         "gatewayDefinition", () -> definition.status().accepted()),
                 new ReadinessCheckVO(
@@ -430,10 +430,6 @@ public class Rbac3PlatformIntegrationConfiguration {
      * @param redisson 输入参数 `redisson`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
-    private static boolean redisAvailable(RedissonClient redisson) {
-        redisson.getKeys().count();
-        return true;
-    }
 
     /**
      * 方法 `ddcConfigReady` 按照 `Rbac3PlatformIntegrationConfiguration` 的职责处理输入，完成 `ddc Config Ready` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。

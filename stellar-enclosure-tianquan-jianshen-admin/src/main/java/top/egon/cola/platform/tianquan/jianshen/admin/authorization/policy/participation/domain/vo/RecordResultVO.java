@@ -1,5 +1,10 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.participation.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import top.egon.cola.platform.tianquan.shoubing.contract.ServiceIdentityPrincipal;
 import top.egon.cola.platform.tianquan.jianshen.contract.participation.BusinessParticipationCommand;
 import top.egon.cola.platform.tianquan.jianshen.core.participation.OperationSodSpecification;
@@ -35,6 +40,9 @@ import java.util.TreeSet;
              * 含义与用法：读取、传递或更新 `created` 时应保持 `RecordResultVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `created`, preserve `RecordResultVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.participation.domain.vo.RecordResultVO.created", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.created", access = ResourceAccess.PUBLIC,
+                    allowedPrincipals = {PermissionManifest.PrincipalType.SERVICE}, oauthScopes = {"service:participation:write"})
             boolean created,
             /**
              * 字段 `participationId` 表示 `RecordResultVO` 中与 `participation Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -43,6 +51,9 @@ import java.util.TreeSet;
              * 含义与用法：读取、传递或更新 `participationId` 时应保持 `RecordResultVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `participationId`, preserve `RecordResultVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.participation.domain.vo.RecordResultVO.participationId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.participationId", access = ResourceAccess.PUBLIC,
+                    allowedPrincipals = {PermissionManifest.PrincipalType.SERVICE}, oauthScopes = {"service:participation:write"})
             String participationId,
             /**
              * 字段 `reasonCode` 表示 `RecordResultVO` 中与 `reason Code` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -51,5 +62,8 @@ import java.util.TreeSet;
              * 含义与用法：读取、传递或更新 `reasonCode` 时应保持 `RecordResultVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `reasonCode`, preserve `RecordResultVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.participation.domain.vo.RecordResultVO.reasonCode", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.reasonCode", access = ResourceAccess.PUBLIC,
+                    allowedPrincipals = {PermissionManifest.PrincipalType.SERVICE}, oauthScopes = {"service:participation:write"})
             String reasonCode) {
     }

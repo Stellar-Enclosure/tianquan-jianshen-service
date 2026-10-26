@@ -14,4 +14,12 @@ public class Rbac3FieldJacksonModule extends SimpleModule {
         setSerializerModifier(new Rbac3FieldSerializerModifier(
                 currentUser, strategyRegistry));
     }
+
+    public Rbac3FieldJacksonModule(CurrentRbac3User currentUser, SensitiveStrategyRegistry strategyRegistry,
+            top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionPolicyRegistry policies,
+            PermissionFieldBindingGuard writes) {
+        super("Rbac3FieldJacksonModule");
+        setSerializerModifier(new Rbac3FieldSerializerModifier(currentUser, strategyRegistry, policies, writes));
+        setDeserializerModifier(new PermissionFieldDeserializerModifier(policies, writes));
+    }
 }

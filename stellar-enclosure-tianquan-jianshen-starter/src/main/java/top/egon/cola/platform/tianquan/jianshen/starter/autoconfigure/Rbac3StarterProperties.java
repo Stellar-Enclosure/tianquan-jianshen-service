@@ -227,6 +227,21 @@ public class Rbac3StarterProperties {
      * Semantics and usage: use `Runtime` as the responsibility boundary of `Rbac3StarterProperties`, following its existing construction, interface, or Spring-assembly mechanism.
      */
     public static class Runtime {
+        private String artifactDigest;
+        private java.util.Set<String> anonymousResourceKeys = java.util.Set.of();
+        public java.util.Set<String> getAnonymousResourceKeys() { return anonymousResourceKeys; }
+        public void setAnonymousResourceKeys(java.util.Set<String> value) { anonymousResourceKeys = value; }
+
+        private java.util.Set<String> bootstrapServiceResourceKeys = java.util.Set.of();
+        public java.util.Set<String> getBootstrapServiceResourceKeys() { return bootstrapServiceResourceKeys; }
+        public void setBootstrapServiceResourceKeys(java.util.Set<String> value) { bootstrapServiceResourceKeys = value; }
+
+        private java.util.List<top.egon.cola.platform.tianquan.jianshen.contract.permission.CatalogScope> catalogScopes = java.util.List.of();
+        public String getArtifactDigest() { return artifactDigest; }
+        public void setArtifactDigest(String value) { artifactDigest = value; }
+        public java.util.List<top.egon.cola.platform.tianquan.jianshen.contract.permission.CatalogScope> getCatalogScopes() { return catalogScopes; }
+        public void setCatalogScopes(java.util.List<top.egon.cola.platform.tianquan.jianshen.contract.permission.CatalogScope> value) { catalogScopes = value; }
+
         /**
          * 字段 `redisEnabled` 表示 `Runtime` 中与 `redis Enabled` 相关的状态、依赖、配置或结果（声明类型 `boolean`）；其生命周期和取值含义由声明类型及所属对象共同确定。
          * Field `redisEnabled` stores the `redis Enabled`-related state, dependency, configuration, or result of `Runtime` (declared type `boolean`); its lifecycle and value semantics are defined by its declared type and owning object.

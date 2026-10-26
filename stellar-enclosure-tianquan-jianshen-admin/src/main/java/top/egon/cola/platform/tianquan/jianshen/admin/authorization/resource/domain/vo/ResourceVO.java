@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
@@ -29,6 +35,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `resourceId` 时应保持 `ResourceVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `resourceId`, preserve `ResourceVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.resource.domain.vo.ResourceVO.resourceId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.resourceId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:resource:read"}))
             String resourceId,
             /**
              * 字段 `applicationId` 表示 `ResourceVO` 中与 `application Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -37,6 +47,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `applicationId` 时应保持 `ResourceVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `applicationId`, preserve `ResourceVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.resource.domain.vo.ResourceVO.applicationId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.applicationId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:resource:read"}))
             String applicationId,
             /**
              * 字段 `resourceType` 表示 `ResourceVO` 中与 `resource Type` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -45,6 +59,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `resourceType` 时应保持 `ResourceVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `resourceType`, preserve `ResourceVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.resource.domain.vo.ResourceVO.resourceType", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.resourceType")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:resource:read"}))
             String resourceType,
             /**
              * 字段 `resourceCode` 表示 `ResourceVO` 中与 `resource Code` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -53,6 +71,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `resourceCode` 时应保持 `ResourceVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `resourceCode`, preserve `ResourceVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.resource.domain.vo.ResourceVO.resourceCode", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.resourceCode")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:resource:read"}))
             String resourceCode,
             /**
              * 字段 `resourceName` 表示 `ResourceVO` 中与 `resource Name` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -61,6 +83,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `resourceName` 时应保持 `ResourceVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `resourceName`, preserve `ResourceVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.resource.domain.vo.ResourceVO.resourceName", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.resourceName")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:resource:read"}))
             String resourceName,
             /**
              * 字段 `parentResourceId` 表示 `ResourceVO` 中与 `parent Resource Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -69,12 +95,20 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `parentResourceId` 时应保持 `ResourceVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `parentResourceId`, preserve `ResourceVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.resource.domain.vo.ResourceVO.parentResourceId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.parentResourceId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:resource:read"}))
             String parentResourceId,
             /**
              * 字段 `mappingStatus` 表示 `ResourceVO` 中实际权限映射的配置状态；field `mappingStatus` reports the actual mapping state.
              *
              * 普通资源目录不会暴露权限字符或权限 ID；管理员映射接口负责读取和修改实际映射。
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.resource.domain.vo.ResourceVO.mappingStatus", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.mappingStatus")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:resource:read"}))
             String mappingStatus,
             /**
              * 字段 `status` 表示 `ResourceVO` 中与 `status` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -83,6 +117,10 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `status` 时应保持 `ResourceVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `status`, preserve `ResourceVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.resource.domain.vo.ResourceVO.status", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.status")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:resource:read"}))
             String status,
             /**
              * 字段 `version` 表示 `ResourceVO` 中与 `version` 相关的状态、依赖、配置或结果（声明类型 `long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -91,5 +129,9 @@ import java.util.Objects;
              * 含义与用法：读取、传递或更新 `version` 时应保持 `ResourceVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `version`, preserve `ResourceVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.resource.domain.vo.ResourceVO.version", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.version")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    plainRead = @PermissionGroup(codes = {"system:resource:read"}))
             long version) {
     }

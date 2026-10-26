@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +35,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `ddcConfigClient` 时应保持 `RuntimeStatusVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `ddcConfigClient`, preserve `RuntimeStatusVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.RuntimeStatusVO.ddcConfigClient", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.ddcConfigClient")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             DdcConfigClientStatusVO ddcConfigClient,
             /**
              * 字段 `definition` 表示 `RuntimeStatusVO` 中与 `definition` 相关的状态、依赖、配置或结果（声明类型 `DefinitionStatusVO`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -37,6 +47,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `definition` 时应保持 `RuntimeStatusVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `definition`, preserve `RuntimeStatusVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.RuntimeStatusVO.definition", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.definition")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             DefinitionStatusVO definition,
             /**
              * 字段 `providerLease` 表示 `RuntimeStatusVO` 中与 `provider Lease` 相关的状态、依赖、配置或结果（声明类型 `ProviderLeaseStatusVO`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -45,6 +59,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `providerLease` 时应保持 `RuntimeStatusVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `providerLease`, preserve `RuntimeStatusVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.RuntimeStatusVO.providerLease", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.providerLease")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             ProviderLeaseStatusVO providerLease,
             /**
              * 字段 `gatewayRelease` 表示 `RuntimeStatusVO` 中与 `gateway Release` 相关的状态、依赖、配置或结果（声明类型 `GatewayReleaseStatusVO`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -53,6 +71,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `gatewayRelease` 时应保持 `RuntimeStatusVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `gatewayRelease`, preserve `RuntimeStatusVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.RuntimeStatusVO.gatewayRelease", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.gatewayRelease")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             GatewayReleaseStatusVO gatewayRelease,
             /**
              * 字段 `flyway` 表示 `RuntimeStatusVO` 中与 `flyway` 相关的状态、依赖、配置或结果（声明类型 `FlywayStatusVO`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -61,6 +83,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `flyway` 时应保持 `RuntimeStatusVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `flyway`, preserve `RuntimeStatusVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.RuntimeStatusVO.flyway", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.flyway")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             FlywayStatusVO flyway,
             /**
              * 字段 `redisProjection` 表示 `RuntimeStatusVO` 中与 `redis Projection` 相关的状态、依赖、配置或结果（声明类型 `RedisProjectionStatusVO`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -69,6 +95,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `redisProjection` 时应保持 `RuntimeStatusVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `redisProjection`, preserve `RuntimeStatusVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.RuntimeStatusVO.redisProjection", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.redisProjection")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             RedisProjectionStatusVO redisProjection,
             /**
              * 字段 `fence` 表示 `RuntimeStatusVO` 中与 `fence` 相关的状态、依赖、配置或结果（声明类型 `FenceMutationStatusVO`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -77,6 +107,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `fence` 时应保持 `RuntimeStatusVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `fence`, preserve `RuntimeStatusVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.RuntimeStatusVO.fence", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.fence")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             FenceMutationStatusVO fence,
             /**
              * 字段 `outbox` 表示 `RuntimeStatusVO` 中与 `outbox` 相关的状态、依赖、配置或结果（声明类型 `OutboxStatusVO`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -85,6 +119,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `outbox` 时应保持 `RuntimeStatusVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `outbox`, preserve `RuntimeStatusVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.RuntimeStatusVO.outbox", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.outbox")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
             OutboxStatusVO outbox,
             /**
              * 字段 `checkedAt` 表示 `RuntimeStatusVO` 中与 `checked At` 相关的状态、依赖、配置或结果（声明类型 `Instant`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -93,6 +131,11 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `checkedAt` 时应保持 `RuntimeStatusVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `checkedAt`, preserve `RuntimeStatusVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.RuntimeStatusVO.checkedAt", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.checkedAt")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant checkedAt) {
 
         /**

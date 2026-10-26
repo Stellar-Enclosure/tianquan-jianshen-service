@@ -2,7 +2,6 @@ package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.dom
 
 import jakarta.persistence.EntityManager;
 import org.flywaydb.core.Flyway;
-import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;

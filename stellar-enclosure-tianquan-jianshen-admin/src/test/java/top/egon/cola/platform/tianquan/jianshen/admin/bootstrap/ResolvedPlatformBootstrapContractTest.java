@@ -22,9 +22,9 @@ import top.egon.cola.platform.tianquan.jianshen.admin.bootstrap.domain.dto.Resol
 import top.egon.cola.platform.tianquan.jianshen.admin.bootstrap.repository.DevelopmentBootstrapPort;
 import top.egon.cola.platform.tianquan.jianshen.admin.bootstrap.repository.jpa.JpaDevelopmentTopologyBootstrapRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.application.domain.po.ApplicationPO;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.ApplicationCatalogEntry;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.BusinessCatalogEntry;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.DdcCatalogGateway;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.domain.vo.ApplicationCatalogEntry;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.domain.vo.BusinessCatalogEntry;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.repository.DdcCatalogGateway;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -34,7 +34,7 @@ import static org.mockito.Mockito.*;
 class ResolvedPlatformBootstrapContractTest {
     private static final Instant NOW = Instant.parse("2026-10-14T00:00:00Z");
     private static final String ACTOR = "tianquan-jianshen-development-bootstrap";
-    private static final List<String> CURRENT = List.of("tianquan-jianshen-admin", "tianquan-shoubing-admin", "stellar-enclosure-yuheng-admin", "tianshu-admin");
+    private static final List<String> CURRENT = List.of("tianquan-jianshen-admin", "tianquan-shoubing-admin", "yuheng-admin", "tianshu-admin");
     private static final List<String> LEGACY = List.of("rbac3-admin", "idp-admin", "gateway-admin", "ddc-admin");
     private static final List<String> OLD_APPS = List.of("rbac3", "idp", "gateway-admin", "ddc");
     private static final List<String> BUSINESSES = List.of("permission", "identity", "platform", "platform");

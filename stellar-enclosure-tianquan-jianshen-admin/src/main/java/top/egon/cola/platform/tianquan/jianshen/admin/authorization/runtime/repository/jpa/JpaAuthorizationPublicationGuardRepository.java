@@ -7,7 +7,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.iam.user.domain.enums.User
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.user.domain.po.UserPO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.domain.vo.AuthorizationPublicationGuardVO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.AuthorizationPublicationGuardRepository;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.redis.RedisAuthorizationRuntimeRepository;
+import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.postgresql.PostgresqlAuthorizationRuntimeRepository;
 
 import java.time.Duration;
 import java.util.List;
@@ -22,17 +22,17 @@ public class JpaAuthorizationPublicationGuardRepository
 
     private static final Duration GUARD_TTL = Duration.ofMinutes(15);
     private final EntityManager entityManager;
-    private final RedisAuthorizationRuntimeRepository runtimeStore;
+    private final PostgresqlAuthorizationRuntimeRepository runtimeStore;
 
     public JpaAuthorizationPublicationGuardRepository(
             EntityManager entityManager,
-            RedisAuthorizationRuntimeRepository runtimeStore) {
+            PostgresqlAuthorizationRuntimeRepository runtimeStore) {
         this.entityManager = Objects.requireNonNull(entityManager, "entityManager");
         this.runtimeStore = Objects.requireNonNull(runtimeStore, "runtimeStore");
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public void put(AuthorizationPublicationGuardVO guard) {
         subjects(guard.tenantId(), guard.scopeType(), guard.scopeId()).forEach(
                 identitySub -> runtimeStore.createFence(
@@ -40,7 +40,7 @@ public class JpaAuthorizationPublicationGuardRepository
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public void remove(String tenantId, String scopeType, String scopeId) {
         subjects(tenantId, scopeType, scopeId).forEach(
                 identitySub -> runtimeStore.removeFence(tenantId, identitySub));

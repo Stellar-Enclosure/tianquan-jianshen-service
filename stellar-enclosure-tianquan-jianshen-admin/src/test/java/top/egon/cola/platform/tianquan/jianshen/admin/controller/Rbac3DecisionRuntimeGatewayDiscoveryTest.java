@@ -29,6 +29,9 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @WebMvcTest(
+        properties = {"egon.cola.component.tianshu.enabled=false", "egon.cola.component.tianshu.registry.enabled=false",
+                "egon.cola.component.yuheng.reporting.enabled=false", "egon.cola.platform.tianquan.jianshen.enabled=false",
+                "egon.cola.platform.tianquan.shoubing.enabled=false"},
         controllers = {
                 InternalAuthorizationController.class,
                 ParticipationController.class,
@@ -44,6 +47,12 @@ class Rbac3DecisionRuntimeGatewayDiscoveryTest {
 
     @Autowired
     private RequestMappingHandlerMapping handlerMappings;
+
+    @MockitoBean
+    private top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.catalog.PermissionRuntimeProofService runtimeProofs;
+
+    @MockitoBean
+    private top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.catalog.PermissionRuntimeSnapshotRepository runtimeSnapshots;
 
     @MockitoBean
     private AuthorizationDecisionService decisionService;

@@ -1,22 +1,15 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.integration;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.application.domain.vo.ApplicationVO;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.application.domain.vo.ApplicationAuthorizationScopeVO;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.BusinessCatalogEntry;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.ApplicationCatalogEntry;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.permission.domain.vo.ResourcePermissionMappingVO;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.domain.vo.BusinessCatalogEntry;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.domain.vo.ApplicationCatalogEntry;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.service.GlobalResourceCatalogService;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.service.DeploymentPermissionRegistrationConverterImpl;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.permission.service.PermissionCatalogService;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.permission.service.ResourcePermissionMappingService;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.permission.repository.jpa.JpaResourcePermissionMappingRepository;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.management.repository.jpa.JpaManagementPolicyRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.management.service.ManagementPolicyFacade;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.management.domain.dto.SaveCommandDTO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.management.domain.vo.PolicyVO;
@@ -28,31 +21,16 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.userro
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.userrole.domain.vo.AssignmentResultVO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.business.domain.vo.UserBusinessAccessVO;
 
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.userrole.repository.jpa.JpaAssignmentRepository;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.userrole.repository.jdbc.PostgresqlAssignmentLockRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.userrole.service.AssignmentFacade;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.roleinheritance.repository.jdbc.PostgresqlRoleClosureRepository;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.repository.jpa.JpaRoleRepository;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.service.RoleFacade;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.user.service.UserCrudFacade;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.user.domain.dto.CreateUserCommandDTO;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.user.domain.enums.UserStatusEnum;
-import top.egon.cola.platform.tianquan.jianshen.core.delegation.ManagementPolicyDecisionService;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.domain.command.DeploymentCatalogRegistrationCommand;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.permission.domain.dto.ChangePermissionStatusRequestDTO;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.permission.domain.dto.UpdateResourcePermissionMappingRequestDTO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.permission.domain.vo.PermissionCatalogVO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.domain.vo.ResourceVO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.domain.vo.DeploymentCatalogRegistrationResultVO;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.field.domain.dto.CreateFieldDefinitionRequestDTO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.field.domain.vo.FieldDefinitionVO;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.dto.CreateRoleCommandDTO;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.vo.RoleVO;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.roleresource.service.RoleResourceGrantService;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.roleresource.domain.dto.ReplaceRoleResourcesRequestDTO;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.roleresource.domain.dto.ReplaceRoleFieldRulesCommandDTO;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.roleresource.domain.dto.ReplaceRoleFieldRulesCommandDTO.RoleFieldRuleDTO;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.enums.FieldRuleStatusEnum;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.FieldAccessLevel;
 import jakarta.validation.Valid;
 import jakarta.validation.Validation;
@@ -75,67 +53,31 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
 import jakarta.persistence.EntityManager;
+import org.redisson.api.RedissonClient;
+import org.redisson.client.codec.StringCodec;
 import org.mockito.Mockito;
 import org.mockito.ArgumentMatchers;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.user.domain.vo.UserDirectoryVO;
-import jakarta.persistence.EntityManagerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
-import org.springframework.boot.persistence.autoconfigure.EntityScan;
-import org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration;
-import org.springframework.boot.transaction.autoconfigure.TransactionAutoConfiguration;
-import org.springframework.boot.transaction.autoconfigure.TransactionManagerCustomizationAutoConfiguration;
-import org.springframework.boot.validation.autoconfigure.ValidationAutoConfiguration;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
-import org.springframework.core.env.MapPropertySource;
 import org.springframework.jdbc.datasource.AbstractDataSource;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
-import org.springframework.orm.jpa.SharedEntityManagerCreator;
 import top.egon.cola.component.common.core.validation.ValidationUtils;
-import top.egon.cola.component.common.id.autoconfigure.IdGeneratorAutoConfiguration;
-import top.egon.cola.component.common.mybatis.autoconfigure.EgonColaMybatisPlusAutoConfiguration;
-import top.egon.cola.component.common.mybatis.routing.EgonColaRoutingProfileBO;
-import top.egon.cola.component.common.mybatis.sharding.resolver.EgonColaShardingWriteTargetResolver;
-import top.egon.cola.component.common.mybatis.routing.EgonColaTwoLevelRouteStrategy;
-import top.egon.cola.component.common.mybatis.routing.EgonColaWriteTargetResolver;
-import top.egon.cola.component.common.mybatis.sharding.EgonColaShardingProperties;
-import top.egon.cola.component.common.mybatis.sharding.bootstrap.EgonColaShardingTopologyValidator;
-import top.egon.cola.platform.tianquan.jianshen.admin.config.flyway.Rbac3FlywayConfiguration;
-import top.egon.cola.platform.tianquan.jianshen.admin.config.runtime.Rbac3ApplicationConfiguration;
 import top.egon.cola.platform.tianquan.jianshen.admin.shared.domain.DatabaseClock;
-import top.egon.cola.platform.tianquan.jianshen.admin.shared.repository.jpa.JpaDatabaseClock;
-import com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration;
 
 import javax.sql.DataSource;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.StandardCharsets;
-import java.time.Clock;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.application.service.TenantApplicationFacade;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.business.service.UserBusinessAccessFacade;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.application.repository.jpa.JpaTenantApplicationRepository;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.jpa.JpaAuthorizationMutationRepository;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.jpa.JpaAuthorizationPublicationGuardRepository;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.service.AuthorizationMutationCoordinator;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.service.AuthorizationPublicationGuardService;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.domain.dto.MutationWorkDTO;
-import top.egon.cola.component.common.id.snowflake.SnowflakeIdGenerator;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
-import top.egon.cola.platform.tianquan.jianshen.admin.bootstrap.repository.DevelopmentBootstrapPort;
 import top.egon.cola.platform.tianquan.jianshen.admin.bootstrap.domain.Rbac3DevelopmentTopology;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.user.domain.po.UserPO;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.po.RolePO;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.application.domain.command.AdmitApplicationAuthorizationScopeCommand;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.business.domain.command.ReplaceUserBusinessAccessesCommand;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.business.domain.enums.UserBusinessAccessStatusEnum;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.activation.domain.dto.ReplaceCommandDTO;
@@ -146,37 +88,11 @@ import java.nio.file.StandardCopyOption;
 import org.slf4j.MDC;
 import top.egon.cola.platform.tianquan.jianshen.admin.bootstrap.domain.dto.ResolvedPlatformBootstrapCommandDTO;
 import top.egon.cola.platform.tianquan.jianshen.admin.bootstrap.domain.dto.ResolvedPlatformBootstrapCommandDTO.PlatformCatalogBindingDTO;
-import top.egon.cola.platform.tianquan.jianshen.admin.bootstrap.repository.jpa.JpaDevelopmentTopologyBootstrapRepository;
-import top.egon.cola.platform.tianquan.jianshen.admin.bootstrap.service.Rbac3DevelopmentResourceBootstrap;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.user.repository.IdentityTenantMembershipDirectory;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.user.repository.IdentityProfileDirectory;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.activation.repository.jpa.JpaRoleActivationFactRepository;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.activation.repository.jpa.JpaUserActiveRoleRepository;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.jpa.JpaRuntimeProjectionTargetRepository;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.jpa.JpaInitialAuthorizationContextRepository;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.business.repository.jpa.JpaUserBusinessAccessRepository;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.service.RoleEligibilityService;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.activation.service.RoleActivationFacade;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.service.UserAuthorizationSnapshotProjector;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.redis.RedisAuthorizationRuntimeRepository;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.service.Rbac3RuntimeProjectionRecovery;
-import top.egon.cola.platform.tianquan.jianshen.core.runtime.Rbac3RuntimeKeyFactory;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.tianshu.AtomicRbac3RuntimePolicy;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.Rbac3RuntimePolicy;
-import top.egon.cola.platform.tianquan.jianshen.admin.config.properties.Rbac3AdminProperties;
-import top.egon.cola.platform.tianquan.jianshen.starter.cache.AuthorizationSnapshotCache;
-import top.egon.cola.platform.tianquan.jianshen.starter.cache.RedisAuthorizationSnapshotCache;
-import top.egon.cola.platform.tianquan.jianshen.starter.autoconfigure.Rbac3StarterProperties;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.DdcCatalogGateway;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.RpcDdcCatalogGateway;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import top.egon.cola.component.rpc.config.EgonRpcAutoConfig;
-import top.egon.cola.component.rpc.tianshu.autoconfigure.DdcRpcAutoConfiguration;
-import top.egon.cola.component.rpc.tianshu.client.DdcRpcClientFactory;
-import top.egon.cola.component.rpc.tianshu.client.DdcRpcClientHandle;
-import top.egon.cola.component.tianshu.api.client.DdcManagementClient;
-import org.redisson.api.RedissonClient;
-import org.redisson.client.codec.StringCodec;
+import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.postgresql.PostgresqlAuthorizationRuntimeRepository;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.repository.DdcCatalogGateway;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -321,150 +237,13 @@ public class IsolatedAuthorizationProvisioningIT {
         }
     }
 
-    /** The sole live-context entrance checks immutable task ownership before any Spring bean is created. */
-    public static AnnotationConfigApplicationContext openAuthorizationContext(
-            Path manifest, Path receipt, Path repository) throws IOException {
-        if (!"true".equals(System.getenv("XINGYUAN_ISOLATED_INTEGRATION"))) {
-            throw new IllegalArgumentException("XINGYUAN_TARGET_UNSAFE");
-        }
-        return openAuthorizationContext(manifest, receipt, repository, false);
-    }
 
-    private static AnnotationConfigApplicationContext openAuthorizationContext(
-            Path manifest, Path receipt, Path repository, boolean owners) throws IOException {
-        return openAuthorizationContext(manifest, receipt, repository, owners, owners);
-    }
 
-    private static AnnotationConfigApplicationContext openAuthorizationContext(
-            Path manifest, Path receipt, Path repository, boolean owners, boolean autoActivatePlatformRoles) throws IOException {
-        if (!"true".equals(System.getenv("XINGYUAN_ISOLATED_INTEGRATION"))) {
-            throw new IllegalArgumentException("XINGYUAN_TARGET_UNSAFE");
-        }
-        var inputs = readVerifiedDatabaseInputs(manifest, receipt, repository, "rbac");
-        Map<String, Object> ownerProperties = owners ? readOwnerProperties(inputs) : Map.of();
-        DataSource physical = physicalDataSource(inputs);
-        var redisOwner = new java.util.concurrent.atomic.AtomicReference<RedissonClient>();
-        Runnable ownership = () -> {
-            try {
-                var current = readVerifiedDatabaseInputs(manifest, receipt, repository, "rbac");
-                if (!inputs.getManifestSha256().equals(current.getManifestSha256())
-                        || !inputs.getReceipt().equals(current.getReceipt())) {
-                    throw new IllegalArgumentException("XINGYUAN_TARGET_UNSAFE");
-                }
-                try (var connection = physical.getConnection()) {
-                    verifyDatabaseConnection(connection, inputs.getReceipt());
-                }
-                if (redisOwner.get() != null) {
-                    verifyRedisOwnership(redisOwner.get(), inputs);
-                }
-            } catch (IOException | SQLException unavailable) {
-                throw new IllegalStateException("XINGYUAN_DEPENDENCY_UNAVAILABLE");
-            }
-        };
-        ownership.run();
-        var context = isolatedBeanContext();
-        context.getDefaultListableBeanFactory().setAllowBeanDefinitionOverriding(false);
-        context.getEnvironment().setActiveProfiles(owners ? new String[]{"local", "rbac3-catalog-command"}
-                : new String[]{"rbac3-catalog-command"});
-        Map<String, Object> properties = new LinkedHashMap<>(ownerProperties);
-        properties.put("spring.jpa.database-platform", "org.hibernate.dialect.PostgreSQLDialect");
-        properties.put("spring.jpa.hibernate.ddl-auto", "validate");
-        properties.put("spring.jpa.open-in-view", "false");
-        properties.put("egon.cola.component.id.machine-id", "712");
-        properties.put("rbac3.catalog.field-rules-enabled", "true");
-        properties.put("mybatis-plus.mapper-locations", "classpath*:mapper/**/*.xml");
-        properties.put("egon.cola.component.mybatis-plus.tenant-id.ignored-tables[0]", "egon_cola_outbox_message");
-        properties.put("egon.cola.component.transactional-outbox.node-id", "xingyuan-it:" + inputs.getManifest().getRunId());
-        properties.put("egon.cola.component.transactional-outbox.storage.data-source-bean-name", "dataSource");
-        properties.put("egon.cola.component.transactional-outbox.storage.transaction-manager-bean-name", "transactionManager");
-        properties.put("egon.cola.component.transactional-outbox.storage.mp.auto-initialize-ddl", "true");
-        properties.put("egon.cola.component.transactional-outbox.polling.enabled", "false");
-        properties.put("egon.cola.component.transactional-outbox.state-machine.business.enabled", "false");
-        context.getEnvironment().getPropertySources().addFirst(new MapPropertySource("isolatedAuthorization", properties));
-        context.registerBean("isolatedVerifiedDatabaseInputs", VerifiedDatabaseInputsBO.class, () -> inputs);
-        context.registerBean("isolatedPhysicalDataSource", DataSource.class, () -> physical);
-        context.registerBean("isolatedOwnershipGuard", Runnable.class, () -> ownership);
-        context.register(AuthorizationPersistenceConfiguration.class);
-        if (owners) {
-            properties.put("egon.cola.component.rpc.provider.enabled", "false");
-            properties.put("egon.cola.component.rpc.provider.grpc.enabled", "false");
-            properties.put("egon.cola.component.rpc.consumer.enabled", "true");
-            properties.put("egon.cola.component.tianshu.enabled", "false");
-            properties.put("egon.cola.component.tianshu.registry.enabled", "false");
-            properties.put("egon.cola.component.tianshu.registry.http.enabled", "false");
-            properties.put("egon.tianquan-jianshen.development-bootstrap.auto-activate-local-admin-roles", Boolean.toString(autoActivatePlatformRoles));
-            context.register(AuthorizationOwnerConfiguration.class);
-        }
-        try {
-            if (owners) {
-                installTaskTls(context, inputs);
-                var redis = ownedRedis(inputs);
-                redisOwner.set(redis);
-                context.getBeanFactory().registerSingleton("rbac3RuntimeRedissonClient", redis);
-                context.getBeanFactory().registerAlias("rbac3RuntimeRedissonClient", "redisson");
-                context.getDefaultListableBeanFactory().registerDisposableBean("rbac3RuntimeRedissonClient", redis::shutdown);
-            }
-            context.refresh();
-            return context;
-        } catch (RuntimeException | IOException failedInitialization) {
-            context.getDefaultListableBeanFactory().destroySingletons();
-            context.close();
-            throw failedInitialization;
-        }
-    }
 
-    @Test
-    @org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable(named = "XINGYUAN_ISOLATED_INTEGRATION", matches = "true")
-    void verifyControlPlaneClients() throws IOException {
-        Path repository = Path.of(operationProperty("xingyuan.isolated.repository-root"));
-        Path manifest = Path.of(operationProperty("xingyuan.isolated.manifest-file"));
-        Path receipt = Path.of(operationProperty("xingyuan.isolated.receipt-file"));
-        var inputs = readVerifiedDatabaseInputs(manifest, receipt, repository, "rbac");
-        Path root = Path.of(inputs.getManifest().getRuntimeRoot());
-        var registry = strictMapper().readTree(readProtectedBytes(root.resolve("secrets/runtime-registry.json"), root.resolve("secrets"), 2 * 1024 * 1024));
-        var catalog = strictMapper().readTree(readProtectedBytes(root.resolve("evidence/tianshu-platform-catalog.json"), root.resolve("evidence"), 128 * 1024));
-        for (var document : List.of(registry, catalog)) {
-            if (!inputs.getManifest().getRunId().equals(document.path("runId").asText())
-                    || !inputs.getManifestSha256().equals(document.path("manifestSha256").asText())) { throw new IllegalArgumentException("XINGYUAN_TARGET_UNSAFE"); }
-        }
-        if (!"COMMITTED".equals(catalog.path("status").asText()) || !registry.path("subjects").isObject()
-                || !registry.path("tenantIds").isObject() || registry.path("tenantIds").size() != 2
-                || !catalog.path("applications").isObject() || catalog.path("applications").size() != 4) {
-            throw new IllegalArgumentException("XINGYUAN_STATE_CONFLICT");
-        }
-        try (var context = openAuthorizationContext(manifest, receipt, repository, true)) {
-            var profiles = context.getBean("identityProfileDirectory", IdentityProfileDirectory.class);
-            var memberships = context.getBean("identityTenantMembershipDirectory", IdentityTenantMembershipDirectory.class);
-            List<String> subjects = provisioningDirectorySubjects(registry);
-            var found = profiles.batchGet(subjects);
-            if (!found.available() || subjects.stream().anyMatch(subject -> !found.profiles().containsKey(subject)
-                    || !"ACTIVE".equals(found.profiles().get(subject).status()))) { throw new IllegalStateException("XINGYUAN_DEPENDENCY_UNAVAILABLE"); }
-            for (String tenant : List.of("default", "tenant-b")) {
-                for (String subject : subjects) { memberships.requireActive(requiredPublicId(registry.path("tenantIds"), tenant), subject); }
-            }
-            var gateway = context.getBean("ddcCatalogGateway", DdcCatalogGateway.class);
-            for (var application : catalog.path("applications")) {
-                var actual = gateway.findApplication(requiredPublicId(application, "id"))
-                        .orElseThrow(() -> new IllegalStateException("XINGYUAN_DEPENDENCY_UNAVAILABLE"));
-                String business = requiredJsonText(application, "bizCode", 128);
-                String businessId = requiredPublicId(catalog.path("businesses").path(business), "id");
-                if (!actual.applicationEnabled() || !actual.businessEnabled() || !businessId.equals(actual.ddcBusinessId())
-                        || !requiredJsonText(application, "appCode", 128).equals(actual.appCode())) { throw new IllegalStateException("XINGYUAN_DEPENDENCY_UNAVAILABLE"); }
-            }
-            var proof = ControlPlaneClientProofDTO.builder().schemaVersion(1).runId(inputs.getManifest().getRunId())
-                    .manifestSha256(inputs.getManifestSha256()).status("READY").membershipCount(6).catalogCount(4).recordedAt(Instant.now()).build();
-            Path output = root.resolve("evidence/control-plane-clients.json");
-            byte[] previous = Files.exists(output, LinkOption.NOFOLLOW_LINKS) ? readProtectedBytes(output, root.resolve("evidence"), 128 * 1024) : null;
-            if (previous != null) {
-                var old = strictMapper().readValue(previous, ControlPlaneClientProofDTO.class);
-                if (!proof.getRunId().equals(old.getRunId()) || !proof.getManifestSha256().equals(old.getManifestSha256())) {
-                    throw new IllegalStateException("XINGYUAN_STATE_CONFLICT");
-                }
-            }
-            context.getBean("isolatedOwnershipGuard", Runnable.class).run();
-            publishAuthorizationCheckpoint(output, strictMapper().writeValueAsBytes(proof), previous);
-        }
-    }
+
+
+
+
 
     private static List<String> provisioningDirectorySubjects(com.fasterxml.jackson.databind.JsonNode registry) {
         var interactive = registry.path("subjects");
@@ -503,124 +282,9 @@ public class IsolatedAuthorizationProvisioningIT {
         @NotNull @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING) private Instant recordedAt;
     }
 
-    @Test
-    @org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable(named = "XINGYUAN_ISOLATED_INTEGRATION", matches = "true")
-    void provisionPlatformAuthorization() throws IOException {
-        Path repository = Path.of(operationProperty("xingyuan.isolated.repository-root"));
-        Path manifest = Path.of(operationProperty("xingyuan.isolated.manifest-file"));
-        Path receipt = Path.of(operationProperty("xingyuan.isolated.receipt-file"));
-        var inputs = readVerifiedDatabaseInputs(manifest, receipt, repository, "rbac");
-        var commands = platformBootstrapCommands(inputs);
-        String resume = System.getProperty("xingyuan.isolated.resume", "false");
-        if (!Set.of("true", "false").contains(resume)) { throw new IllegalArgumentException("XINGYUAN_INPUT_INVALID"); }
-        Path root = Path.of(inputs.getManifest().getRuntimeRoot());
-        Path checkpoint = root.resolve("evidence/authorization-platform-owner.json");
-        Path lockPath = root.resolve("evidence/authorization-platform.lock");
-        requirePrivateDirectory(checkpoint.getParent());
-        try (var lockFile = FileChannel.open(lockPath, Set.of(StandardOpenOption.CREATE, StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS),
-                PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------")))) {
-            readProtectedBytes(lockPath, checkpoint.getParent(), 1024);
-            try (var lock = lockFile.tryLock()) {
-                if (lock == null) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                byte[] priorBytes = Files.exists(checkpoint, LinkOption.NOFOLLOW_LINKS)
-                        ? readProtectedBytes(checkpoint, checkpoint.getParent(), 128 * 1024) : null;
-                String commandHash = digest(strictMapper().writeValueAsBytes(commands));
-                PlatformAuthorizationReceiptDTO prior = priorBytes == null ? null
-                        : strictMapper().readValue(priorBytes, PlatformAuthorizationReceiptDTO.class);
-                if (prior != null) { validatePlatformCheckpoint(prior, inputs, commandHash, Boolean.parseBoolean(resume)); }
-                if (prior == null && Files.exists(root.resolve("evidence/authorization-native.json"), LinkOption.NOFOLLOW_LINKS)) {
-                    throw new IllegalStateException("XINGYUAN_STATE_CONFLICT");
-                }
-                try (var context = openAuthorizationContext(manifest, receipt, repository, true)) {
-                    Runnable guard = context.getBean("isolatedOwnershipGuard", Runnable.class);
-                    var profiles = context.getBean("identityProfileDirectory", IdentityProfileDirectory.class)
-                            .batchGet(List.of(commands.getFirst().getIdentitySub()));
-                    if (!profiles.available()) { throw new IllegalStateException("XINGYUAN_DEPENDENCY_UNAVAILABLE"); }
-                    var actor = profiles.profiles().get(commands.getFirst().getIdentitySub());
-                    if (actor == null || !"ACTIVE".equals(actor.status())
-                            || !commands.getFirst().getIdentitySub().equals(actor.subject())) {
-                        throw new IllegalStateException("XINGYUAN_DEPENDENCY_UNAVAILABLE");
-                    }
-                    var memberships = context.getBean("identityTenantMembershipDirectory", IdentityTenantMembershipDirectory.class);
-                    for (var command : commands) { memberships.requireActive(command.getTenantId(), command.getIdentitySub()); }
-                    PlatformAuthorizationReceiptDTO pending = prior == null ? PlatformAuthorizationReceiptDTO.builder()
-                            .schemaVersion(1).runId(inputs.getManifest().getRunId()).manifestSha256(inputs.getManifestSha256())
-                            .databaseOid(inputs.getReceipt().getOid()).commandSha256(commandHash).phase("platform")
-                            .status("RUNNING").recordedAt(Instant.now()).snapshots(Map.of()).build() : prior;
-                    byte[] pendingBytes = priorBytes;
-                    if (prior == null) {
-                        guard.run();
-                        pendingBytes = strictMapper().writeValueAsBytes(pending);
-                        publishAuthorizationCheckpoint(checkpoint, pendingBytes, null);
-                        try { preparePlatformFacts(context, inputs, commands, pending.getRecordedAt()); }
-                        catch (RuntimeException failedOwner) { throw new IllegalStateException("XINGYUAN_COMMIT_UNKNOWN"); }
-                    }
-                    // Existing RUNNING/COMMITTED receipts only reconcile; unknown writes are never repeated.
-                    guard.run();
-                    Map<String, PlatformSnapshotProofVO> snapshots = new LinkedHashMap<>();
-                    for (var command : commands) { snapshots.put(command.getTenantId(), confirmedPlatformSnapshot(context, command)); }
-                    var confirmed = PlatformAuthorizationReceiptDTO.builder().schemaVersion(1).runId(inputs.getManifest().getRunId())
-                            .manifestSha256(inputs.getManifestSha256()).databaseOid(inputs.getReceipt().getOid())
-                            .commandSha256(commandHash).phase("platform").status("COMMITTED").recordedAt(Instant.now())
-                            .snapshots(Map.copyOf(snapshots)).build();
-                    guard.run();
-                    publishAuthorizationCheckpoint(checkpoint, strictMapper().writeValueAsBytes(confirmed), pendingBytes);
-                }
-            }
-        }
-    }
 
-    private static void preparePlatformFacts(AnnotationConfigApplicationContext context, VerifiedDatabaseInputsBO inputs,
-                                             List<ResolvedPlatformBootstrapCommandDTO> commands, Instant started) {
-        Runnable guard = context.getBean("isolatedOwnershipGuard", Runnable.class);
-        var bootstrap = context.getBean("jpaDevelopmentTopologyBootstrapRepository", DevelopmentBootstrapPort.class);
-        guard.run();
-        bootstrap.bindResolvedApplications(commands.getFirst());
-        guard.run();
-        context.getBean("rbac3DevelopmentResourceBootstrap", Rbac3DevelopmentResourceBootstrap.class)
-                .run(new org.springframework.boot.DefaultApplicationArguments());
-        var applications = context.getBean("tenantApplicationFacade", TenantApplicationFacade.class);
-        var businesses = context.getBean("userBusinessAccessFacade", UserBusinessAccessFacade.class);
-        Map<String, String> previous = MDC.getCopyOfContextMap();
-        try {
-            for (var command : commands) {
-                MDC.put("tenantId", command.getTenantId());
-                guard.run();
-                bootstrap.bootstrapResolved(command);
-                UserPO user = platformUser(context, command);
-                MDC.put("userId", user.getId().toString());
-                for (var binding : command.getApplications()) {
-                    var existing = applications.applications(Long.valueOf(command.getTenantId())).stream()
-                            .filter(scope -> scope.ddcApplicationId().equals(binding.getDdcApplicationId())).toList();
-                    if (existing.isEmpty()) {
-                        guard.run();
-                        applications.admit(Long.valueOf(command.getTenantId()), user.getId().toString(),
-                                new AdmitApplicationAuthorizationScopeCommand(binding.getDdcApplicationId(),
-                                        command.getApplications().indexOf(binding) * 10));
-                    } else if (existing.size() != 1 || !"ACTIVE".equals(existing.getFirst().status())
-                            || !binding.getApplicationCode().equals(existing.getFirst().applicationCode())
-                            || !binding.getDdcBusinessId().equals(existing.getFirst().ddcBusinessId())) {
-                        throw new IllegalStateException("XINGYUAN_STATE_CONFLICT");
-                    }
-                }
-                var existing = businesses.accesses(Long.valueOf(command.getTenantId()), user.getId());
-                if (!existing.isEmpty()) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                var desired = command.getApplications().stream().map(PlatformCatalogBindingDTO::getDdcBusinessId).distinct()
-                        .map(id -> new ReplaceUserBusinessAccessesCommand.Item(id, UserBusinessAccessStatusEnum.ACTIVE,
-                                started.truncatedTo(java.time.temporal.ChronoUnit.MICROS), null,
-                                "xingyuan-it:" + inputs.getManifest().getRunId() + ":platform-business", null, 0L)).toList();
-                guard.run();
-                businesses.replace(Long.valueOf(command.getTenantId()), user.getId(), user.getId().toString(),
-                        new ReplaceUserBusinessAccessesCommand(inputs.getManifest().getRunId() + ":" + command.getTenantId() + ":platform-business", desired));
-                user = platformUser(context, command);
-                List<String> roleIds = platformRoles(context, command).stream().map(role -> role.getId().toString()).toList();
-                guard.run();
-                context.getBean("roleActivationFacade", RoleActivationFacade.class).replace(new ReplaceCommandDTO(
-                        command.getTenantId(), command.getIdentitySub(), user.getId().toString(), roleIds, user.getAuthVersion(),
-                        user.getId().toString(), inputs.getManifest().getRunId() + ":" + command.getTenantId() + ":platform-activation"));
-            }
-        } finally { if (previous == null) { MDC.clear(); } else { MDC.setContextMap(previous); } }
-    }
+
+
 
     private static UserPO platformUser(AnnotationConfigApplicationContext context, ResolvedPlatformBootstrapCommandDTO command) {
         var users = context.getBean("jpaSharedEM_entityManagerFactory", EntityManager.class).createQuery("""
@@ -644,7 +308,7 @@ public class IsolatedAuthorizationProvisioningIT {
     private static PlatformSnapshotProofVO confirmedPlatformSnapshot(AnnotationConfigApplicationContext context,
                                                                      ResolvedPlatformBootstrapCommandDTO command) {
         UserPO user = platformUser(context, command);
-        var snapshot = context.getBean("redisAuthorizationRuntimeRepository", RedisAuthorizationRuntimeRepository.class)
+        var snapshot = context.getBean("postgresqlAuthorizationRuntimeRepository", PostgresqlAuthorizationRuntimeRepository.class)
                 .load(command.getTenantId(), command.getIdentitySub());
         long policyVersion = context.getBean("jpaTenantAuthorizationStateRepository", TenantAuthorizationStateRepository.class)
                 .require(Long.valueOf(command.getTenantId())).getPolicyVersion();
@@ -1440,21 +1104,9 @@ public class IsolatedAuthorizationProvisioningIT {
         return context;
     }
 
-    @Test
-    void explicitOwnerImportsKeepTheSameBeanNamesAsTheMainComponentScan() {
-        try (var context = isolatedBeanContext()) {
-            context.registerBean("jpaSharedEM_entityManagerFactory", EntityManager.class, () -> org.mockito.Mockito.mock(EntityManager.class));
-            context.registerBean("jpaDatabaseClock", DatabaseClock.class, () -> org.mockito.Mockito.mock(DatabaseClock.class));
-            context.register(OwnerNamingConfiguration.class);
-            context.refresh();
-            assertThat(context.containsBean("permissionCatalogService")).isTrue();
-            assertThat(context.containsBean("jpaResourcePermissionMappingRepository")).isTrue();
-        }
-    }
 
-    @TestConfiguration(value = "isolatedOwnerNamingConfiguration", proxyBeanMethods = false)
-    @Import({PermissionCatalogService.class, JpaResourcePermissionMappingRepository.class})
-    public static class OwnerNamingConfiguration { }
+
+
 
     static NativeMetadataReceiptDTO readNativeMetadataReceipt(VerifiedDatabaseInputsBO inputs,
             Map<String, NativeCatalogPreparationBO> preparations, byte[] bytes) throws IOException {
@@ -1514,114 +1166,13 @@ public class IsolatedAuthorizationProvisioningIT {
         assertThatThrownBy(() -> requireNativeDirectoryBinding(metadata, command, disabled, application)).hasMessage("XINGYUAN_STATE_CONFLICT");
     }
 
-    /** Immutable aggregate of original owner views; mapping counters are intentionally excluded from the stable digest. */
-    public record NativeCatalogStateVO(
-            @NotNull @jakarta.validation.Valid ApplicationVO application,
-            @NotNull @Size(max = 64) List<@jakarta.validation.Valid PermissionCatalogVO> permissions,
-            @NotNull @Size(max = 128) List<@jakarta.validation.Valid ResourceVO> resources,
-            @NotNull @Size(max = 256) List<@jakarta.validation.Valid FieldDefinitionVO> fields,
-            @NotNull @Size(max = 128) List<@jakarta.validation.Valid ResourcePermissionMappingVO> mappings) {
-        public NativeCatalogStateVO {
-            Objects.requireNonNull(application, "application");
-            permissions = List.copyOf(permissions); resources = List.copyOf(resources); fields = List.copyOf(fields); mappings = List.copyOf(mappings);
-        }
-    }
 
-    private static NativeCatalogStateVO readNativeCatalogState(AnnotationConfigApplicationContext context, String applicationId) {
-        var catalog = context.getBean("globalResourceCatalogService", GlobalResourceCatalogService.class);
-        var applications = catalog.applications().stream().filter(value -> applicationId.equals(value.applicationId())).toList();
-        if (applications.size() != 1) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-        var resources = catalog.resources(applicationId);
-        var mappings = context.getBean("resourcePermissionMappingService", ResourcePermissionMappingService.class);
-        Instant now = Instant.now();
-        return new NativeCatalogStateVO(applications.getFirst(), context.getBean("permissionCatalogService", PermissionCatalogService.class).list(applicationId, false),
-                resources, catalog.fields(applicationId, null), resources.stream().map(resource -> mappings.get(resource.resourceId(), now)).toList());
-    }
 
-    static String nativeCatalogStateSha256(NativeCatalogStateVO state) throws IOException {
-        var canonical = new java.util.TreeMap<String, Object>();
-        canonical.put("application", state.application());
-        canonical.put("permissions", state.permissions().stream().sorted(java.util.Comparator.comparing(PermissionCatalogVO::permissionCode)).toList());
-        canonical.put("resources", state.resources().stream().sorted(java.util.Comparator.comparing(ResourceVO::resourceCode)).toList());
-        canonical.put("fields", state.fields().stream().sorted(java.util.Comparator.comparing(FieldDefinitionVO::resourceId).thenComparing(FieldDefinitionVO::fieldCode)).toList());
-        return digest(strictMapper().writeValueAsBytes(canonical));
-    }
 
-    static void validateNativeCatalogState(NativeCatalogPreparationBO preparation, DeploymentCatalogRegistrationResultVO registration, NativeCatalogStateVO state) {
-        try (var validators = Validation.buildDefaultValidatorFactory()) {
-            new top.egon.cola.component.common.core.validation.ValidationUtils(validators.getValidator()).validate(state);
-        }
-        var command = preparation.getCatalog(); var review = preparation.getReview();
-        String appId = registration.applicationId();
-        if (!appId.equals(state.application().applicationId()) || !command.getApplicationCode().equals(state.application().applicationCode())
-                || !"ACTIVE".equals(state.application().status()) || state.application().version() != registration.applicationVersion()
-                || !command.getBuildId().equals(registration.buildId()) || !command.getChecksum().equals(registration.checksum())
-                || !command.getApplicationCode().equals(registration.applicationCode())
-                || registration.permissionCount() != command.getPermissions().size() || registration.resourceCount() != command.getResources().size()
-                || registration.fieldCount() != command.getFields().size()) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-        Map<String, PermissionCatalogVO> permissions = new LinkedHashMap<>();
-        for (var permission : state.permissions()) {
-            String status = review.getApprovedPermissionCodes().contains(permission.permissionCode()) ? "ACTIVE" : "PENDING_VALIDATION";
-            if (!appId.equals(permission.applicationId()) || !status.equals(permission.status())
-                    || permissions.putIfAbsent(permission.permissionCode(), permission) != null) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-        }
-        if (!permissions.keySet().equals(command.getPermissions().stream().map(value -> value.getPermissionCode()).collect(java.util.stream.Collectors.toSet()))) {
-            throw new IllegalStateException("XINGYUAN_STATE_CONFLICT");
-        }
-        for (var definition : command.getPermissions()) {
-            var actual = permissions.get(definition.getPermissionCode());
-            if (!definition.getPermissionName().equals(actual.permissionName()) || !definition.getRiskLevel().equals(actual.riskLevel())) {
-                throw new IllegalStateException("XINGYUAN_STATE_CONFLICT");
-            }
-        }
-        Map<String, ResourceVO> resources = new LinkedHashMap<>();
-        Set<String> resourceIds = new HashSet<>();
-        for (var resource : state.resources()) {
-            String status = review.getResourcePermissions().containsKey(resource.resourceCode()) ? "CONFIGURED" : "UNCONFIGURED";
-            if (!appId.equals(resource.applicationId()) || !"API".equals(resource.resourceType()) || !"ACTIVE".equals(resource.status())
-                    || !status.equals(resource.mappingStatus()) || !resourceIds.add(resource.resourceId())
-                    || resources.putIfAbsent(resource.resourceCode(), resource) != null) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-        }
-        if (!resources.keySet().equals(command.getResources().stream().map(value -> value.getResourceCode()).collect(java.util.stream.Collectors.toSet()))) {
-            throw new IllegalStateException("XINGYUAN_STATE_CONFLICT");
-        }
-        for (var definition : command.getResources()) {
-            if (!definition.getName().equals(resources.get(definition.getResourceCode()).resourceName())) {
-                throw new IllegalStateException("XINGYUAN_STATE_CONFLICT");
-            }
-        }
-        Set<String> mapped = new HashSet<>();
-        for (var mapping : state.mappings()) {
-            var resource = resources.get(mapping.resourceCode());
-            var permission = permissions.get(review.getResourcePermissions().get(mapping.resourceCode()));
-            if (resource == null || !appId.equals(mapping.applicationId()) || !resource.resourceId().equals(mapping.resourceId())
-                    || mapping.resourceVersion() != resource.version() || !resource.mappingStatus().equals(mapping.mappingStatus())
-                    || !mapped.add(mapping.resourceId()) || !Objects.equals(permission == null ? null : permission.id(), mapping.actualPermissionId())) {
-                throw new IllegalStateException("XINGYUAN_STATE_CONFLICT");
-            }
-        }
-        if (!mapped.equals(resourceIds)) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-        Map<List<String>, FieldDefinitionVO> fields = new LinkedHashMap<>();
-        for (var field : state.fields()) {
-            if (!appId.equals(field.applicationId()) || !resourceIds.contains(field.resourceId()) || !"ACTIVE".equals(field.status())
-                    || fields.putIfAbsent(List.of(field.resourceId(), field.fieldCode()), field) != null) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-        }
-        Set<List<String>> reviewedFields = new HashSet<>();
-        for (var field : review.getFields()) {
-            var resource = resources.get(field.getResourceCode());
-            if (resource == null) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-            var key = List.of(resource.resourceId(), field.getFieldCode());
-            reviewedFields.add(key);
-            var actual = fields.get(key);
-            var mechanical = command.getFields().stream().filter(value -> value.getResourceCode().equals(field.getResourceCode())
-                    && value.getFieldCode().equals(field.getFieldCode())).findFirst().orElseThrow();
-            if (actual == null || !mechanical.getJsonPath().equals(actual.jsonPath()) || !mechanical.getDataType().equals(actual.dataType())
-                    || !field.getSensitivity().equals(actual.sensitivity()) || !field.getDefaultAccess().equals(actual.defaultAccess())
-                    || !Objects.equals(field.getMaskingStrategy(), actual.maskingStrategy()) || field.getWritable() != actual.writable()
-                    || field.getExportable() != actual.exportable()) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-        }
-        if (!fields.keySet().equals(reviewedFields)) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-    }
+
+
+
+
 
     @Data @NoArgsConstructor @AllArgsConstructor @Accessors(chain = true) @Builder
     public static class NativeCatalogReviewReceiptDTO {
@@ -1703,100 +1254,7 @@ public class IsolatedAuthorizationProvisioningIT {
         requireUtcInstant(requiredJsonText(result, "completedAt", 64));
     }
 
-    @Test
-    @org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable(named = "XINGYUAN_ISOLATED_INTEGRATION", matches = "true")
-    void provisionNativeCatalogReview() throws IOException {
-        Path repository = Path.of(operationProperty("xingyuan.isolated.repository-root"));
-        Path manifest = Path.of(operationProperty("xingyuan.isolated.manifest-file"));
-        Path database = Path.of(operationProperty("xingyuan.isolated.receipt-file"));
-        var inputs = readVerifiedDatabaseInputs(manifest, database, repository, "rbac");
-        var preparations = nativeCatalogPreparations(inputs);
-        var commands = platformBootstrapCommands(inputs);
-        requireCommittedPlatformAuthorization(inputs, commands);
-        String resume = System.getProperty("xingyuan.isolated.resume", "false");
-        if (!Set.of("true", "false").contains(resume)) { throw new IllegalArgumentException("XINGYUAN_INPUT_INVALID"); }
-        Path root = Path.of(inputs.getManifest().getRuntimeRoot());
-        Path metadataFile = root.resolve("evidence/native-metadata.json");
-        byte[] metadataBytes = readProtectedBytes(metadataFile, root.resolve("evidence"), 128 * 1024);
-        String metadataHash = digest(metadataBytes);
-        var metadata = readNativeMetadataReceipt(inputs, preparations, metadataBytes);
-        Path checkpoint = root.resolve("evidence/native-catalog-review.json");
-        Path lockPath = root.resolve("evidence/native-catalog-review.lock");
-        requirePrivateDirectory(root.resolve("evidence"));
-        try (var channel = FileChannel.open(lockPath, Set.of(StandardOpenOption.CREATE, StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS),
-                PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------")))) {
-            readProtectedBytes(lockPath, root.resolve("evidence"), 1024);
-            try (var lock = channel.tryLock()) {
-                if (lock == null) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                byte[] previous = Files.exists(checkpoint, LinkOption.NOFOLLOW_LINKS) ? readProtectedBytes(checkpoint, root.resolve("evidence"), 128 * 1024) : null;
-                var priorDocument = previous == null ? null : strictMapper().readTree(previous);
-                if (previous != null && (priorDocument == null || !priorDocument.isObject())) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                if (priorDocument != null) { requireUtcInstant(requiredJsonText(priorDocument, "recordedAt", 64)); }
-                var prior = priorDocument == null ? null : strictMapper().treeToValue(priorDocument, NativeCatalogReviewReceiptDTO.class);
-                if (prior != null) {
-                    validateNativeCatalogCheckpoint(prior, inputs, metadataHash, preparations.keySet(),
-                            commands.stream().map(ResolvedPlatformBootstrapCommandDTO::getTenantId).collect(java.util.stream.Collectors.toSet()), Boolean.parseBoolean(resume));
-                }
-                try (var context = openAuthorizationContext(manifest, database, repository, true, false)) {
-                    Runnable ownerGuard = context.getBean("isolatedOwnershipGuard", Runnable.class);
-                    long deadline = System.nanoTime() + java.time.Duration.ofSeconds(inputs.getManifest().getDeadlines().getOperationSeconds()).toNanos();
-                    Runnable guard = () -> {
-                        if (System.nanoTime() >= deadline) { throw new IllegalStateException("XINGYUAN_DEPENDENCY_UNAVAILABLE"); }
-                        ownerGuard.run();
-                        try {
-                            if (!MessageDigest.isEqual(metadataBytes, readProtectedBytes(metadataFile, root.resolve("evidence"), 128 * 1024))
-                                    || !preparations.equals(nativeCatalogPreparations(inputs))) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                        } catch (IOException unavailable) { throw new IllegalStateException("XINGYUAN_INPUT_UNAVAILABLE"); }
-                    };
-                    guard.run(); requireNativeDirectoryOwnership(context, metadata, preparations);
-                    var profiles = context.getBean("identityProfileDirectory", IdentityProfileDirectory.class).batchGet(List.of(commands.getFirst().getIdentitySub()));
-                    if (!profiles.available() || !profiles.profiles().containsKey(commands.getFirst().getIdentitySub())
-                            || !"ACTIVE".equals(profiles.profiles().get(commands.getFirst().getIdentitySub()).status())) { throw new IllegalStateException("XINGYUAN_DEPENDENCY_UNAVAILABLE"); }
-                    Map<String, PlatformSnapshotProofVO> before = new LinkedHashMap<>();
-                    for (var command : commands) {
-                        context.getBean("identityTenantMembershipDirectory", IdentityTenantMembershipDirectory.class).requireActive(command.getTenantId(), command.getIdentitySub());
-                        before.put(command.getTenantId(), confirmedPlatformSnapshot(context, command));
-                    }
-                    var pending = NativeCatalogReviewReceiptDTO.builder().schemaVersion(1).runId(inputs.getManifest().getRunId())
-                            .manifestSha256(inputs.getManifestSha256()).databaseOid(inputs.getReceipt().getOid()).metadataSha256(metadataHash)
-                            .status("RUNNING").recordedAt(Instant.now()).registrations(Map.of()).catalogSha256(Map.of()).scopeSha256(Map.of()).build();
-                    byte[] pendingBytes = strictMapper().writeValueAsBytes(pending);
-                    Map<String, DeploymentCatalogRegistrationResultVO> registrations;
-                    if (prior == null) {
-                        requireFreshNativeCatalogs(context, preparations, commands);
-                        guard.run(); publishAuthorizationCheckpoint(checkpoint, pendingBytes, null);
-                        registrations = prepareNativeCatalogOwners(context, preparations, metadata, commands, guard);
-                    } else { registrations = prior.getRegistrations(); }
-                    Map<String, String> catalogHashes = new LinkedHashMap<>();
-                    for (var preparation : preparations.entrySet()) {
-                        guard.run();
-                        var registration = registrations.get(preparation.getKey());
-                        var state = readNativeCatalogState(context, registration.applicationId());
-                        validateNativeCatalogState(preparation.getValue(), registration, state);
-                        catalogHashes.put(preparation.getKey(), nativeCatalogStateSha256(state));
-                    }
-                    var scopes = context.getBean("tenantApplicationFacade", TenantApplicationFacade.class);
-                    Map<String, String> scopeHashes = new LinkedHashMap<>();
-                    for (var command : commands) {
-                        guard.run();
-                        scopeHashes.put(command.getTenantId(), nativeScopeSha256(preparations, metadata, scopes.applications(Long.valueOf(command.getTenantId()))));
-                        if (!before.get(command.getTenantId()).equals(confirmedPlatformSnapshot(context, command))) {
-                            throw new IllegalStateException("XINGYUAN_STATE_CONFLICT");
-                        }
-                    }
-                    guard.run(); requireNativeDirectoryOwnership(context, metadata, preparations);
-                    if (prior == null) {
-                        pending.setStatus("COMMITTED").setRecordedAt(Instant.now()).setRegistrations(Map.copyOf(registrations))
-                                .setCatalogSha256(Map.copyOf(catalogHashes)).setScopeSha256(Map.copyOf(scopeHashes));
-                        publishAuthorizationCheckpoint(checkpoint, strictMapper().writeValueAsBytes(pending), pendingBytes);
-                    } else if (!prior.getCatalogSha256().equals(catalogHashes) || !prior.getScopeSha256().equals(scopeHashes)
-                            || !MessageDigest.isEqual(previous, readProtectedBytes(checkpoint, root.resolve("evidence"), 128 * 1024))) {
-                        throw new IllegalStateException("XINGYUAN_STATE_CONFLICT");
-                    }
-                }
-            }
-        }
-    }
+
 
     private static void requireFreshNativeCatalogs(AnnotationConfigApplicationContext context, Map<String, NativeCatalogPreparationBO> preparations,
             List<ResolvedPlatformBootstrapCommandDTO> commands) {
@@ -1810,79 +1268,9 @@ public class IsolatedAuthorizationProvisioningIT {
         }
     }
 
-    private static Map<String, DeploymentCatalogRegistrationResultVO> prepareNativeCatalogOwners(AnnotationConfigApplicationContext context,
-            Map<String, NativeCatalogPreparationBO> preparations, NativeMetadataReceiptDTO metadata,
-            List<ResolvedPlatformBootstrapCommandDTO> commands, Runnable guard) {
-        var scopes = context.getBean("tenantApplicationFacade", TenantApplicationFacade.class);
-        Map<String, String> previous = MDC.getCopyOfContextMap();
-        try {
-            for (var command : commands) {
-                UserPO user = platformUser(context, command);
-                MDC.put("tenantId", command.getTenantId()); MDC.put("userId", user.getId().toString());
-                int priority = 0;
-                for (var preparation : preparations.values()) {
-                    guard.run();
-                    scopes.admit(Long.valueOf(command.getTenantId()), user.getId().toString(), new AdmitApplicationAuthorizationScopeCommand(
-                            metadata.getApplications().get(preparation.getCatalog().getApplicationCode()), priority));
-                    priority += 10;
-                }
-            }
-            var actor = commands.getFirst(); UserPO user = platformUser(context, actor);
-            MDC.put("tenantId", actor.getTenantId()); MDC.put("userId", user.getId().toString());
-            Map<String, DeploymentCatalogRegistrationResultVO> registrations = new LinkedHashMap<>();
-            for (var preparation : preparations.entrySet()) {
-                guard.run();
-                registrations.put(preparation.getKey(), registerReviewedNativeCatalog(context, preparation.getValue(), user.getId().toString(), Instant.now()).getRegistration());
-            }
-            return Map.copyOf(registrations);
-        } finally { if (previous == null) { MDC.clear(); } else { MDC.setContextMap(previous); } }
-    }
 
-    @Test
-    void nativeCatalogOwnerViewsRequireApprovedMappingsAndStableVersionsWithoutRoleCounters() throws Exception {
-        var command = DeploymentCatalogRegistrationCommand.builder().businessCode("student").applicationCode("evaluation")
-                .buildId("build-evaluation").checksum("a".repeat(64)).expectedApplicationVersion(0L)
-                .permissions(List.of(DeploymentCatalogRegistrationCommand.PermissionDefinitionBO.builder()
-                        .permissionCode("evaluation:read").permissionName("Read").riskLevel("LOW").build()))
-                .resources(List.of(DeploymentCatalogRegistrationCommand.ResourceDefinitionBO.builder()
-                        .resourceCode("evaluation.read").name("Read").transport("RPC").method("Unary").path("/actual.Service/Get").operationId("actualRead").build()))
-                .fields(List.of()).build();
-        var review = NativeApplicationReviewDTO.builder().approvedPermissionCodes(List.of("evaluation:read"))
-                .resourcePermissions(Map.of("evaluation.read", "evaluation:read")).fields(List.of()).build();
-        var preparation = NativeCatalogPreparationBO.builder().catalog(command).review(review).build();
-        var registration = new DeploymentCatalogRegistrationResultVO("601", "evaluation", "build-evaluation", "a".repeat(64), 1, 1, 1, 0, "REGISTERED_PENDING_REVIEW");
-        var app = new ApplicationVO("601", "evaluation", "Evaluation", "ACTIVE", 1);
-        var permission = new PermissionCatalogVO("801", "601", "evaluation:read", "Read", "LOW", "ACTIVE", "MANUAL", null, null, 1);
-        var resource = new ResourceVO("701", "601", "API", "evaluation.read", "Read", null, "CONFIGURED", "ACTIVE", 1);
-        var mapping = new ResourcePermissionMappingVO("701", "601", "evaluation.read", "API", null, "801", null, "CONFIGURED", 1, 0, false, 0, 0);
-        var state = new NativeCatalogStateVO(app, List.of(permission), List.of(resource), List.of(), List.of(mapping));
-        org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> validateNativeCatalogState(preparation, registration, state));
-        var counters = new ResourcePermissionMappingVO("701", "601", "evaluation.read", "API", null, "801", null, "CONFIGURED", 1, 10, false, 90, 91);
-        var afterRoleAssignment = new NativeCatalogStateVO(app, List.of(permission), List.of(resource), List.of(), List.of(counters));
-        validateNativeCatalogState(preparation, registration, afterRoleAssignment);
-        assertThat(nativeCatalogStateSha256(afterRoleAssignment)).isEqualTo(nativeCatalogStateSha256(state));
-        for (var changed : List.of(
-                new NativeCatalogStateVO(new ApplicationVO("601", "evaluation", "Evaluation", "ACTIVE", 2), List.of(permission), List.of(resource), List.of(), List.of(mapping)),
-                new NativeCatalogStateVO(app, List.of(new PermissionCatalogVO("801", "601", "evaluation:read", "Read", "LOW", "PENDING_VALIDATION", "MANUAL", null, null, 0)), List.of(resource), List.of(), List.of(mapping)),
-                new NativeCatalogStateVO(app, List.of(permission), List.of(resource, resource), List.of(), List.of(mapping)),
-                new NativeCatalogStateVO(app, List.of(permission), List.of(resource), List.of(), List.of(new ResourcePermissionMappingVO("701", "601", "evaluation.read", "API", null, "999", null, "CONFIGURED", 1, 0, false, 0, 0))),
-                new NativeCatalogStateVO(app, List.of(permission), List.of(resource), List.of(), List.of()))) {
-            assertThatThrownBy(() -> validateNativeCatalogState(preparation, registration, changed)).hasMessage("XINGYUAN_STATE_CONFLICT");
-        }
-        var changedResource = new ResourceVO("701", "601", "API", "evaluation.read", "Read", null, "CONFIGURED", "ACTIVE", 2);
-        assertThat(nativeCatalogStateSha256(new NativeCatalogStateVO(app, List.of(permission), List.of(changedResource), List.of(), List.of())))
-                .isNotEqualTo(nativeCatalogStateSha256(state));
-        var actualField = new FieldDefinitionVO("901", "601", "701", "name", "$.name", "STRING", "NORMAL", "NONE", null, true, false, "ACTIVE", 0);
-        command.setFields(List.of(DeploymentCatalogRegistrationCommand.FieldDefinitionBO.builder()
-                .resourceCode("evaluation.read").fieldCode("name").jsonPath("$.name").dataType("STRING").build()));
-        review.setFields(List.of(NativeFieldReviewDTO.builder().resourceCode("evaluation.read").fieldCode("name").sensitivity("NORMAL")
-                .defaultAccess("NONE").writable(true).exportable(false).build()));
-        var withField = new DeploymentCatalogRegistrationResultVO("601", "evaluation", "build-evaluation", "a".repeat(64), 1, 1, 1, 1, "REGISTERED_PENDING_REVIEW");
-        validateNativeCatalogState(preparation, withField, new NativeCatalogStateVO(app, List.of(permission), List.of(resource), List.of(actualField), List.of(mapping)));
-        var wrongCap = new FieldDefinitionVO("901", "601", "701", "name", "$.name", "STRING", "NORMAL", "NONE", null, false, false, "ACTIVE", 0);
-        assertThatThrownBy(() -> validateNativeCatalogState(preparation, withField, new NativeCatalogStateVO(app, List.of(permission), List.of(resource), List.of(wrongCap), List.of(mapping))))
-                .hasMessage("XINGYUAN_STATE_CONFLICT");
-    }
+
+
 
     @Test
     void nativeCatalogInputsAndResumeRequireExactMetadataAndKeepEntitlementIdsSeparate() throws Exception {
@@ -2031,106 +1419,7 @@ public class IsolatedAuthorizationProvisioningIT {
         if (uniqueIds != prior.getActors().size() * 3L) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
     }
 
-    @Test
-    @org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable(named = "XINGYUAN_ISOLATED_INTEGRATION", matches = "true")
-    void provisionNativeActors() throws IOException {
-        Path repository = Path.of(operationProperty("xingyuan.isolated.repository-root"));
-        Path manifest = Path.of(operationProperty("xingyuan.isolated.manifest-file")); Path database = Path.of(operationProperty("xingyuan.isolated.receipt-file"));
-        var inputs = readVerifiedDatabaseInputs(manifest, database, repository, "rbac");
-        var preparations = nativeCatalogPreparations(inputs); var commands = platformBootstrapCommands(inputs);
-        requireCommittedPlatformAuthorization(inputs, commands);
-        Path root = Path.of(inputs.getManifest().getRuntimeRoot()); Path evidence = root.resolve("evidence");
-        byte[] registryBytes = readProtectedBytes(root.resolve("secrets/runtime-registry.json"), root.resolve("secrets"), 2 * 1024 * 1024);
-        var registry = strictMapper().readTree(registryBytes);
-        if (!inputs.getManifest().getRunId().equals(registry.path("runId").asText()) || !inputs.getManifestSha256().equals(registry.path("manifestSha256").asText())) {
-            throw new IllegalArgumentException("XINGYUAN_TARGET_UNSAFE");
-        }
-        var subjects = provisioningDirectorySubjects(registry);
-        Set<String> registeredTenants = new HashSet<>(List.of(requiredPublicId(registry.path("tenantIds"), "default"), requiredPublicId(registry.path("tenantIds"), "tenant-b")));
-        if (registry.path("tenantIds").size() != 2 || registeredTenants.size() != 2 || commands.size() != 2
-                || !registeredTenants.equals(commands.stream().map(ResolvedPlatformBootstrapCommandDTO::getTenantId).collect(java.util.stream.Collectors.toSet()))
-                || commands.stream().anyMatch(command -> !subjects.getFirst().equals(command.getIdentitySub()))) { throw new IllegalArgumentException("XINGYUAN_TARGET_UNSAFE"); }
-        byte[] metadataBytes = readProtectedBytes(evidence.resolve("native-metadata.json"), evidence, 128 * 1024);
-        var metadata = readNativeMetadataReceipt(inputs, preparations, metadataBytes);
-        byte[] catalogBytes = readProtectedBytes(evidence.resolve("native-catalog-review.json"), evidence, 128 * 1024);
-        var catalogDocument = strictMapper().readTree(catalogBytes); requireUtcInstant(requiredJsonText(catalogDocument, "recordedAt", 64));
-        var catalog = strictMapper().treeToValue(catalogDocument, NativeCatalogReviewReceiptDTO.class);
-        Set<String> tenants = commands.stream().map(ResolvedPlatformBootstrapCommandDTO::getTenantId).collect(java.util.stream.Collectors.toSet());
-        validateNativeCatalogCheckpoint(catalog, inputs, digest(metadataBytes), preparations.keySet(), tenants, true);
-        String resume = System.getProperty("xingyuan.isolated.resume", "false");
-        if (!Set.of("true", "false").contains(resume)) { throw new IllegalArgumentException("XINGYUAN_INPUT_INVALID"); }
-        Path checkpoint = evidence.resolve("native-actors.json"); Path lockPath = evidence.resolve("native-actors.lock");
-        try (var channel = FileChannel.open(lockPath, Set.of(StandardOpenOption.CREATE, StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS),
-                PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------")))) {
-            readProtectedBytes(lockPath, evidence, 1024);
-            try (var lock = channel.tryLock()) {
-                if (lock == null) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                byte[] previous = Files.exists(checkpoint, LinkOption.NOFOLLOW_LINKS) ? readProtectedBytes(checkpoint, evidence, 128 * 1024) : null;
-                NativeActorReceiptDTO prior = null;
-                if (previous != null) {
-                    var document = strictMapper().readTree(previous); requireUtcInstant(requiredJsonText(document, "recordedAt", 64));
-                    prior = strictMapper().treeToValue(document, NativeActorReceiptDTO.class);
-                    validateNativeActorCheckpoint(prior, inputs, digest(registryBytes), digest(catalogBytes), tenants, Boolean.parseBoolean(resume));
-                }
-                try (var context = openAuthorizationContext(manifest, database, repository, true, false)) {
-                    Runnable owner = context.getBean("isolatedOwnershipGuard", Runnable.class);
-                    long deadline = System.nanoTime() + java.time.Duration.ofSeconds(inputs.getManifest().getDeadlines().getOperationSeconds()).toNanos();
-                    Runnable guard = () -> {
-                        if (System.nanoTime() >= deadline) { throw new IllegalStateException("XINGYUAN_DEPENDENCY_UNAVAILABLE"); }
-                        owner.run();
-                        try {
-                            if (!MessageDigest.isEqual(registryBytes, readProtectedBytes(root.resolve("secrets/runtime-registry.json"), root.resolve("secrets"), 2 * 1024 * 1024))
-                                    || !MessageDigest.isEqual(catalogBytes, readProtectedBytes(evidence.resolve("native-catalog-review.json"), evidence, 128 * 1024))
-                                    || !MessageDigest.isEqual(metadataBytes, readProtectedBytes(evidence.resolve("native-metadata.json"), evidence, 128 * 1024))
-                                    || !preparations.equals(nativeCatalogPreparations(inputs))) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                        } catch (IOException unavailable) { throw new IllegalStateException("XINGYUAN_INPUT_UNAVAILABLE"); }
-                    };
-                    guard.run(); requireNativeDirectoryOwnership(context, metadata, preparations);
-                    requireProvisioningProfiles(subjects, context.getBean("identityProfileDirectory", IdentityProfileDirectory.class).batchGet(subjects));
-                    var membership = context.getBean("identityTenantMembershipDirectory", IdentityTenantMembershipDirectory.class);
-                    var scopes = context.getBean("tenantApplicationFacade", TenantApplicationFacade.class);
-                    Map<String, PlatformSnapshotProofVO> before = new LinkedHashMap<>();
-                    for (var preparation : preparations.entrySet()) {
-                        guard.run(); var registration = catalog.getRegistrations().get(preparation.getKey());
-                        var state = readNativeCatalogState(context, registration.applicationId()); validateNativeCatalogState(preparation.getValue(), registration, state);
-                        if (!catalog.getCatalogSha256().get(preparation.getKey()).equals(nativeCatalogStateSha256(state))) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                    }
-                    for (var command : commands) {
-                        for (String subject : subjects) { guard.run(); membership.requireActive(command.getTenantId(), subject); }
-                        if (!catalog.getScopeSha256().get(command.getTenantId()).equals(nativeScopeSha256(preparations, metadata, scopes.applications(Long.valueOf(command.getTenantId()))))) {
-                            throw new IllegalStateException("XINGYUAN_STATE_CONFLICT");
-                        }
-                        if (prior == null) {
-                            nativeUser(context, command.getTenantId(), subjects.getFirst());
-                            before.put(command.getTenantId(), confirmedPlatformSnapshot(context, command));
-                            for (String subject : subjects.subList(1, 3)) { if (!nativeUsers(context, command.getTenantId(), subject).isEmpty()) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); } }
-                        }
-                    }
-                    var pending = NativeActorReceiptDTO.builder().schemaVersion(1).runId(inputs.getManifest().getRunId()).manifestSha256(inputs.getManifestSha256())
-                            .databaseOid(inputs.getReceipt().getOid()).registrySha256(digest(registryBytes)).catalogReviewSha256(digest(catalogBytes))
-                            .status("RUNNING").recordedAt(Instant.now()).actors(Map.of()).build();
-                    byte[] pendingBytes = strictMapper().writeValueAsBytes(pending);
-                    if (prior == null) { guard.run(); publishAuthorizationCheckpoint(checkpoint, pendingBytes, null); }
-                    Map<String, NativeTenantActorsVO> actors = new LinkedHashMap<>(); Map<String, String> previousMdc = MDC.getCopyOfContextMap();
-                    try {
-                        for (var command : commands) {
-                            guard.run(); var admin = nativeUser(context, command.getTenantId(), subjects.getFirst());
-                            MDC.put("tenantId", command.getTenantId()); MDC.put("userId", admin.getId().toString());
-                            actors.put(command.getTenantId(), nativeTenantActors(context, command.getTenantId(), subjects, prior == null, guard));
-                            if (prior == null && !before.get(command.getTenantId()).equals(confirmedPlatformSnapshot(context, command))) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                        }
-                    } finally { if (previousMdc == null) { MDC.clear(); } else { MDC.setContextMap(previousMdc); } }
-                    guard.run();
-                    if (prior == null) {
-                        pending.setStatus("COMMITTED").setRecordedAt(Instant.now()).setActors(Map.copyOf(actors));
-                        validateNativeActorCheckpoint(pending, inputs, digest(registryBytes), digest(catalogBytes), tenants, true);
-                        publishAuthorizationCheckpoint(checkpoint, strictMapper().writeValueAsBytes(pending), pendingBytes);
-                    }
-                    else if (!prior.getActors().equals(actors) || !MessageDigest.isEqual(previous, readProtectedBytes(checkpoint, evidence, 128 * 1024))) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                }
-            }
-        }
-    }
+
 
     @Test
     void nativeActorsRejectDirectoryProfileSubstitution() {
@@ -2263,36 +1552,7 @@ public class IsolatedAuthorizationProvisioningIT {
         var review = strictMapper().readValue(bytes, McpTaskAuthorizationReviewDTO.class); validateMcpTaskReview(review, inputs.getManifest().getRunId()); return review;
     }
 
-    @Test
-    void mcpReviewOnlyApprovesTheExactTaskPermissionResourceAndAdminRole() throws Exception {
-        String runId = UUID.randomUUID().toString();
-        var review = McpTaskAuthorizationReviewDTO.builder().schemaVersion(1).runId(runId).processId("mcp").tenantKeys(List.of("default", "tenant-b"))
-                .applicationCode("stellar-enclosure-yuheng-admin").businessCode("platform").permissionCode("mcp:xingyuan-it-" + runId + ":resource:scopes:read")
-                .resourceCode("stellar-enclosure-yuheng-admin.mcp-task-" + runId.replace("-", "")).roleCode("XINGYUAN_MCP_" + runId.replace("-", "").toUpperCase(java.util.Locale.ROOT) + "_ADMIN")
-                .userKey("admin").approved(true).build();
-        org.assertj.core.api.Assertions.assertThatCode(() -> validateMcpTaskReview(review, runId)).doesNotThrowAnyException();
-        var catalog = mcpTaskCatalog(review, 7, strictMapper());
-        assertThat(catalog.getPermissions()).isEmpty(); assertThat(catalog.getFields()).isEmpty();
-        assertThat(catalog.getExpectedApplicationVersion()).isEqualTo(7);
-        assertThat(catalog.getResources()).hasSize(1); assertThat(catalog.getResources().getFirst().getSuggestedPermissionCode()).isNull();
-        assertThat(catalog.getResources().getFirst().getPath()).isEqualTo("/mcp/xingyuan-it-" + runId);
-        try (var validators = Validation.buildDefaultValidatorFactory()) {
-            var owner = new GlobalResourceCatalogService(Mockito.mock(EntityManager.class), Mockito.mock(DatabaseClock.class), Mockito.mock(PermissionCatalogService.class),
-                    Mockito.mock(top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.DdcCatalogGateway.class), strictMapper(), validators.getValidator(),
-                    Mockito.mock(GlobalResourceCatalogService.PermissionRegistrationConverter.class));
-            var checksum = GlobalResourceCatalogService.class.getDeclaredMethod("catalogChecksum", DeploymentCatalogRegistrationCommand.class); checksum.setAccessible(true);
-            assertThat(checksum.invoke(owner, catalog)).isEqualTo(catalog.getChecksum());
-        }
-        for (String field : List.of("permissionCode", "resourceCode", "roleCode", "runId", "applicationCode", "userKey")) {
-            var changed = strictMapper().valueToTree(review); ((com.fasterxml.jackson.databind.node.ObjectNode) changed).put(field, "foreign");
-            assertThatThrownBy(() -> validateMcpTaskReview(strictMapper().treeToValue(changed, McpTaskAuthorizationReviewDTO.class), runId)).isInstanceOf(RuntimeException.class);
-        }
-        review.setApproved(false); assertThatThrownBy(() -> validateMcpTaskReview(review, runId)).isInstanceOf(RuntimeException.class);
-        var actors = new NativeTenantActorsVO("301", "302", "303");
-        var role = new RoleVO("601", "501", "XINGYUAN_MCP_ADMIN", "MCP admin", "PUBLIC", "LOW", false, "ACTIVE", 1);
-        assertThat(nativeAssignmentPolicy(runId, "1001:mcp:admin", actors, "301", role, Instant.now()).activationRootRoleIds()).containsExactly("601");
-        assertThatThrownBy(() -> nativeAssignmentPolicy(runId, "1001:mcp:viewer", actors, "302", role, Instant.now())).hasMessage("XINGYUAN_TARGET_UNSAFE");
-    }
+
 
     static DeploymentCatalogRegistrationCommand mcpTaskCatalog(McpTaskAuthorizationReviewDTO review, long applicationVersion,
             com.fasterxml.jackson.databind.ObjectMapper mapper) throws IOException {
@@ -2310,145 +1570,9 @@ public class IsolatedAuthorizationProvisioningIT {
         return command;
     }
 
-    @Test
-    @org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable(named = "XINGYUAN_ISOLATED_INTEGRATION", matches = "true")
-    void provisionTaskMcpAuthorization() throws Exception {
-        Path repository = Path.of(operationProperty("xingyuan.isolated.repository-root")), manifestFile = Path.of(operationProperty("xingyuan.isolated.manifest-file"));
-        Path database = Path.of(operationProperty("xingyuan.isolated.receipt-file")); var inputs = readVerifiedDatabaseInputs(manifestFile, database, repository, "rbac");
-        var review = readMcpTaskReview(inputs); var commands = platformBootstrapCommands(inputs); requireCommittedPlatformAuthorization(inputs, commands);
-        Path root = Path.of(inputs.getManifest().getRuntimeRoot()), base = root.resolve("evidence"), evidence = nativeFieldEvidenceDirectory(inputs);
-        Map<Path, byte[]> frozen = new LinkedHashMap<>();
-        for (Path file : List.of(root.resolve("policies/mcp-authorization.json"), root.resolve("secrets/runtime-registry.json"), evidence.resolve("mcp-publication.json"),
-                base.resolve("native-actors.json"), base.resolve("native-catalog-review.json"))) { frozen.put(file, readProtectedBytes(file, root, 2 * 1024 * 1024)); }
-        var publication = strictMapper().readTree(frozen.get(evidence.resolve("mcp-publication.json")));
-        var registry = strictMapper().readTree(frozen.get(root.resolve("secrets/runtime-registry.json"))); var subjects = provisioningDirectorySubjects(registry);
-        String runId = inputs.getManifest().getRunId(), digest = inputs.getManifestSha256();
-        if (!runId.equals(publication.path("runId").asText()) || !digest.equals(publication.path("manifestSha256").asText()) || !"COMMITTED".equals(publication.path("status").asText())
-                || !"ORIGINAL_TASK_MCP_OWNER_PUBLICATION_ONLY".equals(publication.path("scope").asText()) || !("xingyuan-it-" + runId).equals(publication.path("serverCode").asText())
-                || !review.getApplicationCode().equals(publication.path("rbacApplicationCode").asText()) || !runId.equals(registry.path("runId").asText()) || !digest.equals(registry.path("manifestSha256").asText())) {
-            throw new IllegalArgumentException("XINGYUAN_TARGET_UNSAFE");
-        }
-        var resourceOwners = java.util.stream.StreamSupport.stream(registry.path("resources").spliterator(), false).filter(value -> "ACTIVE".equals(value.path("status").asText())
-                && publication.path("resourceUri").equals(value.path("resourceUri")) && review.getApplicationCode().equals(value.path("rbacApplicationCode").asText())).toList();
-        if (resourceOwners.size() != 1 || commands.size() != 2 || commands.stream().anyMatch(command -> !subjects.getFirst().equals(command.getIdentitySub())
-                || command.getApplications().stream().filter(binding -> review.getApplicationCode().equals(binding.getApplicationCode()) && review.getBusinessCode().equals(binding.getBusinessCode())).count() != 1)) {
-            throw new IllegalArgumentException("XINGYUAN_TARGET_UNSAFE");
-        }
-        var actors = strictMapper().readValue(frozen.get(base.resolve("native-actors.json")), NativeActorReceiptDTO.class);
-        validateNativeActorCheckpoint(actors, inputs, digest(frozen.get(root.resolve("secrets/runtime-registry.json"))), digest(frozen.get(base.resolve("native-catalog-review.json"))),
-                commands.stream().map(ResolvedPlatformBootstrapCommandDTO::getTenantId).collect(java.util.stream.Collectors.toSet()), true);
-        Path running = evidence.resolve("mcp-authorization-running.json"), completed = evidence.resolve("mcp-authorization.json"), lockPath = evidence.resolve("mcp-authorization.lock");
-        try (var channel = FileChannel.open(lockPath, Set.of(StandardOpenOption.CREATE, StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS), PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------")))) {
-            readProtectedBytes(lockPath, evidence, 1024);
-            try (var lock = channel.tryLock()) {
-                if (lock == null || Files.exists(running, LinkOption.NOFOLLOW_LINKS) || Files.exists(completed, LinkOption.NOFOLLOW_LINKS)) { throw new IllegalStateException("XINGYUAN_COMMIT_UNKNOWN"); }
-                try (var context = openAuthorizationContext(manifestFile, database, repository, true, false)) {
-                    Runnable owner = context.getBean("isolatedOwnershipGuard", Runnable.class); long deadline = System.nanoTime() + java.time.Duration.ofSeconds(inputs.getManifest().getDeadlines().getOperationSeconds()).toNanos();
-                    Runnable guard = () -> {
-                        if (System.nanoTime() >= deadline) { throw new IllegalStateException("XINGYUAN_DEPENDENCY_UNAVAILABLE"); }
-                        owner.run();
-                        for (var entry : frozen.entrySet()) {
-                            try { if (!MessageDigest.isEqual(entry.getValue(), readProtectedBytes(entry.getKey(), root, 2 * 1024 * 1024))) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); } }
-                            catch (IOException unavailable) { throw new IllegalStateException("XINGYUAN_INPUT_UNAVAILABLE", unavailable); }
-                        }
-                    };
-                    guard.run(); requireProvisioningProfiles(subjects, context.getBean("identityProfileDirectory", IdentityProfileDirectory.class).batchGet(subjects));
-                    for (var tenant : commands) { for (String subject : subjects) {
-                        guard.run(); context.getBean("identityTenantMembershipDirectory", IdentityTenantMembershipDirectory.class).requireActive(tenant.getTenantId(), subject);
-                    } }
-                    guard.run(); var catalog = context.getBean("globalResourceCatalogService", GlobalResourceCatalogService.class);
-                    var applications = catalog.applications().stream().filter(value -> review.getApplicationCode().equals(value.applicationCode()) && "ACTIVE".equals(value.status())).toList();
-                    if (applications.size() != 1) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                    var app = applications.getFirst(); var before = readNativeCatalogState(context, app.applicationId());
-                    if (before.permissions().stream().anyMatch(value -> review.getPermissionCode().equals(value.permissionCode()))
-                            || before.resources().stream().anyMatch(value -> review.getResourceCode().equals(value.resourceCode()))) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                    var clock = context.getBean("jpaDatabaseClock", DatabaseClock.class);
-                    var command = mcpTaskCatalog(review, app.version(), context.getBean("jacksonObjectMapper", com.fasterxml.jackson.databind.ObjectMapper.class));
-                    var proof = strictMapper().createObjectNode().put("schemaVersion", 1).put("runId", runId).put("manifestSha256", digest).put("databaseOid", inputs.getReceipt().getOid())
-                            .put("scope", "MCP_TASK_AUTHORIZATION_OWNER_ONLY").put("status", "RUNNING").put("publicationSha256", digest(frozen.get(evidence.resolve("mcp-publication.json"))))
-                            .put("reviewSha256", digest(frozen.get(root.resolve("policies/mcp-authorization.json")))).put("permissionCode", review.getPermissionCode()).put("resourceCode", review.getResourceCode())
-                            .put("applicationCode", review.getApplicationCode()).put("recordedAt", Instant.now().toString());
-                    guard.run(); publishAuthorizationCheckpoint(running, strictMapper().writeValueAsBytes(proof), null);
-                    String actorId = actors.getActors().get(commands.getFirst().getTenantId()).adminUserId();
-                    var permissions = context.getBean("permissionCatalogService", PermissionCatalogService.class);
-                    guard.run(); var pending = permissions.create(new top.egon.cola.platform.tianquan.jianshen.admin.authorization.permission.domain.dto.CreatePermissionRequestDTO(
-                            app.applicationId(), review.getPermissionCode(), "Task MCP scopes read", "LOW", "XINGYUAN_TASK:" + runId), actorId);
-                    if (!app.applicationId().equals(pending.applicationId()) || !review.getPermissionCode().equals(pending.permissionCode()) || !"PENDING_VALIDATION".equals(pending.status())
-                            || !"MANUAL".equals(pending.sourceType()) || pending.version() != 0) { throw new IllegalStateException("XINGYUAN_COMMIT_UNKNOWN"); }
-                    guard.run(); var permission = permissions.changeStatus(pending.id(), new ChangePermissionStatusRequestDTO("ACTIVE", pending.version()), actorId);
-                    if (!"ACTIVE".equals(permission.status()) || permission.version() != 1 || !pending.id().equals(permission.id())) { throw new IllegalStateException("XINGYUAN_COMMIT_UNKNOWN"); }
-                    guard.run(); var registered = catalog.registerDeploymentCatalog(command, actorId);
-                    if (!app.applicationId().equals(registered.applicationId()) || registered.applicationVersion() != Math.incrementExact(app.version())) { throw new IllegalStateException("XINGYUAN_COMMIT_UNKNOWN"); }
-                    var resources = catalog.resources(app.applicationId()).stream().filter(value -> review.getResourceCode().equals(value.resourceCode())).toList();
-                    if (resources.size() != 1 || !"ACTIVE".equals(resources.getFirst().status()) || !"UNCONFIGURED".equals(resources.getFirst().mappingStatus())) { throw new IllegalStateException("XINGYUAN_COMMIT_UNKNOWN"); }
-                    var resource = resources.getFirst(); guard.run();
-                    var mapping = context.getBean("resourcePermissionMappingService", ResourcePermissionMappingService.class).update(resource.resourceId(),
-                            new UpdateResourcePermissionMappingRequestDTO(permission.id(), resource.version(), "Task explicit MCP capability review"), actorId, clock.transactionNow());
-                    if (!permission.id().equals(mapping.actualPermissionId()) || !"CONFIGURED".equals(mapping.mappingStatus()) || !app.applicationId().equals(mapping.applicationId())) { throw new IllegalStateException("XINGYUAN_COMMIT_UNKNOWN"); }
-                    var after = readNativeCatalogState(context, app.applicationId());
-                    if (!before.permissions().equals(after.permissions().stream().filter(value -> !permission.id().equals(value.id())).toList())
-                            || !before.resources().equals(after.resources().stream().filter(value -> !resource.resourceId().equals(value.resourceId())).toList())
-                            || !before.fields().equals(after.fields()) || !before.mappings().equals(after.mappings().stream().filter(value -> !resource.resourceId().equals(value.resourceId())).toList())) {
-                        throw new IllegalStateException("XINGYUAN_COMMIT_UNKNOWN");
-                    }
-                    var observations = proof.putArray("tenants");
-                    for (var tenant : commands) { observations.add(prepareMcpTaskRole(context, inputs, tenant, subjects, actors.getActors().get(tenant.getTenantId()), review, app.applicationId(), resource.resourceId(), guard)); }
-                    proof.put("permissionId", permission.id()).put("resourceId", resource.resourceId()).put("status", "COMMITTED").put("recordedAt", Instant.now().toString());
-                    guard.run(); publishAuthorizationCheckpoint(completed, strictMapper().writeValueAsBytes(proof), null);
-                }
-            }
-        }
-    }
 
-    private static com.fasterxml.jackson.databind.node.ObjectNode prepareMcpTaskRole(AnnotationConfigApplicationContext context, VerifiedDatabaseInputsBO inputs,
-            ResolvedPlatformBootstrapCommandDTO tenant, List<String> subjects, NativeTenantActorsVO actors, McpTaskAuthorizationReviewDTO review,
-            String applicationId, String resourceId, Runnable guard) throws IOException {
-        String tenantId = tenant.getTenantId(), runId = inputs.getManifest().getRunId();
-        if (!actors.equals(nativeTenantActors(context, tenantId, subjects, false, guard))) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-        var roles = context.getBean("roleFacade", RoleFacade.class); var activation = context.getBean("roleActivationFacade", RoleActivationFacade.class);
-        var assignments = context.getBean("assignmentFacade", AssignmentFacade.class); var grants = context.getBean("roleResourceGrantService", RoleResourceGrantService.class); var clock = context.getBean("jpaDatabaseClock", DatabaseClock.class);
-        var originalRoles = roles.roles(tenantId, applicationId); if (originalRoles.stream().anyMatch(value -> review.getRoleCode().equals(value.roleCode()))) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-        var admin = nativeUser(context, tenantId, subjects.getFirst()); var viewer = nativeUser(context, tenantId, subjects.get(1));
-        var originalAdmin = activation.current(tenantId, subjects.getFirst(), admin.getId().toString()); var originalViewer = activation.current(tenantId, subjects.get(1), viewer.getId().toString());
-        var viewerAssignments = assignments.assignments(tenantId, viewer.getId().toString(), clock.transactionNow());
-        Instant now = clock.transactionNow().truncatedTo(java.time.temporal.ChronoUnit.MICROS); Map<String, String> oldMdc = MDC.getCopyOfContextMap();
-        try {
-            MDC.put("tenantId", tenantId); MDC.put("userId", admin.getId().toString()); guard.run();
-            var created = roles.createRole(new CreateRoleCommandDTO(tenantId, applicationId, review.getRoleCode(), review.getRoleCode(), "PUBLIC", "LOW", false, null, 0, 1, actors.adminUserId()), now);
-            var selected = roles.roles(tenantId, applicationId).stream().filter(value -> created.resourceId().equals(value.roleId()) && review.getRoleCode().equals(value.roleCode())).toList();
-            if (selected.size() != 1 || !"ACTIVE".equals(selected.getFirst().status()) || !"PUBLIC".equals(selected.getFirst().roleType()) || selected.getFirst().privileged()) { throw new IllegalStateException("XINGYUAN_COMMIT_UNKNOWN"); }
-            var role = selected.getFirst(); var before = nativeFieldState(context, tenantId, applicationId, role.roleId()); guard.run();
-            var granted = grants.replace(tenantId, role.roleId(), new ReplaceRoleResourcesRequestDTO(List.of(resourceId), now, null, role.version()), actors.adminUserId(), now);
-            var after = nativeFieldState(context, tenantId, applicationId, role.roleId());
-            var tree = grants.tree(tenantId, role.roleId(), now);
-            if (!tree.directResourceIds().equals(List.of(resourceId)) || after.roleVersion() != Math.incrementExact(before.roleVersion())
-                    || after.policyVersion() != Math.incrementExact(before.policyVersion()) || after.roleEventCount() != Math.incrementExact(before.roleEventCount())
-                    || granted.roleVersion() != after.roleVersion() || !before.rulesSha256().equals(after.rulesSha256())) { throw new IllegalStateException("XINGYUAN_COMMIT_UNKNOWN"); }
-            role = roles.roles(tenantId, applicationId).stream().filter(value -> created.resourceId().equals(value.roleId())).findFirst().orElseThrow();
-            var assignment = assignReviewedNativeRole(context, runId, tenantId + ":mcp:admin", actors, subjects.getFirst(), role, digest(strictMapper().writeValueAsBytes(tree)), guard);
-            var expected = new java.util.TreeMap<>(activationRoots(originalAdmin.activeRoles()));
-            var desiredForApp = new HashSet<>(expected.getOrDefault(review.getApplicationCode(), Set.of())); desiredForApp.add(role.roleId()); expected.put(review.getApplicationCode(), Set.copyOf(desiredForApp));
-            admin = nativeUser(context, tenantId, subjects.getFirst()); guard.run();
-            long expectedUserVersion = admin.getAuthVersion();
-            var activated = activation.replace(new ReplaceCommandDTO(tenantId, subjects.getFirst(), admin.getId().toString(), expected.values().stream().flatMap(Set::stream).sorted().toList(),
-                    expectedUserVersion, actors.adminUserId(), runId + ":mcp-activate:" + tenantId));
-            if (!activated.changed() || activated.activationRequired() || activated.authVersion() != Math.incrementExact(expectedUserVersion) || !expected.equals(activationRoots(activated.activeRoles()))) {
-                throw new IllegalStateException("XINGYUAN_COMMIT_UNKNOWN");
-            }
-            var snapshot = nativeRuntimeSnapshot(context, tenantId, subjects.getFirst(), expected, guard);
-            var apps = snapshot.appContexts().stream().filter(value -> review.getApplicationCode().equals(value.applicationCode())).toList();
-            if (apps.size() != 1 || !apps.getFirst().permissions().contains(review.getPermissionCode()) || !apps.getFirst().resourceCodes().contains(review.getResourceCode())
-                    || !snapshot.checksum().equals(activated.snapshotChecksum())) { throw new IllegalStateException("XINGYUAN_COMMIT_UNKNOWN"); }
-            var viewerRoots = activationRoots(originalViewer.activeRoles()); var viewerSnapshot = nativeRuntimeSnapshot(context, tenantId, subjects.get(1), viewerRoots, guard);
-            if (viewerSnapshot.appContexts().stream().anyMatch(value -> value.permissions().contains(review.getPermissionCode()) || value.resourceCodes().contains(review.getResourceCode()))
-                    || !viewerAssignments.equals(assignments.assignments(tenantId, viewer.getId().toString(), clock.transactionNow()))
-                    || !originalRoles.equals(roles.roles(tenantId, applicationId).stream().filter(value -> !created.resourceId().equals(value.roleId())).toList())) { throw new IllegalStateException("XINGYUAN_COMMIT_UNKNOWN"); }
-            var result = strictMapper().createObjectNode().put("tenantId", tenantId).put("roleId", role.roleId()).put("viewerGranted", false);
-            result.set("assignment", strictMapper().valueToTree(assignment)); result.set("beforeGrant", strictMapper().valueToTree(before)); result.set("afterGrant", strictMapper().valueToTree(after));
-            result.set("adminSnapshot", strictMapper().valueToTree(context.getBean("nativeSnapshotProofConverterImpl", NativeSnapshotProofConverter.class).toTarget(snapshot)));
-            result.set("viewerSnapshot", strictMapper().valueToTree(context.getBean("nativeSnapshotProofConverterImpl", NativeSnapshotProofConverter.class).toTarget(viewerSnapshot))); guard.run(); return result;
-        } finally { if (oldMdc == null) { MDC.clear(); } else { MDC.setContextMap(oldMdc); } }
-    }
+
+
 
     private static SaveCommandDTO nativeAssignmentPolicy(String runId, String key, NativeTenantActorsVO actors, String targetId, RoleVO role, Instant now) {
         validateNativeTenantActorIds(actors);
@@ -2607,17 +1731,7 @@ public class IsolatedAuthorizationProvisioningIT {
         assertThatThrownBy(() -> validateNativeRoleCheckpoint(prior, inputs, "a".repeat(64), "b".repeat(64), "d".repeat(64), intents, true)).hasMessage("XINGYUAN_STATE_CONFLICT");
     }
 
-    private static NativeCatalogFactsBO nativeCatalogFacts(DeploymentCatalogRegistrationResultVO registration, NativeCatalogStateVO state) {
-        Map<String, PermissionCatalogVO> permissions = new LinkedHashMap<>(); state.permissions().forEach(value -> permissions.put(value.permissionCode(), value));
-        Map<String, ResourceVO> resources = new LinkedHashMap<>(); state.resources().forEach(value -> resources.put(value.resourceCode(), value));
-        Map<List<String>, FieldDefinitionVO> fields = new LinkedHashMap<>();
-        for (var field : state.fields()) {
-            String code = state.resources().stream().filter(value -> value.resourceId().equals(field.resourceId())).map(ResourceVO::resourceCode)
-                    .findFirst().orElseThrow(() -> new IllegalStateException("XINGYUAN_STATE_CONFLICT"));
-            if (fields.putIfAbsent(List.of(code, field.fieldCode()), field) != null) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-        }
-        return NativeCatalogFactsBO.builder().registration(registration).permissions(Map.copyOf(permissions)).resources(Map.copyOf(resources)).fields(Map.copyOf(fields)).build();
-    }
+
 
     static ReplaceUserBusinessAccessesCommand nativeBusinessCommand(String commandId, List<UserBusinessAccessVO> existing, Set<String> additions, Instant now) {
         Map<String, ReplaceUserBusinessAccessesCommand.Item> desired = new LinkedHashMap<>();
@@ -2649,53 +1763,13 @@ public class IsolatedAuthorizationProvisioningIT {
         }
     }
 
-    @org.mapstruct.Mapper(implementationName = "NativeFieldRuleReadConverterImpl", unmappedTargetPolicy = org.mapstruct.ReportingPolicy.ERROR)
-    public interface NativeFieldRuleReadConverter extends top.egon.cola.component.common.core.converter.BaseForwardConverter<
-            top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.po.FieldRulePO, RoleFieldRuleDTO> {
-        @Override RoleFieldRuleDTO toTarget(top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.po.FieldRulePO source);
-        RoleFieldRuleDTO copy(RoleFieldRuleDTO source);
-    }
 
-    static List<RoleFieldRuleDTO> nativeFieldDesiredRules(String phase, List<RoleFieldRuleDTO> original, Set<Long> selected) {
-        if (!Set.of("EMPTY", "READ", "WRITE", "RESTORE").contains(phase) || selected.size() != 3 || original == null) {
-            throw new IllegalArgumentException("XINGYUAN_TARGET_UNSAFE");
-        }
-        var converter = new NativeFieldRuleReadConverterImpl();
-        Map<String, java.util.function.UnaryOperator<RoleFieldRuleDTO>> strategies = Map.of(
-                "EMPTY", converter::copy, "RESTORE", converter::copy,
-                "READ", rule -> converter.copy(rule).setAccessLevel(selected.contains(rule.getFieldDefinitionId()) ? FieldAccessLevel.READ : rule.getAccessLevel()),
-                "WRITE", rule -> converter.copy(rule).setAccessLevel(selected.contains(rule.getFieldDefinitionId()) ? FieldAccessLevel.WRITE : rule.getAccessLevel()));
-        return original.stream().filter(rule -> !"EMPTY".equals(phase) || !selected.contains(rule.getFieldDefinitionId()))
-                .map(strategies.get(phase)).toList();
-    }
 
-    @Test
-    void fieldPhaseStrategiesRemoveOnlyReviewedFieldsAndPreserveOtherRules() {
-        Instant from = Instant.parse("2026-10-15T00:00:00Z");
-        var original = List.of(
-                new RoleFieldRuleDTO(90L, 101L, FieldAccessLevel.WRITE, from, null, FieldRuleStatusEnum.ACTIVE),
-                new RoleFieldRuleDTO(90L, 102L, FieldAccessLevel.WRITE, from, null, FieldRuleStatusEnum.ACTIVE),
-                new RoleFieldRuleDTO(90L, 103L, FieldAccessLevel.WRITE, from, null, FieldRuleStatusEnum.ACTIVE),
-                new RoleFieldRuleDTO(91L, 104L, FieldAccessLevel.READ, from, from.plusSeconds(3600), FieldRuleStatusEnum.ACTIVE));
-        var empty = nativeFieldDesiredRules("EMPTY", original, Set.of(101L, 102L, 103L));
-        assertThat(empty).extracting(RoleFieldRuleDTO::getFieldDefinitionId).containsExactly(104L);
-        assertThat(empty.getFirst()).isEqualTo(original.getLast()).isNotSameAs(original.getLast());
-        assertThat(nativeFieldDesiredRules("RESTORE", original, Set.of(101L, 102L, 103L))).isEqualTo(original);
-    }
 
-    @Test
-    void fieldPhaseStrategiesUseReadAndWriteWithoutMutatingTheBaseline() {
-        Instant from = Instant.parse("2026-10-15T00:00:00Z");
-        var original = List.of(new RoleFieldRuleDTO(90L, 101L, FieldAccessLevel.WRITE, from, null, FieldRuleStatusEnum.ACTIVE),
-                new RoleFieldRuleDTO(90L, 102L, FieldAccessLevel.WRITE, from, null, FieldRuleStatusEnum.ACTIVE),
-                new RoleFieldRuleDTO(90L, 103L, FieldAccessLevel.WRITE, from, null, FieldRuleStatusEnum.ACTIVE));
-        var read = nativeFieldDesiredRules("READ", original, Set.of(101L, 102L, 103L));
-        assertThat(read).extracting(RoleFieldRuleDTO::getAccessLevel).containsOnly(FieldAccessLevel.READ);
-        assertThat(read).extracting(RoleFieldRuleDTO::getValidFrom).containsOnly(from);
-        assertThat(original).extracting(RoleFieldRuleDTO::getAccessLevel).containsOnly(FieldAccessLevel.WRITE);
-        assertThat(nativeFieldDesiredRules("WRITE", original, Set.of(101L, 102L, 103L))).isEqualTo(original);
-        assertThatThrownBy(() -> nativeFieldDesiredRules("FOREIGN", original, Set.of(101L, 102L, 103L))).hasMessage("XINGYUAN_TARGET_UNSAFE");
-    }
+
+
+
+
 
     private static final List<String> NATIVE_FIELD_PHASES = List.of("CAP_REJECT", "EMPTY", "READ", "WRITE", "RESTORE");
 
@@ -2826,22 +1900,7 @@ public class IsolatedAuthorizationProvisioningIT {
                 .setParameter("tenant", Long.valueOf(tenant)).setParameter("app", Long.valueOf(appId)).setParameter("role", Long.valueOf(roleId)).getResultList();
     }
 
-    private static NativeFieldStateVO nativeFieldState(AnnotationConfigApplicationContext context, String tenant, String appId, String roleId) throws IOException {
-        var manager = context.getBean("jpaSharedEM_entityManagerFactory", EntityManager.class);
-        Object[] row = (Object[]) manager.createNativeQuery("""
-                select role.version, state.policy_version,
-                  (select count(*) from egon_outbox.egon_cola_outbox_message event
-                   where event.channel = 'tianquan-jianshen-runtime' and event.payload::jsonb ->> 'tenantId' = :tenantText
-                     and event.payload::jsonb ->> 'aggregateType' = 'ROLE' and event.payload::jsonb ->> 'aggregateId' = :roleText)
-                from rbac3_role role join rbac3_tenant_authorization_state state on state.tenant_id = role.tenant_id
-                where role.tenant_id = :tenant and role.application_id = :app and role.id = :role
-                """).setParameter("tenantText", tenant).setParameter("roleText", roleId).setParameter("tenant", Long.valueOf(tenant))
-                .setParameter("app", Long.valueOf(appId)).setParameter("role", Long.valueOf(roleId)).getSingleResult();
-        var converter = new NativeFieldRuleReadConverterImpl();
-        var rules = nativeFieldRows(context, tenant, appId, roleId).stream().map(converter::toTarget).toList();
-        return new NativeFieldStateVO(((Number) row[0]).longValue(), ((Number) row[1]).longValue(), ((Number) row[2]).longValue(),
-                digest(strictMapper().writeValueAsBytes(rules)));
-    }
+
 
     private static top.egon.cola.platform.tianquan.jianshen.contract.authorization.UserAuthorizationSnapshot nativeRuntimeSnapshot(
             AnnotationConfigApplicationContext context, String tenant, String subject, Map<String, Set<String>> roots, Runnable guard) {
@@ -2851,7 +1910,7 @@ public class IsolatedAuthorizationProvisioningIT {
                 user.getId().toString(), UUID.randomUUID().toString()));
         if (result.changed() || !roots.equals(activationRoots(result.activeRoles()))) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
         guard.run();
-        var record = context.getBean("redisAuthorizationRuntimeRepository", RedisAuthorizationRuntimeRepository.class).load(tenant, subject);
+        var record = context.getBean("postgresqlAuthorizationRuntimeRepository", PostgresqlAuthorizationRuntimeRepository.class).load(tenant, subject);
         if (record == null || !tenant.equals(record.tenantId()) || !subject.equals(record.identitySub()) || !user.getId().toString().equals(record.userId())) {
             throw new IllegalStateException("XINGYUAN_PARTIAL");
         }
@@ -2910,55 +1969,7 @@ public class IsolatedAuthorizationProvisioningIT {
         @com.fasterxml.jackson.annotation.JsonIgnore @lombok.ToString.Exclude @NotNull private Runnable guard;
     }
 
-    private static void observeNativeResourceGrantLoss(NativeGrantOwnerBO owner) throws Exception {
-        try (var validators = Validation.buildDefaultValidatorFactory()) { new ValidationUtils(validators.getValidator()).validate(owner); }
-        var context = owner.getContext(); var inputs = owner.getInputs(); String tenant = owner.getTenantId(), role = owner.getRoleId();
-        var service = context.getBean("roleResourceGrantService", RoleResourceGrantService.class); var clock = context.getBean("jpaDatabaseClock", DatabaseClock.class);
-        var original = owner.getResourceIds().stream().sorted().toList(); owner.getGuard().run();
-        var tree = service.tree(tenant, role, clock.transactionNow());
-        if (!tree.applicationId().equals(owner.getApplicationId()) || !tree.directResourceIds().equals(original)) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-        var initial = nativeRuntimeSnapshot(context, tenant, owner.getSubject(), owner.getRoots(), owner.getGuard());
-        if (!nativeGrantResourceAllowed(initial, owner.getApplicationCode(), owner.getPermissionCode(), owner.getResourceCode())) { throw new IllegalStateException("XINGYUAN_PARTIAL"); }
-        String nonce = UUID.randomUUID().toString(); Instant readyAt = Instant.now(); String originalHash = digest(strictMapper().writeValueAsBytes(original));
-        var ready = strictMapper().createObjectNode().put("schemaVersion", 1).put("runId", inputs.getManifest().getRunId()).put("manifestSha256", inputs.getManifestSha256())
-                .put("databaseOid", inputs.getReceipt().getOid()).put("nonce", nonce).put("status", "READY").put("scope", "RESOURCE_GRANT_OWNER_ONLY")
-                .put("tenantId", tenant).put("applicationCode", owner.getApplicationCode()).put("roleId", role).put("originalResourceIdsSha256", originalHash)
-                .put("recordedAt", readyAt.toString());
-        byte[] previous = strictMapper().writeValueAsBytes(ready); owner.getGuard().run();
-        publishAuthorizationCheckpoint(owner.getEvidence().resolve("native-resource-grant-ready.json"), previous, null);
-        NativeGrantPhaseReceiptDTO removed = null; Exception operationFailure = null;
-        try {
-            for (int sequence = 1; sequence <= 2; sequence++) {
-                Path requestFile = owner.getEvidence().resolve("native-resource-grant-request-0" + sequence + ".json");
-                while (!Files.exists(requestFile, LinkOption.NOFOLLOW_LINKS)) { owner.getGuard().run(); Thread.sleep(200); }
-                var requestNode = strictMapper().readTree(readProtectedBytes(requestFile, owner.getEvidence(), 16 * 1024));
-                requireUtcInstant(requiredJsonText(requestNode, "requestedAt", 64)); requireUtcInstant(requiredJsonText(requestNode, "expiresAt", 64));
-                var request = strictMapper().treeToValue(requestNode, NativeGrantRequestVO.class);
-                validateNativeGrantRequest(request, inputs.getManifest().getRunId(), inputs.getManifestSha256(), nonce, sequence, digest(previous), readyAt, Instant.now());
-                var receipt = applyNativeResourceGrantPhase(owner, nonce, sequence, digest(previous), sequence == 1 ? List.of() : original, request.expiresAt());
-                previous = strictMapper().writeValueAsBytes(receipt);
-                if (sequence == 1) { removed = receipt; } else { removed = null; }
-            }
-        } catch (Exception failure) {
-            operationFailure = failure; throw failure;
-        } finally {
-            if (removed != null) {
-                try {
-                    // Restore only a confirmed removal whose exact role/epoch/rules state is still current. Unknown commits remain retained.
-                    owner.getGuard().run();
-                    var actual = nativeFieldState(context, tenant, owner.getApplicationId(), role);
-                    var current = service.tree(tenant, role, clock.transactionNow());
-                    if (!actual.equals(removed.getAfter()) || !current.directResourceIds().isEmpty()) { throw new IllegalStateException("XINGYUAN_COMMIT_UNKNOWN"); }
-                    // A started RESTORE already has its own checkpoint; never retry a possibly committed owner call.
-                    if (Files.exists(owner.getEvidence().resolve("native-resource-grant-result-02.json"), LinkOption.NOFOLLOW_LINKS)) { throw new IllegalStateException("XINGYUAN_COMMIT_UNKNOWN"); }
-                    applyNativeResourceGrantPhase(owner, nonce, 2, digest(previous), original, Instant.now().plusSeconds(inputs.getManifest().getDeadlines().getHttpSeconds()));
-                } catch (Exception cleanupFailure) {
-                    if (operationFailure == null) { throw cleanupFailure; }
-                    operationFailure.addSuppressed(cleanupFailure);
-                }
-            }
-        }
-    }
+
 
     private static boolean nativeGrantResourceAllowed(top.egon.cola.platform.tianquan.jianshen.contract.authorization.UserAuthorizationSnapshot snapshot,
             String application, String permission, String resource) {
@@ -2967,198 +1978,9 @@ public class IsolatedAuthorizationProvisioningIT {
         return apps.size() == 1 && apps.getFirst().permissions().contains(permission) && apps.getFirst().resourceCodes().contains(resource);
     }
 
-    private static NativeGrantPhaseReceiptDTO applyNativeResourceGrantPhase(NativeGrantOwnerBO owner, String nonce, int sequence,
-            String previous, List<String> desired, Instant expiresAt) throws Exception {
-        var context = owner.getContext(); var inputs = owner.getInputs(); owner.getGuard().run();
-        var service = context.getBean("roleResourceGrantService", RoleResourceGrantService.class); var clock = context.getBean("jpaDatabaseClock", DatabaseClock.class);
-        var before = nativeFieldState(context, owner.getTenantId(), owner.getApplicationId(), owner.getRoleId());
-        var tree = service.tree(owner.getTenantId(), owner.getRoleId(), clock.transactionNow());
-        var original = owner.getResourceIds().stream().sorted().toList();
-        if (tree.roleVersion() != before.roleVersion() || !tree.applicationId().equals(owner.getApplicationId())
-                || !tree.directResourceIds().equals(sequence == 1 ? original : List.of())) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-        var receipt = NativeGrantPhaseReceiptDTO.builder().schemaVersion(1).runId(inputs.getManifest().getRunId()).manifestSha256(inputs.getManifestSha256())
-                .databaseOid(inputs.getReceipt().getOid()).nonce(nonce).sequence(sequence).phase(sequence == 1 ? "REMOVE" : "RESTORE").previousSha256(previous)
-                .status("RUNNING").tenantId(owner.getTenantId()).applicationCode(owner.getApplicationCode()).roleId(owner.getRoleId()).originalResourceIds(original)
-                .resourceIdsSha256(digest(strictMapper().writeValueAsBytes(desired))).before(before).recordedAt(Instant.now()).build();
-        Path output = owner.getEvidence().resolve("native-resource-grant-result-0" + sequence + ".json"); byte[] running = strictMapper().writeValueAsBytes(receipt);
-        owner.getGuard().run(); publishAuthorizationCheckpoint(output, running, null);
-        try {
-            owner.getGuard().run();
-            var result = service.replace(owner.getTenantId(), owner.getRoleId(), new ReplaceRoleResourcesRequestDTO(desired,
-                    clock.transactionNow(), null, before.roleVersion()), owner.getActorId(), clock.transactionNow());
-            var after = nativeFieldState(context, owner.getTenantId(), owner.getApplicationId(), owner.getRoleId());
-            var actual = service.tree(owner.getTenantId(), owner.getRoleId(), clock.transactionNow());
-            if (!actual.directResourceIds().equals(desired) || !result.directResourceIds().equals(desired) || result.roleVersion() != after.roleVersion()
-                    || result.policyVersion() != after.policyVersion() || after.roleVersion() != before.roleVersion() + 1
-                    || after.policyVersion() != before.policyVersion() + 1 || after.roleEventCount() != before.roleEventCount() + 1
-                    || !after.rulesSha256().equals(before.rulesSha256()) || result.addedCount() != (sequence == 1 ? 0 : original.size())
-                    || result.removedCount() != (sequence == 1 ? original.size() : 0)) { throw new IllegalStateException("XINGYUAN_COMMIT_UNKNOWN"); }
-            var snapshot = nativeRuntimeSnapshot(context, owner.getTenantId(), owner.getSubject(), owner.getRoots(), owner.getGuard());
-            boolean allowed = nativeGrantResourceAllowed(snapshot, owner.getApplicationCode(), owner.getPermissionCode(), owner.getResourceCode());
-            if (allowed != (sequence == 2) || snapshot.policyVersion() < after.policyVersion() || !expiresAt.isAfter(Instant.now())) { throw new IllegalStateException("XINGYUAN_COMMIT_UNKNOWN"); }
-            receipt.setAfter(after).setProjection(context.getBean("nativeSnapshotProofConverterImpl", NativeSnapshotProofConverter.class).toTarget(snapshot))
-                    .setResourceAllowed(allowed).setStatus("CONFIRMED").setRecordedAt(Instant.now());
-            owner.getGuard().run(); publishAuthorizationCheckpoint(output, strictMapper().writeValueAsBytes(receipt), running); return receipt;
-        } catch (Exception unknown) {
-            receipt.setStatus("UNKNOWN_COMMIT").setRecordedAt(Instant.now());
-            try { publishAuthorizationCheckpoint(output, strictMapper().writeValueAsBytes(receipt), running); }
-            catch (IOException | RuntimeException checkpointFailure) { unknown.addSuppressed(checkpointFailure); }
-            throw unknown;
-        }
-    }
 
-    @Test
-    @org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable(named = "XINGYUAN_ISOLATED_INTEGRATION", matches = "true")
-    void observeNativeFieldRules() throws Exception {
-        Path repository = Path.of(operationProperty("xingyuan.isolated.repository-root")), manifestFile = Path.of(operationProperty("xingyuan.isolated.manifest-file"));
-        Path database = Path.of(operationProperty("xingyuan.isolated.receipt-file"));
-        var inputs = readVerifiedDatabaseInputs(manifestFile, database, repository, "rbac");
-        Path root = Path.of(inputs.getManifest().getRuntimeRoot()), base = root.resolve("evidence"), evidence = nativeFieldEvidenceDirectory(inputs);
-        var preparations = nativeCatalogPreparations(inputs); var commands = platformBootstrapCommands(inputs); requireCommittedPlatformAuthorization(inputs, commands);
-        Map<Path, byte[]> frozen = new LinkedHashMap<>();
-        frozen.put(root.resolve("secrets/runtime-registry.json"), readProtectedBytes(root.resolve("secrets/runtime-registry.json"), root.resolve("secrets"), 2 * 1024 * 1024));
-        for (String name : List.of("native-metadata.json", "native-catalog-review.json", "native-actors.json", "native-role-assignments.json", "authorization-native-owner.json")) {
-            frozen.put(base.resolve(name), readProtectedBytes(base.resolve(name), base, 128 * 1024));
-        }
-        var registry = strictMapper().readTree(frozen.get(root.resolve("secrets/runtime-registry.json"))); var subjects = provisioningDirectorySubjects(registry);
-        String tenant = requiredPublicId(registry.path("tenantIds"), "default");
-        var command = commands.stream().filter(value -> tenant.equals(value.getTenantId()) && subjects.getFirst().equals(value.getIdentitySub())).findFirst().orElseThrow();
-        Set<String> tenants = commands.stream().map(ResolvedPlatformBootstrapCommandDTO::getTenantId).collect(java.util.stream.Collectors.toSet());
-        String registryHash = digest(frozen.get(root.resolve("secrets/runtime-registry.json")));
-        var metadata = readNativeMetadataReceipt(inputs, preparations, frozen.get(base.resolve("native-metadata.json")));
-        var catalog = strictMapper().readValue(frozen.get(base.resolve("native-catalog-review.json")), NativeCatalogReviewReceiptDTO.class);
-        var actors = strictMapper().readValue(frozen.get(base.resolve("native-actors.json")), NativeActorReceiptDTO.class);
-        var assignments = strictMapper().readValue(frozen.get(base.resolve("native-role-assignments.json")), NativeRolePreparationReceiptDTO.class);
-        String catalogHash = digest(frozen.get(base.resolve("native-catalog-review.json"))), actorHash = digest(frozen.get(base.resolve("native-actors.json")));
-        validateNativeCatalogCheckpoint(catalog, inputs, digest(frozen.get(base.resolve("native-metadata.json"))), preparations.keySet(), tenants, true);
-        validateNativeActorCheckpoint(actors, inputs, registryHash, catalogHash, tenants, true);
-        validateNativeRoleCheckpoint(assignments, inputs, registryHash, actorHash, catalogHash, nativePolicyIntents(inputs.getManifest().getRunId(), preparations, tenants), true);
-        var parent = strictMapper().readTree(frozen.get(base.resolve("authorization-native-owner.json")));
-        var historical = strictMapper().treeToValue(parent, NativeAuthorizationReceiptDTO.class);
-        try (var validators = Validation.buildDefaultValidatorFactory()) { new ValidationUtils(validators.getValidator()).validate(historical); }
-        Set<String> snapshotKeys = new HashSet<>(); tenants.forEach(value -> { snapshotKeys.add(value + ":admin"); snapshotKeys.add(value + ":viewer"); });
-        if (!snapshotKeys.equals(historical.getSnapshots().keySet())) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-        if (!"COMMITTED".equals(parent.path("status").asText()) || !"native".equals(parent.path("phase").asText())
-                || !inputs.getManifest().getRunId().equals(parent.path("runId").asText()) || !inputs.getManifestSha256().equals(parent.path("manifestSha256").asText())
-                || parent.path("databaseOid").asLong() != inputs.getReceipt().getOid() || !registryHash.equals(parent.path("registrySha256").asText())
-                || !catalogHash.equals(parent.path("catalogReviewSha256").asText()) || !actorHash.equals(parent.path("actorSha256").asText())
-                || !digest(frozen.get(base.resolve("native-role-assignments.json"))).equals(parent.path("assignmentSha256").asText())) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-        if (Files.exists(evidence.resolve("native-field-owner-ready.json"), LinkOption.NOFOLLOW_LINKS)) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-        try (var context = openAuthorizationContext(manifestFile, database, repository, true, false)) {
-            Runnable ownership = context.getBean("isolatedOwnershipGuard", Runnable.class);
-            long deadline = System.nanoTime() + Duration.ofSeconds(inputs.getManifest().getDeadlines().getOperationSeconds()).toNanos();
-            Runnable guard = () -> {
-                if (System.nanoTime() >= deadline) { throw new IllegalStateException("XINGYUAN_DEPENDENCY_UNAVAILABLE"); }
-                ownership.run();
-                try {
-                    for (var entry : frozen.entrySet()) {
-                        if (!MessageDigest.isEqual(entry.getValue(), readProtectedBytes(entry.getKey(), entry.getKey().getParent(), 2 * 1024 * 1024))) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                    }
-                    if (!preparations.equals(nativeCatalogPreparations(inputs))) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                } catch (IOException unavailable) { throw new IllegalStateException("XINGYUAN_INPUT_UNAVAILABLE"); }
-            };
-            guard.run(); var allFacts = requireNativeRoleCatalogs(context, preparations, metadata, catalog, commands, guard);
-            requireNativeRoleOwnerReadback(context, inputs, preparations, metadata, allFacts, commands, subjects, actors, assignments.getAssignments(), guard);
-            var facts = allFacts.get("native-light"); var preparation = preparations.get("native-light");
-            String appId = facts.getRegistration().applicationId(), app = facts.getRegistration().applicationCode(), resource = app + ".api.user.create";
-            String permission = preparation.getReview().getResourcePermissions().get(resource);
-            var proof = assignments.getAssignments().get(tenant + ":native-light:admin"); String role = proof.roleId();
-            var review = preparation.getReview().getRoles().stream().filter(value -> "admin".equals(value.getUserKey())).findFirst().orElseThrow();
-            if (!review.getResourceCodes().contains(resource) || permission == null || !facts.getPermissions().containsKey(permission)) { throw new IllegalArgumentException("XINGYUAN_INPUT_UNAVAILABLE"); }
-            String readResource = app + ".api.user.read", readPermission = preparation.getReview().getResourcePermissions().get(readResource);
-            if (readPermission == null || !review.getResourceCodes().contains(readResource) || !facts.getResources().containsKey(readResource)) { throw new IllegalArgumentException("XINGYUAN_INPUT_UNAVAILABLE"); }
-            var originalResourceIds = review.getResourceCodes().stream().map(code -> facts.getResources().get(code).resourceId()).sorted().toList();
-            Set<Long> selected = new HashSet<>();
-            for (String field : List.of("externalId", "name", "email")) {
-                var definition = facts.getFields().get(List.of(resource, field));
-                if (definition == null || !definition.writable() || !"ACTIVE".equals(definition.status())) { throw new IllegalArgumentException("XINGYUAN_INPUT_UNAVAILABLE"); }
-                selected.add(Long.valueOf(definition.id()));
-            }
-            var cap = facts.getFields().entrySet().stream().filter(entry -> !entry.getValue().writable() && "ACTIVE".equals(entry.getValue().status())
-                    && review.getResourceCodes().contains(entry.getKey().getFirst()) && preparation.getReview().getResourcePermissions().containsKey(entry.getKey().getFirst()))
-                    .findFirst().orElseThrow(() -> new IllegalArgumentException("XINGYUAN_INPUT_UNAVAILABLE"));
-            var converter = new NativeFieldRuleReadConverterImpl();
-            var original = nativeFieldRows(context, tenant, appId, role).stream().filter(value -> value.getStatus() == FieldRuleStatusEnum.ACTIVE).map(converter::toTarget).toList();
-            if (selected.size() != 3 || selected.stream().anyMatch(id -> original.stream().noneMatch(value -> id.equals(value.getFieldDefinitionId())
-                    && value.getAccessLevel() == FieldAccessLevel.WRITE)) || original.size() >= 256) { throw new IllegalArgumentException("XINGYUAN_INPUT_UNAVAILABLE"); }
-            String originalHash = digest(strictMapper().writeValueAsBytes(original));
-            var activation = context.getBean("roleActivationFacade", RoleActivationFacade.class);
-            var user = nativeUser(context, tenant, subjects.getFirst());
-            Map<String, Set<String>> roots = activationRoots(activation.current(tenant, subjects.getFirst(), user.getId().toString()).activeRoles());
-            if (!Set.of(role).equals(roots.get(app)) || roots.size() != 8) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-            var initial = nativeFieldSnapshot(context, tenant, subjects.getFirst(), app, permission, resource, roots, guard);
-            if (initial.missingFields() != 0 || initial.levels().stream().anyMatch(level -> level != FieldAccessLevel.WRITE)) { throw new IllegalStateException("XINGYUAN_PARTIAL"); }
-            String nonce = UUID.randomUUID().toString(); Instant readyAt = Instant.now();
-            var ready = strictMapper().createObjectNode().put("schemaVersion", 1).put("runId", inputs.getManifest().getRunId()).put("manifestSha256", inputs.getManifestSha256())
-                    .put("databaseOid", inputs.getReceipt().getOid()).put("nonce", nonce).put("status", "READY").put("scope", "FIELD_RULE_OWNER_ONLY")
-                    .put("tenantId", tenant).put("applicationCode", app).put("recordedAt", readyAt.toString()).put("inputSha256", digest(strictMapper().writeValueAsBytes(
-                            frozen.entrySet().stream().collect(java.util.stream.Collectors.toMap(entry -> entry.getKey().getFileName().toString(), entry -> digest(entry.getValue()))))));
-            byte[] previous = strictMapper().writeValueAsBytes(ready);
-            guard.run(); publishAuthorizationCheckpoint(evidence.resolve("native-field-owner-ready.json"), previous, null);
-            var service = context.getBean("roleResourceGrantService", RoleResourceGrantService.class);
-            Map<String, String> previousMdc = MDC.getCopyOfContextMap();
-            try {
-                MDC.put("tenantId", tenant); MDC.put("userId", actors.getActors().get(tenant).adminUserId());
-                for (int sequence = 1; sequence <= NATIVE_FIELD_PHASES.size(); sequence++) {
-                    Path requestFile = evidence.resolve("native-field-request-0" + sequence + ".json");
-                    while (!Files.exists(requestFile, LinkOption.NOFOLLOW_LINKS)) { guard.run(); Thread.sleep(250); }
-                    var document = strictMapper().readTree(readProtectedBytes(requestFile, evidence, 16 * 1024));
-                    requireUtcInstant(requiredJsonText(document, "requestedAt", 64)); requireUtcInstant(requiredJsonText(document, "expiresAt", 64));
-                    var request = strictMapper().treeToValue(document, NativeFieldRequestVO.class);
-                    validateNativeFieldRequest(request, inputs.getManifest().getRunId(), inputs.getManifestSha256(), nonce, sequence, digest(previous), readyAt, Instant.now());
-                    guard.run(); var before = nativeFieldState(context, tenant, appId, role);
-                    var receipt = NativeFieldPhaseReceiptDTO.builder().schemaVersion(1).runId(inputs.getManifest().getRunId()).manifestSha256(inputs.getManifestSha256())
-                            .databaseOid(inputs.getReceipt().getOid()).nonce(nonce).sequence(sequence).phase(request.phase()).previousSha256(request.previousSha256())
-                            .status("RUNNING").tenantId(tenant).applicationCode(app).roleId(role).before(before).recordedAt(Instant.now()).build();
-                    byte[] running = strictMapper().writeValueAsBytes(receipt); Path output = evidence.resolve("native-field-result-0" + sequence + ".json");
-                    publishAuthorizationCheckpoint(output, running, null);
-                    List<RoleFieldRuleDTO> desired;
-                    if ("CAP_REJECT".equals(request.phase())) {
-                        Long fieldId = Long.valueOf(cap.getValue().id());
-                        desired = new java.util.ArrayList<>(original.stream().filter(value -> !fieldId.equals(value.getFieldDefinitionId())).map(converter::copy).toList());
-                        var permissionFact = facts.getPermissions().get(preparation.getReview().getResourcePermissions().get(cap.getKey().getFirst()));
-                        desired.add(new RoleFieldRuleDTO(Long.valueOf(permissionFact.id()), fieldId, FieldAccessLevel.WRITE,
-                                context.getBean("jpaDatabaseClock", DatabaseClock.class).transactionNow(), null, FieldRuleStatusEnum.ACTIVE));
-                    } else { desired = nativeFieldDesiredRules(request.phase(), original, selected); }
-                    var mutation = ReplaceRoleFieldRulesCommandDTO.builder().tenantId(Long.valueOf(tenant)).applicationId(Long.valueOf(appId)).roleId(Long.valueOf(role))
-                            .expectedRoleVersion(before.roleVersion()).actorId(actors.getActors().get(tenant).adminUserId()).rules(desired).build();
-                    guard.run();
-                    if ("CAP_REJECT".equals(request.phase())) {
-                        try { service.replaceFieldRules(mutation); throw new IllegalStateException("XINGYUAN_PARTIAL"); }
-                        catch (top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation rejected) {
-                            if (!"FIELD_ACCESS_DENIED".equals(rejected.reasonCode())) { throw rejected; }
-                        }
-                        if (!before.equals(nativeFieldState(context, tenant, appId, role))) { throw new IllegalStateException("XINGYUAN_PARTIAL"); }
-                        receipt.setOutcome("REJECTED_AT_DEFINITION_CAP");
-                    } else {
-                        var result = service.replaceFieldRules(mutation);
-                        var after = nativeFieldState(context, tenant, appId, role);
-                        boolean changed = result.addedCount() + result.changedCount() + result.disabledCount() > 0;
-                        if (!"CONFIRMED".equals(result.status()) || result.roleVersion() != after.roleVersion() || result.policyVersion() != after.policyVersion()
-                                || after.roleVersion() != before.roleVersion() + (changed ? 1 : 0) || after.policyVersion() != before.policyVersion() + (changed ? 1 : 0)
-                                || after.roleEventCount() != before.roleEventCount() + (changed ? 1 : 0)) { throw new IllegalStateException("XINGYUAN_PARTIAL"); }
-                        var actualRules = nativeFieldRows(context, tenant, appId, role).stream().filter(value -> value.getStatus() == FieldRuleStatusEnum.ACTIVE).map(converter::toTarget).toList();
-                        var expectedRules = desired.stream().sorted(java.util.Comparator.comparing(RoleFieldRuleDTO::getPermissionId).thenComparing(RoleFieldRuleDTO::getFieldDefinitionId).thenComparing(RoleFieldRuleDTO::getValidFrom)).toList();
-                        if (!actualRules.equals(expectedRules) || "RESTORE".equals(request.phase()) && !originalHash.equals(digest(strictMapper().writeValueAsBytes(actualRules)))) {
-                            throw new IllegalStateException("XINGYUAN_PARTIAL");
-                        }
-                        receipt.setOutcome(changed ? "APPLIED" : "UNCHANGED");
-                    }
-                    guard.run(); receipt.setAfter(nativeFieldState(context, tenant, appId, role));
-                    var observed = nativeFieldSnapshot(context, tenant, subjects.getFirst(), app, permission, resource, roots, guard);
-                    if (observed.policyVersion() < receipt.getAfter().policyVersion() || "EMPTY".equals(request.phase()) && observed.missingFields() != 3
-                            || !"EMPTY".equals(request.phase()) && (observed.missingFields() != 0 || observed.levels().stream().anyMatch(level ->
-                            level != ("READ".equals(request.phase()) ? FieldAccessLevel.READ : FieldAccessLevel.WRITE)))) { throw new IllegalStateException("XINGYUAN_PARTIAL"); }
-                    receipt.setSnapshot(observed).setStatus("CONFIRMED").setRecordedAt(Instant.now());
-                    if (!request.expiresAt().isAfter(Instant.now())) { throw new IllegalStateException("XINGYUAN_COMMIT_UNKNOWN"); }
-                    previous = strictMapper().writeValueAsBytes(receipt); guard.run(); publishAuthorizationCheckpoint(output, previous, running);
-                }
-                observeNativeResourceGrantLoss(NativeGrantOwnerBO.builder().context(context).inputs(inputs).evidence(evidence).tenantId(tenant).roleId(role)
-                        .applicationId(appId).applicationCode(app).permissionCode(readPermission).resourceCode(readResource).subject(subjects.getFirst())
-                        .actorId(actors.getActors().get(tenant).adminUserId()).resourceIds(originalResourceIds).roots(roots).guard(guard).build());
-            } finally { if (previousMdc == null) { MDC.clear(); } else { MDC.setContextMap(previousMdc); } }
-        }
-    }
+
+
 
     public record NativeRoleAssignmentProofVO(
             @NotBlank String userId, @NotBlank String roleId, @Min(0) long roleVersion, @NotBlank String resourceTreeSha256,
@@ -3269,205 +2091,15 @@ public class IsolatedAuthorizationProvisioningIT {
         }
     }
 
-    private static void requireNativeRoleReadback(AnnotationConfigApplicationContext context, String runId, String key, NativeTenantActorsVO actors,
-            String subject, NativeRoleReviewDTO review, NativeCatalogFactsBO facts, NativeRoleAssignmentProofVO proof, Runnable guard) throws IOException {
-        String tenant = key.substring(0, key.indexOf(':')); UserPO user = nativeUser(context, tenant, subject);
-        String wanted = key.endsWith(":admin") ? actors.adminUserId() : actors.viewerUserId();
-        var found = context.getBean("roleFacade", RoleFacade.class).roles(tenant, facts.getRegistration().applicationId()).stream().filter(value -> proof.roleId().equals(value.roleId())).toList();
-        if (!wanted.equals(user.getId().toString()) || !wanted.equals(proof.userId()) || user.getAuthVersion() < proof.authVersion() || found.size() != 1
-                || !review.getRoleCode().equals(found.getFirst().roleCode()) || found.getFirst().version() != proof.roleVersion()) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-        var role = found.getFirst(); var tree = context.getBean("roleResourceGrantService", RoleResourceGrantService.class).tree(tenant, role.roleId(), Instant.now());
-        Set<String> expectedResources = review.getResourceCodes().stream().map(code -> facts.getResources().get(code).resourceId()).collect(java.util.stream.Collectors.toSet());
-        if (!new HashSet<>(tree.directResourceIds()).equals(expectedResources) || !proof.resourceTreeSha256().equals(digest(strictMapper().writeValueAsBytes(tree)))) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-        var expected = nativeAssignmentPolicy(runId, key, actors, wanted, role, proof.policyFrom());
-        if (!expected.validTo().equals(proof.policyTo())) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-        var actual = context.getBean("managementPolicyFacade", ManagementPolicyFacade.class).policy(tenant, proof.policyId());
-        requireNativeAssignmentPolicy(expected, actual, "DISABLED");
-        if (actual.version() != proof.disabledPolicyVersion()) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-        guard.run(); var assignments = context.getBean("assignmentFacade", AssignmentFacade.class).assignments(tenant, wanted, context.getBean("jpaDatabaseClock", DatabaseClock.class).transactionNow())
-                .stream().filter(value -> role.roleId().equals(value.roleId())).toList();
-        if (assignments.size() != 1 || !proof.assignmentId().equals(assignments.getFirst().assignmentId()) || !"DIRECT".equals(assignments.getFirst().assignmentType())
-                || !"ACTIVE".equals(assignments.getFirst().status()) || !proof.assignmentFrom().equals(assignments.getFirst().validFrom()) || !proof.assignmentTo().equals(assignments.getFirst().validTo())
-                || !"MANAGEMENT_POLICY".equals(assignments.getFirst().sourceType()) || !proof.policyId().equals(assignments.getFirst().sourceId())) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-    }
 
-    private static Map<String, NativeCatalogFactsBO> requireNativeRoleCatalogs(AnnotationConfigApplicationContext context,
-            Map<String, NativeCatalogPreparationBO> preparations, NativeMetadataReceiptDTO metadata, NativeCatalogReviewReceiptDTO catalog,
-            List<ResolvedPlatformBootstrapCommandDTO> commands, Runnable guard) throws IOException {
-        guard.run(); requireNativeDirectoryOwnership(context, metadata, preparations);
-        Map<String, NativeCatalogFactsBO> facts = new LinkedHashMap<>();
-        for (var entry : preparations.entrySet()) {
-            guard.run(); var registration = catalog.getRegistrations().get(entry.getKey()); var state = readNativeCatalogState(context, registration.applicationId());
-            validateNativeCatalogState(entry.getValue(), registration, state);
-            if (!catalog.getCatalogSha256().get(entry.getKey()).equals(nativeCatalogStateSha256(state))) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-            facts.put(entry.getKey(), nativeCatalogFacts(registration, state));
-        }
-        var scopes = context.getBean("tenantApplicationFacade", TenantApplicationFacade.class);
-        for (var command : commands) {
-            guard.run();
-            if (!catalog.getScopeSha256().get(command.getTenantId()).equals(nativeScopeSha256(preparations, metadata, scopes.applications(Long.valueOf(command.getTenantId()))))) {
-                throw new IllegalStateException("XINGYUAN_STATE_CONFLICT");
-            }
-        }
-        return Map.copyOf(facts);
-    }
 
-    private static Map<String, NativeRoleAssignmentProofVO> prepareNativeRoleOwners(AnnotationConfigApplicationContext context, VerifiedDatabaseInputsBO inputs,
-            Map<String, NativeCatalogPreparationBO> preparations, NativeMetadataReceiptDTO metadata, Map<String, NativeCatalogFactsBO> facts,
-            List<ResolvedPlatformBootstrapCommandDTO> commands, List<String> subjects, NativeActorReceiptDTO actorReceipt, Runnable guard) throws IOException {
-        var businesses = context.getBean("userBusinessAccessFacade", UserBusinessAccessFacade.class);
-        var activation = context.getBean("roleActivationFacade", RoleActivationFacade.class); var clock = context.getBean("jpaDatabaseClock", DatabaseClock.class);
-        Set<String> nativeBusinesses = Set.copyOf(metadata.getBusinesses().values());
-        Map<String, NativeRoleAssignmentProofVO> result = new LinkedHashMap<>(); Map<String, String> previous = MDC.getCopyOfContextMap();
-        try {
-            for (var command : commands) {
-                String tenant = command.getTenantId(); var actors = actorReceipt.getActors().get(tenant);
-                Map<String, List<top.egon.cola.platform.tianquan.jianshen.contract.activation.ActiveRoleSetView.ApplicationActiveRoles>> before = new LinkedHashMap<>();
-                for (int index = 0; index < 2; index++) {
-                    String subject = subjects.get(index); UserPO user = nativeUser(context, tenant, subject);
-                    before.put(subject, activation.current(tenant, subject, user.getId().toString()).activeRoles());
-                    MDC.put("tenantId", tenant); MDC.put("userId", actors.adminUserId()); guard.run();
-                    var existing = businesses.accesses(Long.valueOf(tenant), user.getId());
-                    if (existing.stream().anyMatch(value -> !user.getId().toString().equals(value.userId()))) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                    var desired = nativeBusinessCommand(inputs.getManifest().getRunId() + ":native-business:" + tenant + ":" + user.getId(), existing, nativeBusinesses,
-                            clock.transactionNow().truncatedTo(java.time.temporal.ChronoUnit.MICROS));
-                    try (var validators = Validation.buildDefaultValidatorFactory()) { new top.egon.cola.component.common.core.validation.ValidationUtils(validators.getValidator()).validate(desired); }
-                    guard.run(); businesses.replace(Long.valueOf(tenant), user.getId(), actors.adminUserId(), desired);
-                    guard.run(); requireNativeBusinessReadback(user.getId().toString(), existing, desired, businesses.accesses(Long.valueOf(tenant), user.getId()));
-                }
-                for (var entry : preparations.entrySet()) {
-                    guard.run(); var selected = createReviewedNativeRoles(context, entry.getValue(), facts.get(entry.getKey()), tenant, actors.adminUserId(), clock.transactionNow());
-                    for (var review : entry.getValue().getReview().getRoles()) {
-                        var role = selected.get(review.getUserKey());
-                        guard.run(); var tree = context.getBean("roleResourceGrantService", RoleResourceGrantService.class).tree(tenant, role.roleId(), clock.transactionNow());
-                        Set<String> wanted = review.getResourceCodes().stream().map(code -> facts.get(entry.getKey()).getResources().get(code).resourceId()).collect(java.util.stream.Collectors.toSet());
-                        if (!new HashSet<>(tree.directResourceIds()).equals(wanted) || tree.roleVersion() != role.version()) { throw new IllegalStateException("XINGYUAN_PARTIAL"); }
-                        String key = tenant + ":" + entry.getKey() + ":" + review.getUserKey();
-                        String subject = subjects.get(review.getUserKey().equals("admin") ? 0 : 1);
-                        var proof = assignReviewedNativeRole(context, inputs.getManifest().getRunId(), key, actors, subject, role, digest(strictMapper().writeValueAsBytes(tree)), guard);
-                        if (result.putIfAbsent(key, proof) != null) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                    }
-                }
-                for (String subject : subjects.subList(0, 2)) {
-                    var user = nativeUser(context, tenant, subject); guard.run();
-                    if (!before.get(subject).equals(activation.current(tenant, subject, user.getId().toString()).activeRoles())) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                }
-                guard.run(); requireUnprivilegedNativeActor(context, tenant, nativeUser(context, tenant, subjects.get(2)));
-            }
-        } finally { if (previous == null) { MDC.clear(); } else { MDC.setContextMap(previous); } }
-        return Map.copyOf(result);
-    }
 
-    private static void requireNativeRoleOwnerReadback(AnnotationConfigApplicationContext context, VerifiedDatabaseInputsBO inputs,
-            Map<String, NativeCatalogPreparationBO> preparations, NativeMetadataReceiptDTO metadata, Map<String, NativeCatalogFactsBO> facts, List<ResolvedPlatformBootstrapCommandDTO> commands,
-            List<String> subjects, NativeActorReceiptDTO actors, Map<String, NativeRoleAssignmentProofVO> proofs, Runnable guard) throws IOException {
-        var businesses = context.getBean("userBusinessAccessFacade", UserBusinessAccessFacade.class);
-        for (var command : commands) {
-            String tenant = command.getTenantId(); guard.run();
-            if (!actors.getActors().get(tenant).equals(nativeTenantActors(context, tenant, subjects, false, guard))) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-            for (var entry : preparations.entrySet()) {
-                Set<String> expectedCodes = entry.getValue().getReview().getRoles().stream().map(NativeRoleReviewDTO::getRoleCode).collect(java.util.stream.Collectors.toSet());
-                var current = context.getBean("roleFacade", RoleFacade.class).roles(tenant, facts.get(entry.getKey()).getRegistration().applicationId());
-                if (current.size() != expectedCodes.size() || !current.stream().map(RoleVO::roleCode).collect(java.util.stream.Collectors.toSet()).equals(expectedCodes)) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                for (var review : entry.getValue().getReview().getRoles()) {
-                    String key = tenant + ":" + entry.getKey() + ":" + review.getUserKey(); String subject = subjects.get(review.getUserKey().equals("admin") ? 0 : 1);
-                    guard.run(); requireNativeRoleReadback(context, inputs.getManifest().getRunId(), key, actors.getActors().get(tenant), subject, review, facts.get(entry.getKey()), proofs.get(key), guard);
-                    var user = nativeUser(context, tenant, subject);
-                    String businessId = metadata.getBusinesses().get(entry.getValue().getCatalog().getBusinessCode());
-                    Instant now = context.getBean("jpaDatabaseClock", DatabaseClock.class).transactionNow();
-                    var access = businesses.accesses(Long.valueOf(tenant), user.getId()).stream().filter(value -> businessId.equals(value.ddcBusinessId()) && "ACTIVE".equals(value.status())
-                            && !value.validFrom().isAfter(now) && (value.validTo() == null || value.validTo().isAfter(now))).toList();
-                    if (access.size() != 1) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                }
-            }
-            String provisioner = actors.getActors().get(tenant).provisionerUserId();
-            if (context.getBean("managementPolicyFacade", ManagementPolicyFacade.class).policies(tenant).stream().anyMatch(value -> !"DISABLED".equals(value.status())
-                    && value.subjects().contains(new ManagementPolicySubjectVO("USER", provisioner)))) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-        }
-    }
 
-    @Test
-    @org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable(named = "XINGYUAN_ISOLATED_INTEGRATION", matches = "true")
-    void provisionNativeRoleAssignments() throws IOException {
-        Path repository = Path.of(operationProperty("xingyuan.isolated.repository-root")); Path manifest = Path.of(operationProperty("xingyuan.isolated.manifest-file"));
-        Path database = Path.of(operationProperty("xingyuan.isolated.receipt-file")); var inputs = readVerifiedDatabaseInputs(manifest, database, repository, "rbac");
-        var preparations = nativeCatalogPreparations(inputs); var commands = platformBootstrapCommands(inputs); requireCommittedPlatformAuthorization(inputs, commands);
-        Path root = Path.of(inputs.getManifest().getRuntimeRoot()); Path evidence = root.resolve("evidence");
-        byte[] registryBytes = readProtectedBytes(root.resolve("secrets/runtime-registry.json"), root.resolve("secrets"), 2 * 1024 * 1024);
-        var registry = strictMapper().readTree(registryBytes); var subjects = provisioningDirectorySubjects(registry);
-        if (!inputs.getManifest().getRunId().equals(registry.path("runId").asText()) || !inputs.getManifestSha256().equals(registry.path("manifestSha256").asText())
-                || commands.stream().anyMatch(value -> !subjects.getFirst().equals(value.getIdentitySub()))) { throw new IllegalArgumentException("XINGYUAN_TARGET_UNSAFE"); }
-        Set<String> tenants = commands.stream().map(ResolvedPlatformBootstrapCommandDTO::getTenantId).collect(java.util.stream.Collectors.toSet());
-        byte[] metadataBytes = readProtectedBytes(evidence.resolve("native-metadata.json"), evidence, 128 * 1024); var metadata = readNativeMetadataReceipt(inputs, preparations, metadataBytes);
-        byte[] catalogBytes = readProtectedBytes(evidence.resolve("native-catalog-review.json"), evidence, 128 * 1024);
-        var catalogDocument = strictMapper().readTree(catalogBytes); requireUtcInstant(requiredJsonText(catalogDocument, "recordedAt", 64));
-        var catalog = strictMapper().treeToValue(catalogDocument, NativeCatalogReviewReceiptDTO.class);
-        validateNativeCatalogCheckpoint(catalog, inputs, digest(metadataBytes), preparations.keySet(), tenants, true);
-        byte[] actorBytes = readProtectedBytes(evidence.resolve("native-actors.json"), evidence, 128 * 1024);
-        var actorDocument = strictMapper().readTree(actorBytes); requireUtcInstant(requiredJsonText(actorDocument, "recordedAt", 64));
-        var actors = strictMapper().treeToValue(actorDocument, NativeActorReceiptDTO.class);
-        validateNativeActorCheckpoint(actors, inputs, digest(registryBytes), digest(catalogBytes), tenants, true);
-        var intents = nativePolicyIntents(inputs.getManifest().getRunId(), preparations, tenants);
-        String resume = System.getProperty("xingyuan.isolated.resume", "false"); if (!Set.of("true", "false").contains(resume)) { throw new IllegalArgumentException("XINGYUAN_INPUT_INVALID"); }
-        Path checkpoint = evidence.resolve("native-role-assignments.json"); Path lockPath = evidence.resolve("native-role-assignments.lock");
-        try (var channel = FileChannel.open(lockPath, Set.of(StandardOpenOption.CREATE, StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS), PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------")))) {
-            readProtectedBytes(lockPath, evidence, 1024);
-            try (var lock = channel.tryLock()) {
-                if (lock == null) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                byte[] previous = Files.exists(checkpoint, LinkOption.NOFOLLOW_LINKS) ? readProtectedBytes(checkpoint, evidence, 128 * 1024) : null;
-                NativeRolePreparationReceiptDTO prior = null;
-                if (previous != null) {
-                    var document = strictMapper().readTree(previous); requireUtcInstant(requiredJsonText(document, "recordedAt", 64));
-                    if (!document.path("assignments").isObject()) { throw new IllegalArgumentException("XINGYUAN_INPUT_INVALID"); }
-                    for (var proof : document.path("assignments")) { for (String field : List.of("policyFrom", "policyTo", "assignmentFrom", "assignmentTo")) { requireUtcInstant(requiredJsonText(proof, field, 64)); } }
-                    prior = strictMapper().treeToValue(document, NativeRolePreparationReceiptDTO.class);
-                    validateNativeRoleCheckpoint(prior, inputs, digest(registryBytes), digest(actorBytes), digest(catalogBytes), intents, Boolean.parseBoolean(resume));
-                }
-                try (var context = openAuthorizationContext(manifest, database, repository, true, false)) {
-                    Runnable owner = context.getBean("isolatedOwnershipGuard", Runnable.class);
-                    long deadline = System.nanoTime() + java.time.Duration.ofSeconds(inputs.getManifest().getDeadlines().getOperationSeconds()).toNanos();
-                    Runnable guard = () -> {
-                        if (System.nanoTime() >= deadline) { throw new IllegalStateException("XINGYUAN_DEPENDENCY_UNAVAILABLE"); }
-                        owner.run();
-                        try {
-                            if (!MessageDigest.isEqual(registryBytes, readProtectedBytes(root.resolve("secrets/runtime-registry.json"), root.resolve("secrets"), 2 * 1024 * 1024))
-                                    || !MessageDigest.isEqual(metadataBytes, readProtectedBytes(evidence.resolve("native-metadata.json"), evidence, 128 * 1024))
-                                    || !MessageDigest.isEqual(actorBytes, readProtectedBytes(evidence.resolve("native-actors.json"), evidence, 128 * 1024))
-                                    || !MessageDigest.isEqual(catalogBytes, readProtectedBytes(evidence.resolve("native-catalog-review.json"), evidence, 128 * 1024))
-                                    || !preparations.equals(nativeCatalogPreparations(inputs))) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                        } catch (IOException unavailable) { throw new IllegalStateException("XINGYUAN_INPUT_UNAVAILABLE"); }
-                    };
-                    guard.run(); var facts = requireNativeRoleCatalogs(context, preparations, metadata, catalog, commands, guard);
-                    requireProvisioningProfiles(subjects, context.getBean("identityProfileDirectory", IdentityProfileDirectory.class).batchGet(subjects));
-                    for (var command : commands) {
-                        for (String subject : subjects) { guard.run(); context.getBean("identityTenantMembershipDirectory", IdentityTenantMembershipDirectory.class).requireActive(command.getTenantId(), subject); }
-                        if (!actors.getActors().get(command.getTenantId()).equals(nativeTenantActors(context, command.getTenantId(), subjects, false, guard))) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                        if (prior == null) {
-                            requireUnprivilegedNativeActor(context, command.getTenantId(), nativeUser(context, command.getTenantId(), subjects.get(1)));
-                            for (var value : facts.values()) { if (!context.getBean("roleFacade", RoleFacade.class).roles(command.getTenantId(), value.getRegistration().applicationId()).isEmpty()) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); } }
-                            String operator = actors.getActors().get(command.getTenantId()).provisionerUserId();
-                            if (context.getBean("managementPolicyFacade", ManagementPolicyFacade.class).policies(command.getTenantId()).stream().anyMatch(value -> intents.containsValue(value.policyCode())
-                                    || value.subjects().contains(new ManagementPolicySubjectVO("USER", operator)))) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                        }
-                    }
-                    var pending = NativeRolePreparationReceiptDTO.builder().schemaVersion(1).runId(inputs.getManifest().getRunId()).manifestSha256(inputs.getManifestSha256())
-                            .databaseOid(inputs.getReceipt().getOid()).scope("NATIVE_ROLE_ASSIGNMENTS_ONLY").registrySha256(digest(registryBytes)).actorSha256(digest(actorBytes))
-                            .catalogReviewSha256(digest(catalogBytes)).status("RUNNING").recordedAt(Instant.now()).policyIntents(intents).assignments(Map.of()).build();
-                    byte[] pendingBytes = strictMapper().writeValueAsBytes(pending);
-                    Map<String, NativeRoleAssignmentProofVO> proofs;
-                    if (prior == null) { guard.run(); publishAuthorizationCheckpoint(checkpoint, pendingBytes, null); proofs = prepareNativeRoleOwners(context, inputs, preparations, metadata, facts, commands, subjects, actors, guard); }
-                    else { proofs = prior.getAssignments(); }
-                    guard.run(); requireNativeRoleOwnerReadback(context, inputs, preparations, metadata, facts, commands, subjects, actors, proofs, guard);
-                    requireNativeRoleCatalogs(context, preparations, metadata, catalog, commands, guard);
-                    if (prior == null) {
-                        pending.setStatus("COMMITTED").setRecordedAt(Instant.now()).setAssignments(proofs);
-                        validateNativeRoleCheckpoint(pending, inputs, digest(registryBytes), digest(actorBytes), digest(catalogBytes), intents, true);
-                        guard.run(); publishAuthorizationCheckpoint(checkpoint, strictMapper().writeValueAsBytes(pending), pendingBytes);
-                    } else if (!MessageDigest.isEqual(previous, readProtectedBytes(checkpoint, evidence, 128 * 1024))) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                }
-            }
-        }
-    }
+
+
+
+
+
 
     @Data @NoArgsConstructor @AllArgsConstructor @Accessors(chain = true) @Builder
     public static class NativeSnapshotProofVO {
@@ -3629,7 +2261,7 @@ public class IsolatedAuthorizationProvisioningIT {
             Map<String, Set<String>> expectedRoots, Map<String, NativeCatalogPreparationBO> preparations, Map<String, NativeCatalogFactsBO> facts,
             NativeRolePreparationReceiptDTO roles, String returnedChecksum) {
         UserPO user = nativeUser(context, tenant, subject);
-        var record = context.getBean("redisAuthorizationRuntimeRepository", RedisAuthorizationRuntimeRepository.class).load(tenant, subject);
+        var record = context.getBean("postgresqlAuthorizationRuntimeRepository", PostgresqlAuthorizationRuntimeRepository.class).load(tenant, subject);
         long policy = context.getBean("jpaTenantAuthorizationStateRepository", TenantAuthorizationStateRepository.class).require(Long.valueOf(tenant)).getPolicyVersion();
         if (record == null || !tenant.equals(record.tenantId()) || !subject.equals(record.identitySub()) || !user.getId().toString().equals(record.userId())) { throw new IllegalStateException("XINGYUAN_PARTIAL"); }
         var snapshot = record.snapshot();
@@ -3651,242 +2283,13 @@ public class IsolatedAuthorizationProvisioningIT {
         return proof;
     }
 
-    @Test
-    @org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable(named = "XINGYUAN_ISOLATED_INTEGRATION", matches = "true")
-    void provisionNativeAuthorization() throws Exception {
-        provisionNativeMetadataCatalog();
-        provisionNativeCatalogReview();
-        provisionNativeActors();
-        provisionNativeRoleAssignments();
-        activateReviewedNativeAuthorization();
-    }
 
-    private void activateReviewedNativeAuthorization() throws IOException {
-        Path repository = Path.of(operationProperty("xingyuan.isolated.repository-root")); Path manifest = Path.of(operationProperty("xingyuan.isolated.manifest-file"));
-        Path database = Path.of(operationProperty("xingyuan.isolated.receipt-file")); var inputs = readVerifiedDatabaseInputs(manifest, database, repository, "rbac");
-        var preparations = nativeCatalogPreparations(inputs); var commands = platformBootstrapCommands(inputs); requireCommittedPlatformAuthorization(inputs, commands);
-        Path root = Path.of(inputs.getManifest().getRuntimeRoot()); Path evidence = root.resolve("evidence");
-        Map<Path, byte[]> frozen = new LinkedHashMap<>();
-        Path registryPath = root.resolve("secrets/runtime-registry.json"); byte[] registryBytes = readProtectedBytes(registryPath, root.resolve("secrets"), 2 * 1024 * 1024); frozen.put(registryPath, registryBytes);
-        for (String name : List.of("native-metadata.json", "native-catalog-review.json", "native-actors.json", "native-role-assignments.json")) {
-            Path path = evidence.resolve(name); frozen.put(path, readProtectedBytes(path, evidence, 128 * 1024));
-        }
-        var registry = strictMapper().readTree(registryBytes); var subjects = provisioningDirectorySubjects(registry);
-        if (!inputs.getManifest().getRunId().equals(registry.path("runId").asText()) || !inputs.getManifestSha256().equals(registry.path("manifestSha256").asText())
-                || commands.stream().anyMatch(value -> !subjects.getFirst().equals(value.getIdentitySub()))) { throw new IllegalArgumentException("XINGYUAN_TARGET_UNSAFE"); }
-        var metadata = readNativeMetadataReceipt(inputs, preparations, frozen.get(evidence.resolve("native-metadata.json")));
-        var catalogDoc = strictMapper().readTree(frozen.get(evidence.resolve("native-catalog-review.json"))); requireUtcInstant(requiredJsonText(catalogDoc, "recordedAt", 64));
-        var catalog = strictMapper().treeToValue(catalogDoc, NativeCatalogReviewReceiptDTO.class);
-        var actorDoc = strictMapper().readTree(frozen.get(evidence.resolve("native-actors.json"))); requireUtcInstant(requiredJsonText(actorDoc, "recordedAt", 64));
-        var actors = strictMapper().treeToValue(actorDoc, NativeActorReceiptDTO.class);
-        var roleDoc = strictMapper().readTree(frozen.get(evidence.resolve("native-role-assignments.json"))); requireUtcInstant(requiredJsonText(roleDoc, "recordedAt", 64));
-        for (var proof : roleDoc.path("assignments")) { for (String field : List.of("policyFrom", "policyTo", "assignmentFrom", "assignmentTo")) { requireUtcInstant(requiredJsonText(proof, field, 64)); } }
-        var roles = strictMapper().treeToValue(roleDoc, NativeRolePreparationReceiptDTO.class);
-        String registryHash = digest(registryBytes), actorHash = digest(frozen.get(evidence.resolve("native-actors.json"))), catalogHash = digest(frozen.get(evidence.resolve("native-catalog-review.json")));
-        String assignmentHash = digest(frozen.get(evidence.resolve("native-role-assignments.json")));
-        Set<String> tenants = commands.stream().map(ResolvedPlatformBootstrapCommandDTO::getTenantId).collect(java.util.stream.Collectors.toSet());
-        validateNativeCatalogCheckpoint(catalog, inputs, digest(frozen.get(evidence.resolve("native-metadata.json"))), preparations.keySet(), tenants, true);
-        validateNativeActorCheckpoint(actors, inputs, registryHash, catalogHash, tenants, true);
-        validateNativeRoleCheckpoint(roles, inputs, registryHash, actorHash, catalogHash, nativePolicyIntents(inputs.getManifest().getRunId(), preparations, tenants), true);
-        String resume = System.getProperty("xingyuan.isolated.resume", "false"); if (!Set.of("true", "false").contains(resume)) { throw new IllegalArgumentException("XINGYUAN_INPUT_INVALID"); }
-        Path checkpoint = evidence.resolve("authorization-native-owner.json"), lockPath = evidence.resolve("native-authorization.lock");
-        try (var channel = FileChannel.open(lockPath, Set.of(StandardOpenOption.CREATE, StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS), PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------")))) {
-            readProtectedBytes(lockPath, evidence, 1024);
-            try (var lock = channel.tryLock()) {
-                if (lock == null) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                byte[] previous = Files.exists(checkpoint, LinkOption.NOFOLLOW_LINKS) ? readProtectedBytes(checkpoint, evidence, 128 * 1024) : null;
-                NativeAuthorizationReceiptDTO prior = null;
-                if (previous != null) {
-                    var document = strictMapper().readTree(previous); requireUtcInstant(requiredJsonText(document, "recordedAt", 64));
-                    for (var proof : document.path("snapshots")) { requireUtcInstant(requiredJsonText(proof, "expiresAt", 64)); }
-                    prior = strictMapper().treeToValue(document, NativeAuthorizationReceiptDTO.class);
-                    validateNativeAuthorizationCheckpoint(prior, inputs, registryHash, actorHash, catalogHash, assignmentHash, actors, Boolean.parseBoolean(resume));
-                }
-                try (var context = openAuthorizationContext(manifest, database, repository, true, false)) {
-                    Runnable owner = context.getBean("isolatedOwnershipGuard", Runnable.class);
-                    long deadline = System.nanoTime() + java.time.Duration.ofSeconds(inputs.getManifest().getDeadlines().getOperationSeconds()).toNanos();
-                    Runnable guard = () -> {
-                        if (System.nanoTime() >= deadline) { throw new IllegalStateException("XINGYUAN_DEPENDENCY_UNAVAILABLE"); }
-                        owner.run();
-                        try {
-                            for (var entry : frozen.entrySet()) {
-                                if (!MessageDigest.isEqual(entry.getValue(), readProtectedBytes(entry.getKey(), entry.getKey().getParent(), 2 * 1024 * 1024))) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                            }
-                            if (!preparations.equals(nativeCatalogPreparations(inputs))) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                        } catch (IOException unavailable) { throw new IllegalStateException("XINGYUAN_INPUT_UNAVAILABLE"); }
-                    };
-                    guard.run(); var facts = requireNativeRoleCatalogs(context, preparations, metadata, catalog, commands, guard);
-                    requireProvisioningProfiles(subjects, context.getBean("identityProfileDirectory", IdentityProfileDirectory.class).batchGet(subjects));
-                    for (var command : commands) {
-                        for (String subject : subjects) { guard.run(); context.getBean("identityTenantMembershipDirectory", IdentityTenantMembershipDirectory.class).requireActive(command.getTenantId(), subject); }
-                        if (!actors.getActors().get(command.getTenantId()).equals(nativeTenantActors(context, command.getTenantId(), subjects, false, guard))) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                    }
-                    requireNativeRoleOwnerReadback(context, inputs, preparations, metadata, facts, commands, subjects, actors, roles.getAssignments(), guard);
-                    Map<String, Map<String, Set<String>>> expected = new LinkedHashMap<>();
-                    for (var command : commands) { for (int index = 0; index < 2; index++) {
-                        String userKey = index == 0 ? "admin" : "viewer";
-                        expected.put(command.getTenantId() + ':' + userKey, nativeActivationRoots(context, command, userKey, subjects.get(index), facts, roles, prior == null));
-                    } }
-                    var pending = NativeAuthorizationReceiptDTO.builder().schemaVersion(1).runId(inputs.getManifest().getRunId()).manifestSha256(inputs.getManifestSha256())
-                            .databaseOid(inputs.getReceipt().getOid()).phase("native").registrySha256(registryHash).actorSha256(actorHash).catalogReviewSha256(catalogHash)
-                            .assignmentSha256(assignmentHash).status("RUNNING").recordedAt(Instant.now()).snapshots(Map.of()).build();
-                    byte[] pendingBytes = strictMapper().writeValueAsBytes(pending);
-                    if (prior == null) { guard.run(); publishAuthorizationCheckpoint(checkpoint, pendingBytes, null); }
-                    Map<String, NativeSnapshotProofVO> snapshots = new LinkedHashMap<>(); Map<String, String> oldMdc = MDC.getCopyOfContextMap();
-                    try {
-                        for (var command : commands) { for (int index = 0; index < 2; index++) {
-                            String tenant = command.getTenantId(), subject = subjects.get(index), userKey = index == 0 ? "admin" : "viewer", key = tenant + ':' + userKey;
-                            var roots = expected.get(key); String returnedChecksum = null;
-                            if (prior == null) {
-                                var user = nativeUser(context, tenant, subject); long version = user.getAuthVersion();
-                                MDC.put("tenantId", tenant); MDC.put("userId", user.getId().toString()); guard.run();
-                                var result = context.getBean("roleActivationFacade", RoleActivationFacade.class).replace(new ReplaceCommandDTO(tenant, subject, user.getId().toString(),
-                                        roots.values().stream().flatMap(Set::stream).sorted().toList(), version, user.getId().toString(), inputs.getManifest().getRunId() + ":native-activate:" + key));
-                                if (!result.changed() || result.activationRequired() || result.authVersion() != Math.incrementExact(version)
-                                        || !roots.equals(activationRoots(result.activeRoles()))) { throw new IllegalStateException("XINGYUAN_PARTIAL"); }
-                                returnedChecksum = result.snapshotChecksum();
-                            }
-                            guard.run(); snapshots.put(key, confirmedNativeSnapshot(context, tenant, subject, userKey, roots, preparations, facts, roles, returnedChecksum));
-                        } }
-                    } finally { if (oldMdc == null) { MDC.clear(); } else { MDC.setContextMap(oldMdc); } }
-                    requireNativeRoleOwnerReadback(context, inputs, preparations, metadata, facts, commands, subjects, actors, roles.getAssignments(), guard);
-                    requireNativeRoleCatalogs(context, preparations, metadata, catalog, commands, guard);
-                    if (prior == null) {
-                        pending.setStatus("COMMITTED").setRecordedAt(Instant.now()).setSnapshots(snapshots);
-                        validateNativeAuthorizationCheckpoint(pending, inputs, registryHash, actorHash, catalogHash, assignmentHash, actors, true);
-                        guard.run(); publishAuthorizationCheckpoint(checkpoint, strictMapper().writeValueAsBytes(pending), pendingBytes);
-                    } else if (!prior.getSnapshots().equals(snapshots) || !MessageDigest.isEqual(previous, readProtectedBytes(checkpoint, evidence, 128 * 1024))) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-                }
-            }
-        }
-    }
 
-    /** Fresh task business roles stay PUBLIC/LOW/nonprivileged; grants come only from the reviewed lists. */
-    private static Map<String, RoleVO> createReviewedNativeRoles(AnnotationConfigApplicationContext context,
-            NativeCatalogPreparationBO preparation, NativeCatalogFactsBO facts, String tenantId, String actorId, Instant now) {
-        Runnable guard = context.getBean("isolatedOwnershipGuard", Runnable.class);
-        var roles = context.getBean("roleFacade", RoleFacade.class);
-        var grants = context.getBean("roleResourceGrantService", RoleResourceGrantService.class);
-        String applicationId = facts.getRegistration().applicationId();
-        if (!roles.roles(tenantId, applicationId).isEmpty()) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-        Map<String, RoleVO> confirmedRoles = new LinkedHashMap<>();
-        Instant validFrom = now.truncatedTo(java.time.temporal.ChronoUnit.MICROS);
-        for (var review : preparation.getReview().getRoles()) {
-            guard.run();
-            var created = roles.createRole(new CreateRoleCommandDTO(tenantId, applicationId, review.getRoleCode(),
-                    review.getRoleCode(), "PUBLIC", "LOW", false, null, 0, 1, actorId), validFrom);
-            var stored = roles.roles(tenantId, applicationId).stream()
-                    .filter(role -> created.resourceId().equals(role.roleId()) && review.getRoleCode().equals(role.roleCode())).toList();
-            if (stored.size() != 1 || !"ACTIVE".equals(stored.getFirst().status()) || stored.getFirst().privileged()) {
-                throw new IllegalStateException("XINGYUAN_PARTIAL");
-            }
-            var role = stored.getFirst();
-            List<String> selectedResources = review.getResourceCodes().stream().map(code -> {
-                var resource = facts.getResources().get(code);
-                if (resource == null || !"ACTIVE".equals(resource.status()) || !"CONFIGURED".equals(resource.mappingStatus())) {
-                    throw new IllegalStateException("XINGYUAN_STATE_CONFLICT");
-                }
-                return resource.resourceId();
-            }).toList();
-            guard.run();
-            var resourceReceipt = grants.replace(tenantId, role.roleId(),
-                    new ReplaceRoleResourcesRequestDTO(selectedResources, validFrom, null, role.version()), actorId, validFrom);
-            if (!new HashSet<>(resourceReceipt.directResourceIds()).equals(new HashSet<>(selectedResources))) {
-                throw new IllegalStateException("XINGYUAN_PARTIAL");
-            }
-            var selectedRules = review.getFieldRules().stream().map(rule -> {
-                var definition = facts.getFields().get(List.of(rule.getResourceCode(), rule.getFieldCode()));
-                var permission = facts.getPermissions().get(preparation.getReview().getResourcePermissions().get(rule.getResourceCode()));
-                if (definition == null || permission == null || !"ACTIVE".equals(definition.status()) || !"ACTIVE".equals(permission.status())) {
-                    throw new IllegalStateException("XINGYUAN_STATE_CONFLICT");
-                }
-                return ReplaceRoleFieldRulesCommandDTO.RoleFieldRuleDTO.builder().permissionId(Long.valueOf(permission.id()))
-                        .fieldDefinitionId(Long.valueOf(definition.id())).accessLevel(FieldAccessLevel.valueOf(rule.getAccessLevel()))
-                        .validFrom(validFrom).validTo(null).status(FieldRuleStatusEnum.ACTIVE).build();
-            }).toList();
-            guard.run();
-            var fieldReceipt = grants.replaceFieldRules(ReplaceRoleFieldRulesCommandDTO.builder()
-                    .tenantId(Long.valueOf(tenantId)).applicationId(Long.valueOf(applicationId)).roleId(Long.valueOf(role.roleId()))
-                    .expectedRoleVersion(resourceReceipt.roleVersion()).actorId(actorId).rules(selectedRules).build());
-            var updated = roles.roles(tenantId, applicationId).stream().filter(value -> role.roleId().equals(value.roleId())).toList();
-            if (!"CONFIRMED".equals(fieldReceipt.status()) || fieldReceipt.ruleCount() != selectedRules.size() || updated.size() != 1
-                    || updated.getFirst().version() != fieldReceipt.roleVersion()) { throw new IllegalStateException("XINGYUAN_PARTIAL"); }
-            confirmedRoles.put(review.getUserKey(), updated.getFirst());
-        }
-        return Map.copyOf(confirmedRoles);
-    }
 
-    /** Registration and review are distinct original-owner transactions; no grant is implied by either result. */
-    private static NativeCatalogFactsBO registerReviewedNativeCatalog(AnnotationConfigApplicationContext context,
-            NativeCatalogPreparationBO preparation, String actorId, Instant now) {
-        Runnable guard = context.getBean("isolatedOwnershipGuard", Runnable.class);
-        var catalog = context.getBean("globalResourceCatalogService", GlobalResourceCatalogService.class);
-        var permissions = context.getBean("permissionCatalogService", PermissionCatalogService.class);
-        var mappings = context.getBean("resourcePermissionMappingService", ResourcePermissionMappingService.class);
-        var command = preparation.getCatalog();
-        var review = preparation.getReview();
-        guard.run();
-        var registered = catalog.registerDeploymentCatalog(command, actorId);
-        Map<String, PermissionCatalogVO> permissionFacts = new LinkedHashMap<>();
-        for (var permission : permissions.list(registered.applicationId(), false)) {
-            if (!registered.applicationId().equals(permission.applicationId())
-                    || permissionFacts.putIfAbsent(permission.permissionCode(), permission) != null) {
-                throw new IllegalStateException("XINGYUAN_STATE_CONFLICT");
-            }
-        }
-        if (permissionFacts.size() != command.getPermissions().size()) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-        for (String code : review.getApprovedPermissionCodes()) {
-            var pending = permissionFacts.get(code);
-            if (pending == null || !"PENDING_VALIDATION".equals(pending.status()) || pending.version() != 0L) {
-                throw new IllegalStateException("XINGYUAN_STATE_CONFLICT");
-            }
-            guard.run();
-            permissionFacts.put(code, permissions.changeStatus(pending.id(),
-                    new ChangePermissionStatusRequestDTO("ACTIVE", pending.version()), actorId));
-        }
-        Map<String, ResourceVO> resourceFacts = new LinkedHashMap<>();
-        for (var resource : catalog.resources(registered.applicationId())) {
-            if (!registered.applicationId().equals(resource.applicationId()) || !"API".equals(resource.resourceType())
-                    || resourceFacts.putIfAbsent(resource.resourceCode(), resource) != null) {
-                throw new IllegalStateException("XINGYUAN_STATE_CONFLICT");
-            }
-        }
-        if (resourceFacts.size() != command.getResources().size()) { throw new IllegalStateException("XINGYUAN_STATE_CONFLICT"); }
-        for (var mapping : review.getResourcePermissions().entrySet()) {
-            var resource = resourceFacts.get(mapping.getKey());
-            var permission = permissionFacts.get(mapping.getValue());
-            if (resource == null || permission == null || !"ACTIVE".equals(permission.status())
-                    || !"ACTIVE".equals(resource.status()) || !"UNCONFIGURED".equals(resource.mappingStatus())) {
-                throw new IllegalStateException("XINGYUAN_STATE_CONFLICT");
-            }
-            guard.run();
-            var confirmed = mappings.update(resource.resourceId(), new UpdateResourcePermissionMappingRequestDTO(permission.id(),
-                    resource.version(), "xingyuan-it explicit native review"), actorId, now);
-            if (!registered.applicationId().equals(confirmed.applicationId()) || !resource.resourceId().equals(confirmed.resourceId())
-                    || !permission.id().equals(confirmed.actualPermissionId()) || !"CONFIGURED".equals(confirmed.mappingStatus())) {
-                throw new IllegalStateException("XINGYUAN_PARTIAL");
-            }
-        }
-        resourceFacts.clear();
-        for (var resource : catalog.resources(registered.applicationId())) { resourceFacts.put(resource.resourceCode(), resource); }
-        Map<List<String>, FieldDefinitionVO> fieldFacts = new LinkedHashMap<>();
-        for (var definition : review.getFields()) {
-            var resource = resourceFacts.get(definition.getResourceCode());
-            var mechanical = command.getFields().stream().filter(field -> field.getResourceCode().equals(definition.getResourceCode())
-                    && field.getFieldCode().equals(definition.getFieldCode())).findFirst().orElseThrow();
-            if (resource == null || catalog.fields(registered.applicationId(), resource.resourceId()).stream()
-                    .anyMatch(field -> field.fieldCode().equals(definition.getFieldCode()))) {
-                throw new IllegalStateException("XINGYUAN_STATE_CONFLICT");
-            }
-            guard.run();
-            var field = catalog.createField(new CreateFieldDefinitionRequestDTO(registered.applicationId(), resource.resourceId(),
-                    definition.getFieldCode(), mechanical.getJsonPath(), mechanical.getDataType(), definition.getSensitivity(),
-                    definition.getDefaultAccess(), definition.getMaskingStrategy(), definition.getWritable(), definition.getExportable()), actorId);
-            fieldFacts.put(List.of(definition.getResourceCode(), definition.getFieldCode()), field);
-        }
-        return NativeCatalogFactsBO.builder().registration(registered).permissions(Map.copyOf(permissionFacts))
-                .resources(Map.copyOf(resourceFacts)).fields(Map.copyOf(fieldFacts)).build();
-    }
+
+
+
+
 
     @Data @NoArgsConstructor @AllArgsConstructor @Accessors(chain = true) @Builder
     public static class NativeCatalogFactsBO {
@@ -4386,7 +2789,7 @@ public class IsolatedAuthorizationProvisioningIT {
         }
     }
 
-    static RedissonClient ownedRedis(VerifiedDatabaseInputsBO inputs) throws IOException {
+    static RedissonClient ownedRegistryRedis(VerifiedDatabaseInputsBO inputs) throws IOException {
         char[] password = readProtectedCharacters(Path.of(inputs.getManifest().getRedis().getCredentialFile()), null, 4096);
         try {
             if (password.length == 0) {
@@ -4396,13 +2799,13 @@ public class IsolatedAuthorizationProvisioningIT {
                     .setCodec(new org.redisson.codec.JsonJacksonCodec(strictMapper()));
             config.useSingleServer().setAddress(inputs.getManifest().getRedis().getEndpoint())
                     .setDatabase(inputs.getManifest().getRedis().getDatabase()).setPassword(new String(password))
-                    .setClientName("xingyuan-it:" + inputs.getManifest().getRunId() + ":authorization-owner")
+                    .setClientName("xingyuan-it:" + inputs.getManifest().getRunId() + ":registry-client")
                     .setConnectTimeout(1000).setTimeout(500).setRetryAttempts(0)
                     .setConnectionMinimumIdleSize(1).setConnectionPoolSize(2)
                     .setSubscriptionConnectionMinimumIdleSize(1).setSubscriptionConnectionPoolSize(2);
             var redis = org.redisson.Redisson.create(config);
             try {
-                verifyRedisOwnership(redis, inputs);
+                verifyRegistryRedisOwnership(redis, inputs);
                 return redis;
             } catch (RuntimeException rejected) {
                 redis.shutdown();
@@ -4413,7 +2816,7 @@ public class IsolatedAuthorizationProvisioningIT {
         }
     }
 
-    static void verifyRedisOwnership(RedissonClient redis, VerifiedDatabaseInputsBO inputs) {
+    static void verifyRegistryRedisOwnership(RedissonClient redis, VerifiedDatabaseInputsBO inputs) {
         var config = redis.getConfig();
         if (config == null || config.isClusterConfig() || config.isSentinelConfig()) {
             throw new IllegalArgumentException("XINGYUAN_TARGET_UNSAFE");
@@ -4429,296 +2832,9 @@ public class IsolatedAuthorizationProvisioningIT {
         }
     }
 
-    /** Actual owner graph; no main application, scheduling, provider or automatic bootstrap runner is started. */
-    @lombok.extern.slf4j.Slf4j
-    @TestConfiguration(value = "isolatedAuthorizationOwnerConfiguration", proxyBeanMethods = false)
-    @ImportAutoConfiguration({EgonRpcAutoConfig.class, DdcRpcAutoConfiguration.class})
-    @Import({Rbac3ApplicationConfiguration.CatalogClientConfiguration.class, PlatformSnapshotProofConverterImpl.class, NativeSnapshotProofConverterImpl.class,
-            JpaDevelopmentTopologyBootstrapRepository.class, Rbac3DevelopmentResourceBootstrap.class,
-            IdentityTenantMembershipDirectory.class, IdentityProfileDirectory.class,
-            JpaRoleActivationFactRepository.class, JpaUserActiveRoleRepository.class,
-            JpaRuntimeProjectionTargetRepository.class, JpaInitialAuthorizationContextRepository.class,
-            JpaUserBusinessAccessRepository.class, RedisAuthorizationRuntimeRepository.class, Rbac3RuntimeProjectionRecovery.class,
-            JpaTenantApplicationRepository.class, JpaAuthorizationMutationRepository.class, JpaAuthorizationPublicationGuardRepository.class,
-            GlobalResourceCatalogService.class, PermissionCatalogService.class, DeploymentPermissionRegistrationConverterImpl.class,
-            JpaResourcePermissionMappingRepository.class, JpaManagementPolicyRepository.class, JpaAssignmentRepository.class,
-            PostgresqlAssignmentLockRepository.class, PostgresqlRoleClosureRepository.class, JpaRoleRepository.class})
-    public static class AuthorizationOwnerConfiguration {
-        @Bean("isolatedRbacAdminProperties")
-        @ConfigurationProperties("egon.tianquan-jianshen")
-        Rbac3AdminProperties administrationProperties() { return new Rbac3AdminProperties(); }
 
-        @Bean("isolatedRbacStarterProperties")
-        @ConfigurationProperties("egon.cola.platform.tianquan.jianshen")
-        Rbac3StarterProperties authorizationProperties() { return new Rbac3StarterProperties(); }
 
-        @Bean("rbac3RuntimeKeyFactory")
-        Rbac3RuntimeKeyFactory keys() { return new Rbac3RuntimeKeyFactory(); }
 
-        @Bean("rbac3RuntimePolicy")
-        Rbac3RuntimePolicy policy(@Qualifier("isolatedRbacAdminProperties") Rbac3AdminProperties properties) { return new AtomicRbac3RuntimePolicy(properties); }
-
-        @Bean(name = "rbac3CatalogDdcClientHandle", destroyMethod = "close")
-        DdcRpcClientHandle<DdcManagementClient> catalogHandle(@Qualifier("ddcRpcClientFactory") DdcRpcClientFactory factory) {
-            return factory.managementClient();
-        }
-
-        @Bean("ddcCatalogGateway")
-        DdcCatalogGateway catalog(@Qualifier("rbac3CatalogDdcClientHandle") DdcRpcClientHandle<DdcManagementClient> handle) {
-            return new RpcDdcCatalogGateway(handle.client());
-        }
-
-        @Bean("tenantApplicationFacade")
-        TenantApplicationFacade applications(@Qualifier("ddcCatalogGateway") DdcCatalogGateway catalog,
-                @Qualifier("jpaTenantApplicationRepository") JpaTenantApplicationRepository applications) {
-            return new TenantApplicationFacade(catalog, applications);
-        }
-
-        @Bean("isolatedAuthorizationTransactionTemplate")
-        TransactionTemplate transactions(@Qualifier("transactionManager") PlatformTransactionManager manager) {
-            var transaction = new TransactionTemplate(manager);
-            transaction.setTimeout(30);
-            return transaction;
-        }
-
-        @Bean("authorizationFenceService")
-        AuthorizationPublicationGuardService fences(
-                @Qualifier("jpaAuthorizationPublicationGuardRepository") JpaAuthorizationPublicationGuardRepository store,
-                @Qualifier("isolatedAuthorizationClock") Clock clock) {
-            return new AuthorizationPublicationGuardService(store, clock);
-        }
-
-        @Bean("authorizationMutationCoordinator")
-        AuthorizationMutationCoordinator mutations(@Qualifier("jpaAuthorizationMutationRepository") JpaAuthorizationMutationRepository store,
-                @Qualifier("authorizationFenceService") AuthorizationPublicationGuardService fences,
-                @Qualifier("rbac3RuntimeProjectionRecovery") Rbac3RuntimeProjectionRecovery recovery,
-                @Qualifier("isolatedAuthorizationTransactionTemplate") TransactionTemplate transaction,
-                @Qualifier("isolatedAuthorizationClock") Clock clock) {
-            return new AuthorizationMutationCoordinator(store, fences,
-                    mutation -> recovery.project(new MutationWorkDTO(mutation.mutationId(), mutation.scope().tenantId(),
-                            mutation.scope().scopeType(), mutation.scope().scopeId(), "COMMITTED")),
-                    work -> transaction.execute(status -> work.get()),
-                    () -> Long.toString(SnowflakeIdGenerator.nextLongId()), clock);
-        }
-
-        @Bean("userBusinessAccessFacade")
-        UserBusinessAccessFacade businesses(@Qualifier("jpaUserBusinessAccessRepository") JpaUserBusinessAccessRepository store,
-                @Qualifier("ddcCatalogGateway") DdcCatalogGateway catalog,
-                @Qualifier("authorizationMutationCoordinator") AuthorizationMutationCoordinator mutations,
-                @Qualifier("jpaDatabaseClock") DatabaseClock clock) {
-            return new UserBusinessAccessFacade(store, catalog, mutations, clock);
-        }
-
-        @Bean("isolatedAuthorizationJdbcTemplate")
-        org.springframework.jdbc.core.JdbcTemplate jdbc(@Qualifier("dataSource") DataSource source) {
-            return new org.springframework.jdbc.core.JdbcTemplate(source);
-        }
-
-        @Bean("resourcePermissionMappingService")
-        ResourcePermissionMappingService resourceMappings(
-                @Qualifier("jpaResourcePermissionMappingRepository") JpaResourcePermissionMappingRepository store) {
-            return new ResourcePermissionMappingService(store);
-        }
-
-        @Bean("managementPolicyDecisionService")
-        ManagementPolicyDecisionService managementDecisions() { return new ManagementPolicyDecisionService(); }
-
-        @Bean("managementPolicyFacade")
-        ManagementPolicyFacade managementPolicies(
-                @Qualifier("managementPolicyDecisionService") ManagementPolicyDecisionService decisions,
-                @Qualifier("jpaManagementPolicyRepository") JpaManagementPolicyRepository store) {
-            return new ManagementPolicyFacade(decisions, store);
-        }
-
-        @Bean("assignmentFacade")
-        AssignmentFacade assignments(@Qualifier("managementPolicyFacade") ManagementPolicyFacade policies,
-                @Qualifier("jpaAssignmentRepository") JpaAssignmentRepository store,
-                @Qualifier("postgresqlAssignmentLockRepository") PostgresqlAssignmentLockRepository locks,
-                @Qualifier("authorizationMutationCoordinator") AuthorizationMutationCoordinator mutations,
-                @Qualifier("roleEligibilityService") RoleEligibilityService eligibility) {
-            return new AssignmentFacade(policies, store, locks, store, mutations, eligibility);
-        }
-
-        @Bean("roleFacade")
-        RoleFacade roles(@Qualifier("jpaRoleRepository") JpaRoleRepository store) {
-            return new RoleFacade(store, store);
-        }
-
-        @Bean("userCrudFacade")
-        UserCrudFacade users(@Qualifier("jpaSharedEM_entityManagerFactory") EntityManager manager,
-                @Qualifier("jpaDatabaseClock") DatabaseClock clock,
-                @Qualifier("identityTenantMembershipDirectory") IdentityTenantMembershipDirectory memberships) {
-            return new UserCrudFacade(manager, clock, memberships);
-        }
-
-        @Bean("roleEligibilityService")
-        RoleEligibilityService eligibility(@Qualifier("jpaSharedEM_entityManagerFactory") EntityManager manager,
-                @Qualifier("jpaUserBusinessAccessRepository") JpaUserBusinessAccessRepository access,
-                @Qualifier("ddcCatalogGateway") DdcCatalogGateway catalog) {
-            return new RoleEligibilityService(manager, access, catalog);
-        }
-
-        @Bean("userAuthorizationSnapshotProjector")
-        UserAuthorizationSnapshotProjector projector(@Qualifier("roleEligibilityService") RoleEligibilityService eligibility) {
-            return new UserAuthorizationSnapshotProjector(eligibility);
-        }
-
-        @Bean("roleActivationFacade")
-        RoleActivationFacade activation(@Qualifier("jpaRoleActivationFactRepository") JpaRoleActivationFactRepository facts,
-                @Qualifier("jpaUserActiveRoleRepository") JpaUserActiveRoleRepository transaction,
-                @Qualifier("userAuthorizationSnapshotProjector") UserAuthorizationSnapshotProjector projector,
-                @Qualifier("redisAuthorizationRuntimeRepository") RedisAuthorizationRuntimeRepository runtime,
-                @Qualifier("rbac3RuntimePolicy") Rbac3RuntimePolicy policy,
-                @Qualifier("isolatedAuthorizationClock") Clock clock) {
-            return new RoleActivationFacade(facts, transaction, projector, runtime, policy, clock);
-        }
-
-        @Bean("redisAuthorizationSnapshotCache")
-        RedisAuthorizationSnapshotCache redisSnapshots(@Qualifier("rbac3RuntimeRedissonClient") RedissonClient redis,
-                @Qualifier("jacksonObjectMapper") ObjectMapper mapper,
-                @Qualifier("isolatedRbacStarterProperties") Rbac3StarterProperties properties) {
-            return new RedisAuthorizationSnapshotCache(redis, mapper, properties.getAuthorization().getMaximumJitter());
-        }
-
-        @Bean("authorizationSnapshotCache")
-        AuthorizationSnapshotCache snapshots(@Qualifier("redisAuthorizationSnapshotCache") RedisAuthorizationSnapshotCache store,
-                @Qualifier("isolatedAuthorizationClock") Clock clock,
-                @Qualifier("isolatedRbacStarterProperties") Rbac3StarterProperties properties) {
-            return new AuthorizationSnapshotCache(store, clock, properties.getAuthorization().getNearCacheTtl());
-        }
-    }
-
-    /** Producer-only JPA/MP assembly shares the production writer and starts no HTTP/RPC or projection worker. */
-    @lombok.extern.slf4j.Slf4j
-    @TestConfiguration(value = "isolatedAuthorizationPersistenceConfiguration", proxyBeanMethods = false)
-    @EntityScan(basePackages = "top.egon.cola.platform.tianquan.jianshen.admin")
-    @ImportAutoConfiguration({ValidationAutoConfiguration.class, IdGeneratorAutoConfiguration.class,
-            HibernateJpaAutoConfiguration.class, TransactionAutoConfiguration.class,
-            TransactionManagerCustomizationAutoConfiguration.class, EgonColaMybatisPlusAutoConfiguration.class,
-            MybatisPlusAutoConfiguration.class})
-    @Import(Rbac3ApplicationConfiguration.FieldRuleCommandConfiguration.class)
-    public static class AuthorizationPersistenceConfiguration {
-        @Bean({"isolatedAuthorizationClock", "egonColaMybatisPlusClock"})
-        @Primary
-        Clock clock() {
-            return Clock.systemUTC();
-        }
-
-        @Bean({"jacksonObjectMapper", "outboxStateMachineObjectMapper"})
-        ObjectMapper objectMapper() {
-            return strictMapper();
-        }
-
-        @Bean("egonColaShardingTopologyValidator")
-        EgonColaShardingTopologyValidator topologyValidator(
-                @Qualifier("egonColaValidationUtils") ValidationUtils validation) {
-            return new EgonColaShardingTopologyValidator(validation);
-        }
-
-        @Bean("egon.cola.component.mybatis-plus.sharding-top.egon.cola.component.common.mybatis.sharding.EgonColaShardingProperties")
-        EgonColaShardingProperties shardingProperties(
-                @Qualifier("isolatedVerifiedDatabaseInputs") VerifiedDatabaseInputsBO inputs) {
-            return EgonColaShardingProperties.builder().mode(EgonColaShardingProperties.ModeEnum.SHARDING)
-                    .configStyle(EgonColaShardingProperties.ConfigStyleEnum.NATIVE)
-                    .nativeRulesResource("file:" + inputs.getManifest().getRuntimeRoot() + "/profiles/rbac-sharding.yml")
-                    .dataSources(List.of(new EgonColaShardingProperties.PhysicalDataSourceProperties(
-                            "rbac_primary", "rbac_primary", EgonColaShardingProperties.DataSourceRoleEnum.PRIMARY,
-                            "org.postgresql.Driver", inputs.getJdbcUrl(), inputs.getReceipt().getDatabaseOwner(), "")))
-                    .build();
-        }
-
-        @Bean("isolatedRbacTopology")
-        EgonColaShardingTopologyValidator.TopologyBO topology(
-                @Qualifier("isolatedVerifiedDatabaseInputs") VerifiedDatabaseInputsBO inputs,
-                @Qualifier("isolatedPhysicalDataSource") DataSource physical,
-                @Qualifier("isolatedOwnershipGuard") Runnable guard,
-                @Qualifier("egonColaShardingTopologyValidator") EgonColaShardingTopologyValidator validator,
-                @Qualifier("egon.cola.component.mybatis-plus.sharding-top.egon.cola.component.common.mybatis.sharding.EgonColaShardingProperties")
-                EgonColaShardingProperties properties) throws IOException {
-            // The reviewed task file declares exact SINGLE nodes; wildcard routing is never accepted.
-            Path root = Path.of(inputs.getManifest().getRuntimeRoot());
-            Path yaml = root.resolve("profiles/rbac-sharding.yml");
-            // Missing policy is rejected before the migration or any physical connection.
-            var references = inputs.getManifest().getPolicyFiles().stream()
-                    .filter(reference -> yaml.toString().equals(reference.getPath())).toList();
-            if (references.size() != 1) {
-                throw new IllegalArgumentException("XINGYUAN_INPUT_UNAVAILABLE");
-            }
-            requirePrivateDirectory(yaml.getParent());
-            byte[] bytes = readProtectedBytes(yaml, root, 2 * 1024 * 1024);
-            String checksum;
-            try {
-                checksum = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
-            } catch (NoSuchAlgorithmException unavailableAlgorithm) {
-                throw new IllegalStateException("XINGYUAN_INPUT_UNAVAILABLE");
-            }
-            if (!checksum.equals(references.getFirst().getSha256())) {
-                throw new IllegalArgumentException("XINGYUAN_TARGET_UNSAFE");
-            }
-            var topology = validator.validate(properties, bytes);
-            guard.run();
-            Rbac3FlywayConfiguration.buildRbac3Flyway(physical).migrate();
-            guard.run();
-            Rbac3FlywayConfiguration.buildOutboxFlyway(physical).migrate();
-            guard.run();
-            try (var connection = physical.getConnection()) {
-                try (var query = connection.prepareStatement("SELECT pg_get_userbyid(nspowner) FROM pg_namespace WHERE nspname='egon_outbox'");
-                     var rows = query.executeQuery()) {
-                    if (rows.next() && !inputs.getReceipt().getDatabaseOwner().equals(rows.getString(1))) {
-                        throw new IllegalArgumentException("XINGYUAN_TARGET_UNSAFE");
-                    }
-                }
-                try (var create = connection.prepareStatement("CREATE SCHEMA IF NOT EXISTS egon_outbox AUTHORIZATION CURRENT_USER")) {
-                    create.execute();
-                }
-            } catch (SQLException failedSchemaPreparation) {
-                throw new IllegalStateException("XINGYUAN_DEPENDENCY_UNAVAILABLE", failedSchemaPreparation);
-            }
-            guard.run();
-            return topology;
-        }
-
-        @Bean(name = "dataSource", destroyMethod = "close")
-        @Primary
-        DataSource logicalDataSource(
-                @Qualifier("isolatedPhysicalDataSource") DataSource physical,
-                @Qualifier("isolatedRbacTopology") EgonColaShardingTopologyValidator.TopologyBO topology,
-                @Qualifier("egonColaShardingLogicalDataSourceFactory")
-                top.egon.cola.component.common.mybatis.sharding.bootstrap.EgonColaShardingDataSourceBootstrapper.LogicalDataSourceFactory factory,
-                @Qualifier("isolatedOwnershipGuard") Runnable guard) throws Exception {
-            guard.run();
-            return factory.create(Map.of("rbac_primary", physical), topology.yaml());
-        }
-
-        @Bean("egonColaRoutingProfiles")
-        Map<String, EgonColaRoutingProfileBO> routingProfiles(
-                @Qualifier("isolatedRbacTopology") EgonColaShardingTopologyValidator.TopologyBO topology) {
-            return topology.profiles();
-        }
-
-        @Bean("egonColaShardingRouteFingerprint")
-        String fingerprint(@Qualifier("isolatedRbacTopology") EgonColaShardingTopologyValidator.TopologyBO topology) {
-            return topology.fingerprint();
-        }
-
-        @Bean("egonColaWriteTargetResolver")
-        EgonColaWriteTargetResolver writeTargetResolver(
-                @Qualifier("isolatedRbacTopology") EgonColaShardingTopologyValidator.TopologyBO topology,
-                @Qualifier("egonColaTwoLevelRouteStrategy") EgonColaTwoLevelRouteStrategy strategy,
-                @Qualifier("egonColaValidationUtils") ValidationUtils validation) {
-            return new EgonColaShardingWriteTargetResolver(topology.profiles(), strategy, validation, topology.fingerprint());
-        }
-
-        @Bean("jpaSharedEM_entityManagerFactory")
-        EntityManager entityManager(@Qualifier("entityManagerFactory") EntityManagerFactory factory) {
-            return SharedEntityManagerCreator.createSharedEntityManager(factory);
-        }
-
-        @Bean("jpaDatabaseClock")
-        DatabaseClock databaseClock(@Qualifier("jpaSharedEM_entityManagerFactory") EntityManager manager) {
-            return new JpaDatabaseClock(manager);
-        }
-    }
 
     @Test
     void ownerProfilesBindTheRunRegistryHashAndExactLocalIssuerBeforeContextCreation() throws Exception {
@@ -4765,7 +2881,7 @@ public class IsolatedAuthorizationProvisioningIT {
     }
 
     @Test
-    void anUnmatchedRedisOwnerOrDatabaseCannotReachTheRuntimePublicationLayer() {
+    void anUnmatchedRegistryRedisOwnerCannotReachTheBusinessServiceRegistry() {
         var manifest = intent();
         var inputs = VerifiedDatabaseInputsBO.builder().manifest(manifest).manifestSha256("a".repeat(64)).build();
         var redis = org.mockito.Mockito.mock(RedissonClient.class);
@@ -4776,41 +2892,16 @@ public class IsolatedAuthorizationProvisioningIT {
         org.redisson.api.RBucket<String> marker = org.mockito.Mockito.mock(org.redisson.api.RBucket.class);
         org.mockito.Mockito.when(redis.<String>getBucket("xingyuan-it:owner", StringCodec.INSTANCE)).thenReturn(marker);
         org.mockito.Mockito.when(marker.get()).thenReturn("foreign-owner");
-        assertThatThrownBy(() -> verifyRedisOwnership(redis, inputs)).hasMessage("XINGYUAN_TARGET_UNSAFE");
+        assertThatThrownBy(() -> verifyRegistryRedisOwnership(redis, inputs)).hasMessage("XINGYUAN_TARGET_UNSAFE");
         org.mockito.Mockito.when(marker.get()).thenReturn("xingyuan-it:" + manifest.getRunId() + ":" + inputs.getManifestSha256());
-        verifyRedisOwnership(redis, inputs);
+        verifyRegistryRedisOwnership(redis, inputs);
         org.mockito.Mockito.clearInvocations(marker);
         config.useSingleServer().setDatabase(0);
-        assertThatThrownBy(() -> verifyRedisOwnership(redis, inputs)).hasMessage("XINGYUAN_TARGET_UNSAFE");
+        assertThatThrownBy(() -> verifyRegistryRedisOwnership(redis, inputs)).hasMessage("XINGYUAN_TARGET_UNSAFE");
         org.mockito.Mockito.verifyNoInteractions(marker);
     }
 
-    @Test
-    void missingOrChangedRoutingPolicyCannotStartAnyMigration() throws Exception {
-        var manifest = intent();
-        Path input = preparedIntent(manifest);
-        Path receipt = Path.of(manifest.getRuntimeRoot()).resolve("evidence/db-rbac.json");
-        privateJson(receipt, receiptFor(manifest, input));
-        var inputs = readVerifiedDatabaseInputs(input, receipt, temporaryRepository, "rbac");
-        var physical = org.mockito.Mockito.mock(DataSource.class);
-        var guard = org.mockito.Mockito.mock(Runnable.class);
-        var validator = org.mockito.Mockito.mock(EgonColaShardingTopologyValidator.class);
-        var configuration = new AuthorizationPersistenceConfiguration();
-        var properties = configuration.shardingProperties(inputs);
-        assertThatThrownBy(() -> configuration.topology(inputs, physical, guard, validator, properties))
-                .hasMessage("XINGYUAN_INPUT_UNAVAILABLE");
-        Path root = Path.of(manifest.getRuntimeRoot());
-        Path yaml = root.resolve("profiles/rbac-sharding.yml");
-        Files.createDirectory(yaml.getParent());
-        privateDirectory(yaml.getParent());
-        Files.writeString(yaml, "databaseName: reviewed-task");
-        Files.setPosixFilePermissions(yaml, PosixFilePermissions.fromString("rw-------"));
-        manifest.setPolicyFiles(List.of(FileReferenceDTO.builder().path(yaml.toString()).sha256("0".repeat(64)).build()));
-        inputs.setManifest(manifest);
-        assertThatThrownBy(() -> configuration.topology(inputs, physical, guard, validator, properties))
-                .hasMessage("XINGYUAN_TARGET_UNSAFE");
-        org.mockito.Mockito.verifyNoInteractions(physical, guard, validator);
-    }
+
 
     @Test
     void rejectedPhysicalConnectionIsClosedAndCannotReachAnOwner() throws Exception {

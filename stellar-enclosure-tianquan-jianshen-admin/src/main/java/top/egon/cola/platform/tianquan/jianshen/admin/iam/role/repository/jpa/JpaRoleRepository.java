@@ -29,7 +29,6 @@ import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.vo.RoleMut
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.enums.RoleTypeEnum;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.enums.RoleRiskLevelEnum;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.enums.RoleStatusEnum;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.roleresource.domain.enums.RoleResourceGrantStatusEnum;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.domain.vo.AuthorizationEventVO;
 
 /**
@@ -441,19 +440,24 @@ public class JpaRoleRepository implements RoleHierarchyRepository, RoleControlRe
                 .max(java.util.Comparator.naturalOrder())
                 .orElse(role.getRiskLevel())
                 .name();
-        long permissions = entityManager.createQuery("""
-                        select count(distinct grant.resourceId) from RoleResourceGrantEntity grant
-                         where grant.tenantId = :tenantId
-                           and grant.roleId in :roleIds
-                           and grant.status = :status
-                           and grant.validFrom <= :now
-                           and (grant.validTo is null or grant.validTo > :now)
-                        """, Long.class)
+        long permissions = ((Number) entityManager.createNativeQuery("""
+                        select count(distinct (g.catalog_scope_id, p.permission_code))
+                          from rbac3_catalog_role_permission g
+                          join rbac3_catalog_role_binding b on b.catalog_scope_id=g.catalog_scope_id and b.role_id=g.role_id and b.enabled
+                          join rbac3_catalog_scope s on s.id=b.catalog_scope_id and s.status='ACTIVE'
+                          join rbac3_catalog_permission p on p.catalog_scope_id=g.catalog_scope_id and p.id=g.permission_id and p.governance_state='ACTIVE'
+                          join rbac3_catalog_permission_version v on v.catalog_scope_id=p.catalog_scope_id and v.permission_id=p.id
+                          join rbac3_catalog_activation_producer a on a.catalog_scope_id=v.catalog_scope_id and a.producer_id=v.producer_id and a.producer_version=v.producer_version
+                          join rbac3_catalog_active_pointer head on head.catalog_scope_id=a.catalog_scope_id and head.activation_version=a.activation_version
+                         where b.tenant_id=:tenantId and b.application_id=:applicationId
+                           and g.role_id in :roleIds and g.status='ACTIVE'
+                           and g.valid_from<=:now and (g.valid_to is null or g.valid_to>:now)
+                        """)
                 .setParameter("tenantId", role.getTenantId())
+                .setParameter("applicationId", role.getApplicationId())
                 .setParameter("roleIds", family.stream().map(RolePO::getId).toList())
-                .setParameter("status", RoleResourceGrantStatusEnum.ACTIVE)
                 .setParameter("now", databaseClock.transactionNow())
-                .getSingleResult();
+                .getSingleResult()).longValue();
         return new RoleImpactVO(
                 roleId,
                 roots,

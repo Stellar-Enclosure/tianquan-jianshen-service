@@ -1,5 +1,13 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.user.controller;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -28,7 +36,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.iam.user.service.UserCrudF
 import top.egon.cola.platform.tianquan.jianshen.admin.shared.tenant.domain.TenantContext;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.CurrentRbac3User;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3UserDetails;
-import top.egon.cola.platform.tianquan.jianshen.starter.security.RequiresPermission;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.RequiresPermissions;
 
 /** RBAC-only user membership administration. Tianquan-Shoubing owns credentials and profile data. */
 @RestController
@@ -56,8 +64,10 @@ public class UserController {
         this.users = users;
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.User.users", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.User.users")
     @GetMapping("/users")
-    @RequiresPermission(value = "system:user:read")
+    @RequiresPermissions(codes = "system:user:read")
     @Operation(
             operationId = "tianquan-jianshen-iam-user-list-v1",
             summary = "分页查询租户用户",
@@ -77,8 +87,10 @@ public class UserController {
                 orgUnitId, positionId, page, size));
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.User.create", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.User.create")
     @PostMapping("/users")
-    @RequiresPermission(value = "system:user:manage")
+    @RequiresPermissions(codes = "system:user:manage")
     @Operation(
             operationId = "tianquan-jianshen-iam-user-create-v1",
             summary = "创建RBAC用户成员",
@@ -94,8 +106,10 @@ public class UserController {
                 new CurrentRbac3User().require().rbac3UserId()));
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.User.user", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.User.user")
     @GetMapping("/users/{userId}")
-    @RequiresPermission(value = "system:user:read")
+    @RequiresPermissions(codes = "system:user:read")
     @Operation(
             operationId = "tianquan-jianshen-iam-user-get-v1",
             summary = "查询RBAC用户成员",
@@ -108,8 +122,10 @@ public class UserController {
         return ResultRecord.success(queryPort.findUser(tenantId(), userId));
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.User.update", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.User.update")
     @PutMapping("/users/{userId}")
-    @RequiresPermission(value = "system:user:manage")
+    @RequiresPermissions(codes = "system:user:manage")
     @Operation(
             operationId = "tianquan-jianshen-iam-user-update-v1",
             summary = "更新RBAC用户成员绑定",
@@ -126,8 +142,10 @@ public class UserController {
                 new CurrentRbac3User().require().rbac3UserId()));
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.User.delete", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.User.delete")
     @DeleteMapping("/users/{userId}")
-    @RequiresPermission(value = "system:user:manage")
+    @RequiresPermissions(codes = "system:user:manage")
     @Operation(
             operationId = "tianquan-jianshen-iam-user-delete-v1",
             summary = "归档RBAC用户成员",
@@ -144,8 +162,10 @@ public class UserController {
         return ResultRecord.success(null);
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.User.changeStatus", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.User.changeStatus")
     @PutMapping("/users/{userId}/status")
-    @RequiresPermission(value = "system:user-status:manage")
+    @RequiresPermissions(codes = "system:user-status:manage")
     @Operation(
             operationId = "tianquan-jianshen-iam-user-status-v1",
             summary = "变更RBAC用户成员状态",

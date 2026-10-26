@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
 import java.util.HashSet;
 import java.util.List;
@@ -21,11 +27,21 @@ import java.util.Objects;
  *
  * 含义与用法：读取、传递或更新 `referenceType` 时应保持 `RuleReferenceVO` 的生命周期、不可变性和线程安全约束。
  * Meaning and usage: when reading, passing, or updating `referenceType`, preserve `RuleReferenceVO`'s lifecycle, immutability, and thread-safety constraints.
- */ String referenceType, /**
+ */ @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.RuleReferenceVO.referenceType", type = ResourceType.FIELD,
+                labelPage = "tianquan-jianshen.permissions", labelKey = "field.referenceType")
+        @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                plainRead = @PermissionGroup(codes = {"system:data-rule:read"}),
+                write = @PermissionGroup(codes = {"system:data-rule:manage"}))
+        String referenceType, /**
  * 字段 `referenceId` 表示 `RuleReferenceVO` 中与 `reference Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
  * Field `referenceId` stores the `reference Id`-related state, dependency, configuration, or result of `RuleReferenceVO` (declared type `String`); its lifecycle and value semantics are defined by its declared type and owning object.
  *
  * 含义与用法：读取、传递或更新 `referenceId` 时应保持 `RuleReferenceVO` 的生命周期、不可变性和线程安全约束。
  * Meaning and usage: when reading, passing, or updating `referenceId`, preserve `RuleReferenceVO`'s lifecycle, immutability, and thread-safety constraints.
- */ String referenceId) {
+ */ @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.domain.vo.RuleReferenceVO.referenceId", type = ResourceType.FIELD,
+                labelPage = "tianquan-jianshen.permissions", labelKey = "field.referenceId")
+        @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                plainRead = @PermissionGroup(codes = {"system:data-rule:read"}),
+                write = @PermissionGroup(codes = {"system:data-rule:manage"}))
+        String referenceId) {
     }

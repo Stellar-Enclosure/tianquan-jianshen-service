@@ -256,186 +256,25 @@ public class JpaRoleActivationFactRepository
             long userId,
             Instant now
     ) {
-        List<AuthorizationRuleFacts.ResourceGrantBinding> grants = rows("""
-                select g.role_id, resource.id, resource.resource_code,
-                       resource.resource_type, permission.permission_code
-                  from rbac3_role_resource_grant g
-                  join rbac3_role role on role.id = g.role_id
-                  join rbac3_resource resource
-                    on resource.application_id = g.application_id
-                   and resource.id = g.resource_id
-             left join rbac3_permission permission
-                    on permission.application_id = resource.application_id
-                   and permission.id = resource.required_permission_id
-                   and permission.status = 'ACTIVE'
-                 where g.tenant_id = :tenantId and role.status = 'ACTIVE'
-                   and g.status = 'ACTIVE' and resource.status = 'ACTIVE'
-                   and g.valid_from <= :now
-                   and (g.valid_to is null or g.valid_to > :now)
-                union
-                select g.role_id, api.id, api.resource_code,
-                       api.resource_type, permission.permission_code
-                  from rbac3_role_resource_grant g
-                  join rbac3_role role on role.id = g.role_id
-                  join rbac3_resource source
-                    on source.application_id = g.application_id
-                   and source.id = g.resource_id
-                  join rbac3_resource_api_binding binding
-                    on binding.application_id = g.application_id
-                   and binding.source_resource_id = source.id
-                   and binding.status = 'ACTIVE'
-                  join rbac3_resource api
-                    on api.application_id = binding.application_id
-                   and api.id = binding.api_resource_id
-                   and api.resource_type = 'API'
-                   and api.status = 'ACTIVE'
-             left join rbac3_permission permission
-                    on permission.application_id = api.application_id
-                   and permission.id = api.required_permission_id
-                   and permission.status = 'ACTIVE'
-                 where g.tenant_id = :tenantId and role.status = 'ACTIVE'
-                   and source.resource_type in ('ROUTE', 'ACTION')
-                   and g.status = 'ACTIVE'
-                   and g.valid_from <= :now
-                   and (g.valid_to is null or g.valid_to > :now)
+        List<AuthorizationRuleFacts.PermissionGrantBinding> grants = rows("""
+                select g.catalog_scope_id, b.application_id, g.role_id, p.permission_code
+                  from rbac3_catalog_role_permission g
+                  join rbac3_catalog_role_binding b on b.catalog_scope_id = g.catalog_scope_id and b.role_id = g.role_id and b.enabled
+                  join rbac3_catalog_scope s on s.id = g.catalog_scope_id and s.status = 'ACTIVE'
+                  join rbac3_role r on r.id = g.role_id and r.tenant_id = s.tenant_id and r.status = 'ACTIVE'
+                  join rbac3_catalog_permission p on p.catalog_scope_id = g.catalog_scope_id and p.id = g.permission_id and p.governance_state = 'ACTIVE'
+                  join rbac3_catalog_active_pointer pointer on pointer.catalog_scope_id = s.id
+                  join rbac3_catalog_activation_producer ap on ap.catalog_scope_id = s.id and ap.activation_version = pointer.activation_version and ap.producer_id = p.owner_producer_id
+                  join rbac3_catalog_permission_version pv on pv.catalog_scope_id = s.id and pv.producer_id = ap.producer_id
+                       and pv.producer_version = ap.producer_version and pv.permission_id = p.id
+                  join rbac3_catalog_producer producer on producer.catalog_scope_id = s.id and producer.producer_id = ap.producer_id and producer.enabled
+                 where s.tenant_id = :tenantId and g.status = 'ACTIVE'
+                   and g.valid_from <= :now and (g.valid_to is null or g.valid_to > :now)
                 """, Map.of("tenantId", tenantId, "now", now)).stream()
-                .map(row -> new AuthorizationRuleFacts.ResourceGrantBinding(
-                        text(row[0]), text(row[1]), text(row[2]), text(row[3]),
-                        nullableText(row[4])))
+                .map(row -> new AuthorizationRuleFacts.PermissionGrantBinding(text(row[0]), text(row[1]), text(row[2]), text(row[3])))
                 .toList();
-
-        var scopes = new ArrayList<AuthorizationRuleFacts.DataScopeFact>();
-        for (Object[] row : rows("""
-                select d.role_id, p.permission_code, d.scope_type,
-                       ref.ref_type, ref.ref_id,
-                       coalesce(d.directory_snapshot_version, 0),
-                       cast(null as bigint)
-                  from rbac3_data_rule d
-                  join rbac3_permission p
-                    on p.application_id = d.application_id
-                   and p.id = d.permission_id
-             left join rbac3_data_rule_ref ref
-                    on ref.tenant_id = d.tenant_id and ref.data_rule_id = d.id
-                 where d.tenant_id = :tenantId and d.status = 'ACTIVE'
-                   and d.valid_from <= :now
-                   and (d.valid_to is null or d.valid_to > :now)
-                """, Map.of("tenantId", tenantId, "now", now))) {
-            String scopeType = text(row[2]);
-            String dimension;
-            String referenceId;
-            if ("ALL".equals(scopeType)) {
-                dimension = "TENANT_ALL";
-                referenceId = null;
-            } else if ("SELF".equals(scopeType)) {
-                dimension = "USER";
-                referenceId = Long.toString(userId);
-            } else if (row[3] != null && row[4] != null) {
-                dimension = switch (scopeType) {
-                    case "ORG_TREE" -> "ORG_TREE";
-                    case "DEPT_TREE" -> "DEPT_TREE";
-                    default -> text(row[3]);
-                };
-                referenceId = text(row[4]);
-            } else if (row[6] != null) {
-                dimension = scopeType.startsWith("ORG") ? "ORG" : "DEPT";
-                referenceId = text(row[6]);
-            } else {
-                dimension = "NONE";
-                referenceId = null;
-            }
-            scopes.add(new AuthorizationRuleFacts.DataScopeFact(
-                    text(row[0]), text(row[1]), dimension, referenceId,
-                    number(row[5]).longValue()));
-        }
-
-        List<AuthorizationRuleFacts.FieldRuleFact> fieldRules = rows("""
-                select f.role_id, resource.resource_code,
-                       definition.field_code, f.access_level
-                  from rbac3_field_rule f
-                  join rbac3_field_definition definition
-                    on definition.application_id = f.application_id
-                   and definition.id = f.field_definition_id
-                  join rbac3_resource resource
-                    on resource.application_id = definition.application_id
-                   and resource.id = definition.resource_id
-                 where f.tenant_id = :tenantId and f.status = 'ACTIVE'
-                   and definition.status = 'ACTIVE' and resource.status = 'ACTIVE'
-                   and f.valid_from <= :now
-                   and (f.valid_to is null or f.valid_to > :now)
-                """, Map.of("tenantId", tenantId, "now", now)).stream()
-                .map(row -> new AuthorizationRuleFacts.FieldRuleFact(
-                        text(row[0]), text(row[1]), text(row[2]),
-                        FieldAccessLevel.valueOf(text(row[3]))))
-                .toList();
-
-        List<AuthorizationRuleFacts.FieldDefinitionFact> definitions = rows("""
-                select resource.resource_code, definition.field_code,
-                       case when definition.writable then 'WRITE'
-                            else definition.default_access end
-                  from rbac3_field_definition definition
-                  join rbac3_resource resource
-                    on resource.application_id = definition.application_id
-                   and resource.id = definition.resource_id
-                  join rbac3_tenant_application tenant_application
-                    on tenant_application.application_id = definition.application_id
-                   and tenant_application.tenant_id = :tenantId
-                 where definition.status = 'ACTIVE'
-                   and resource.status = 'ACTIVE'
-                   and tenant_application.status = 'ACTIVE'
-                   and tenant_application.valid_from <= :now
-                   and (tenant_application.valid_to is null
-                        or tenant_application.valid_to > :now)
-                """, Map.of("tenantId", tenantId, "now", now)).stream()
-                .map(row -> new AuthorizationRuleFacts.FieldDefinitionFact(
-                        text(row[0]), text(row[1]),
-                        FieldAccessLevel.valueOf(text(row[2]))))
-                .toList();
-
-        List<AuthorizationRuleFacts.ResourceFact> resources = rows("""
-                select resource.id, resource.resource_code, resource.resource_type,
-                       parent.resource_code, permission.permission_code
-                  from rbac3_resource resource
-             left join rbac3_resource parent
-                    on parent.application_id = resource.application_id
-                   and parent.id = resource.parent_resource_id
-             left join rbac3_permission permission
-                    on permission.application_id = resource.application_id
-                   and permission.id = resource.required_permission_id
-                   and permission.status = 'ACTIVE'
-                  join rbac3_tenant_application tenant_application
-                    on tenant_application.application_id = resource.application_id
-                   and tenant_application.tenant_id = :tenantId
-                 where resource.status = 'ACTIVE'
-                   and tenant_application.status = 'ACTIVE'
-                   and tenant_application.valid_from <= :now
-                   and (tenant_application.valid_to is null
-                        or tenant_application.valid_to > :now)
-                """, Map.of("tenantId", tenantId, "now", now)).stream()
-                .map(row -> new AuthorizationRuleFacts.ResourceFact(
-                        text(row[0]), text(row[1]), text(row[2]), nullableText(row[3]),
-                        nullableText(row[4])))
-                .toList();
-
-        List<AuthorizationRuleFacts.LandingRouteFact> landingRoutes = rows("""
-                select role.id, route.resource_code, role.landing_priority,
-                       permission.permission_code
-                  from rbac3_role role
-                  join rbac3_resource route
-                    on route.application_id = role.application_id
-                   and route.id = role.landing_route_id
-                  join rbac3_permission permission
-                    on permission.application_id = route.application_id
-                   and permission.id = route.required_permission_id
-                 where role.tenant_id = :tenantId and role.status = 'ACTIVE'
-                   and route.status = 'ACTIVE' and permission.status = 'ACTIVE'
-                """, Map.of("tenantId", tenantId)).stream()
-                .map(row -> new AuthorizationRuleFacts.LandingRouteFact(
-                        text(row[0]), text(row[1]), number(row[2]).intValue(),
-                        text(row[3])))
-                .toList();
-
-        return new AuthorizationRuleFacts(
-                grants, scopes, fieldRules, definitions, resources, landingRoutes);
+        // Scoped data and field policy evaluation is performed by the catalog Runtime; old resource grants confer nothing.
+        return new AuthorizationRuleFacts(List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), grants);
     }
 
     /**

@@ -1,5 +1,9 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service;
 
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.domain.vo.BusinessCatalogEntry;
+
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.domain.vo.ApplicationCatalogEntry;
+
 import org.junit.jupiter.api.Test;
 import top.egon.cola.component.tianshu.api.client.DdcManagementClient;
 import top.egon.cola.component.tianshu.model.management.DdcManagementApp;

@@ -6,10 +6,10 @@ Tenant-isolated IAM/RBAC3 management and runtime user authorization for Stellar 
 
 ## Current capabilities
 
-- Manage businesses, applications, users/directories, organizations and positions; admit application resource manifests and maintain resource/permission mappings.
-- Maintain role DAGs, inheritance, user assignments, role-resource grants and user-level active role sets. Evaluate separation-of-duty, prerequisite and cardinality constraints before accepting mutations.
+- Manage businesses, applications, users/directories, organizations and positions; register versioned permission manifests with source receipts, deployment qualifications and explicit catalog activation.
+- Maintain role DAGs, inheritance, user assignments, explicit permission-code grants and user-level active role sets. Evaluate separation-of-duty, prerequisite and cardinality constraints before accepting mutations.
 - Decide function, operation, data and field access from immutable authorization snapshots; provide management delegation policies, authorization simulation and role-change impact analysis.
-- Persist mutation journals/audit evidence and publish runtime snapshots with fail-closed fences; expose runtime status/retry and CI resource-registration APIs.
+- Persist mutation journals/audit evidence and publish runtime snapshots with fail-closed fences; expose runtime status/retry and the scoped permission-manifest protocol.
 - Integrate with Tianshu configuration/service registration and Yuheng definition reporting; enforce user permissions in consuming services through the Starter.
 
 ## Modules and boundaries
@@ -25,6 +25,8 @@ Tenant-isolated IAM/RBAC3 management and runtime user authorization for Stellar 
 The code-level responsibility here is user authorization and IAM governance. [Shoubing](https://github.com/Stellar-Enclosure/tianquan-shoubing-service) handles login and token issuance; Jianshen does not issue tokens or own personnel sessions. SERVICE callers are checked against Shoubing scopes rather than borrowing USER role decisions. The [React SDK](https://github.com/Stellar-Enclosure/web-sdk/tree/main/packages/stellar-enclosure-tianquan-jianshen-react-sdk) and [console](https://github.com/Stellar-Enclosure/tianquan-jianshen-web) are separate npm repositories/workspaces, not modules in this Maven reactor.
 
 Management APIs primarily use `/api/tianquan-jianshen/v1`, with bootstrap/about under `/api/v1/auth` and internal runtime decisions under `/internal/v1/authorization`. PostgreSQL/Redis projection health, Tianshu leases, Yuheng release consistency and actual routed requests are separate observations; see the [architecture](docs/architecture.md), [API/manifest contract](docs/api-and-manifest.md) and [security boundaries](docs/security-boundaries.md).
+
+Clean-environment initialization uses the explicit [permission catalog B0 and administrator B1 commands](docs/permission-catalog-bootstrap.md). B0 provisions finite source authority before registration; B1 grants a reviewed list of active permission codes after activation. Neither runs during application startup or ordinary CI.
 
 ## Build
 
@@ -70,3 +72,7 @@ Java packages/classes, Bean names, configuration keys, OAuth/RPC identities, API
 Git pushes run validation only. Central and npm publication are separate user actions. CI defaults to initial source bootstrap; after publication set `STELLAR_USE_SOURCE_BOOTSTRAP=false` to consume published artifacts directly. Private organizations may supply the Actions secret `STELLAR_ENCLOSURE_READ_TOKEN` with repository read access.
 
 Original MIT/LGPL licenses and author attribution are preserved.
+
+### Permission manifest delivery
+
+The `permission-producer` profile exports and verifies each final executable independently. See [permission build and controlled delivery](docs/permission-ci.md) for the exact toolchain pin, offline CI, candidate registration and deployment-qualified activation gates. Runtime startup and administrator grants are not CI side effects.

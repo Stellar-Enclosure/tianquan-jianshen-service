@@ -1,5 +1,13 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.activation.controller;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,7 +31,7 @@ import top.egon.cola.platform.tianquan.jianshen.contract.activation.ReplaceActiv
 import top.egon.cola.platform.tianquan.jianshen.contract.activation.RoleActivationCandidateView;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.CurrentRbac3User;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3UserDetails;
-import top.egon.cola.platform.tianquan.jianshen.starter.security.RequiresPermission;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.RequiresPermissions;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -105,8 +113,10 @@ public class RoleActivationController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.RoleActivation.candidates", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.RoleActivation.candidates")
     @GetMapping("/role-activation-candidates")
-    @RequiresPermission(value = "system:role-activation:read")
+    @RequiresPermissions(codes = "system:role-activation:read")
     @Operation(
             operationId = "tianquan-jianshen-role-activation-candidates-v1",
             summary = "查询当前会话可激活的规范根角色",
@@ -130,8 +140,10 @@ public class RoleActivationController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.RoleActivation.current", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.RoleActivation.current")
     @GetMapping("/role-activations")
-    @RequiresPermission(value = "system:role-activation:read")
+    @RequiresPermissions(codes = "system:role-activation:read")
     @Operation(
             operationId = "tianquan-jianshen-role-activation-current-v1",
             summary = "查询当前会话已激活的规范根角色",
@@ -156,8 +168,10 @@ public class RoleActivationController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.RoleActivation.replace", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.RoleActivation.replace")
     @PutMapping("/role-activations")
-    @RequiresPermission(value = "system:role-activation:use")
+    @RequiresPermissions(codes = "system:role-activation:use")
     @Operation(
             operationId = "tianquan-jianshen-role-activation-replace-v1",
             summary = "原子替换当前会话激活角色集合",

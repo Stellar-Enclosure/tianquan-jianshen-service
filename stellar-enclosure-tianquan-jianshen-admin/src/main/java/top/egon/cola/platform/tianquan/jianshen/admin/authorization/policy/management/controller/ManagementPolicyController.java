@@ -1,5 +1,13 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.management.controller;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -38,7 +46,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.shared.domain.DatabaseCloc
 import top.egon.cola.platform.tianquan.jianshen.admin.shared.tenant.domain.TenantContext;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.CurrentRbac3User;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3UserDetails;
-import top.egon.cola.platform.tianquan.jianshen.starter.security.RequiresPermission;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.RequiresPermissions;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -130,8 +138,10 @@ public class ManagementPolicyController {
      *
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.ManagementPolicy.policies", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.ManagementPolicy.policies")
     @GetMapping("/management-policies")
-    @RequiresPermission(value = "system:management-policy:read")
+    @RequiresPermissions(codes = "system:management-policy:read")
     @Operation(
             operationId = "tianquan-jianshen-management-policy-list-v1",
             summary = "查询完整委托管理策略",
@@ -154,8 +164,10 @@ public class ManagementPolicyController {
      * @param policyId 输入参数 `policyId`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.ManagementPolicy.policy", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.ManagementPolicy.policy")
     @GetMapping("/management-policies/{policyId}")
-    @RequiresPermission(value = "system:management-policy:read")
+    @RequiresPermissions(codes = "system:management-policy:read")
     @Operation(
             operationId = "tianquan-jianshen-management-policy-get-v1",
             summary = "读取委托管理策略完整聚合",
@@ -182,8 +194,10 @@ public class ManagementPolicyController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.ManagementPolicy.create", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.ManagementPolicy.create")
     @PostMapping("/management-policies")
-    @RequiresPermission(value = "system:management-policy:manage")
+    @RequiresPermissions(codes = "system:management-policy:manage")
     @Operation(
             operationId = "tianquan-jianshen-management-policy-create-v1",
             summary = "创建完整委托管理策略",
@@ -214,8 +228,10 @@ public class ManagementPolicyController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.ManagementPolicy.update", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.ManagementPolicy.update")
     @PutMapping("/management-policies/{policyId}")
-    @RequiresPermission(value = "system:management-policy:manage")
+    @RequiresPermissions(codes = "system:management-policy:manage")
     @Operation(
             operationId = "tianquan-jianshen-management-policy-update-v1",
             summary = "按版本完整替换委托管理策略",
@@ -247,8 +263,10 @@ public class ManagementPolicyController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.ManagementPolicy.disable", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.ManagementPolicy.disable")
     @PostMapping("/management-policies/{policyId}/disable")
-    @RequiresPermission(value = "system:management-policy:manage")
+    @RequiresPermissions(codes = "system:management-policy:manage")
     @Operation(
             operationId = "tianquan-jianshen-management-policy-disable-v1",
             summary = "禁用委托管理策略并保留历史明细",
@@ -285,6 +303,8 @@ public class ManagementPolicyController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.ManagementPolicy.capabilities", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.ManagementPolicy.capabilities", access = ResourceAccess.PUBLIC, allowedPrincipals = PermissionManifest.PrincipalType.USER)
     @GetMapping("/management-capabilities/me")
     @Operation(
             operationId = "tianquan-jianshen-management-capabilities-mine-v1",
@@ -310,6 +330,8 @@ public class ManagementPolicyController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.ManagementPolicy.manageableUsers", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.ManagementPolicy.manageableUsers", access = ResourceAccess.PUBLIC, allowedPrincipals = PermissionManifest.PrincipalType.USER)
     @GetMapping("/manageable-users")
     @Operation(
             operationId = "tianquan-jianshen-manageable-user-search-v1",
@@ -338,6 +360,8 @@ public class ManagementPolicyController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.ManagementPolicy.manageableRoles", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.ManagementPolicy.manageableRoles", access = ResourceAccess.PUBLIC, allowedPrincipals = PermissionManifest.PrincipalType.USER)
     @GetMapping("/manageable-roles")
     @Operation(
             operationId = "tianquan-jianshen-manageable-role-search-v1",

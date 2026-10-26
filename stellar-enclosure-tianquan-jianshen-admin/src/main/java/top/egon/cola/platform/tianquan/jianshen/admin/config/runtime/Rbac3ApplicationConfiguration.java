@@ -1,9 +1,10 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.config.runtime;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.domain.vo.BusinessCatalogEntry;
+
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.domain.vo.ApplicationCatalogEntry;
+
 import io.micrometer.core.instrument.MeterRegistry;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityManagerFactory;
 import jakarta.validation.Validator;
 import org.redisson.api.RedissonClient;
 import org.redisson.spring.starter.RedissonAutoConfigurationV4;
@@ -13,43 +14,14 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.micrometer.metrics.autoconfigure.MetricsAutoConfiguration;
 import org.springframework.boot.micrometer.metrics.autoconfigure.export.simple.SimpleMetricsExportAutoConfiguration;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
-import org.springframework.boot.persistence.autoconfigure.EntityScan;
-import org.springframework.boot.jackson2.autoconfigure.Jackson2AutoConfiguration;
-import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
-import org.springframework.boot.jdbc.autoconfigure.DataSourceTransactionManagerAutoConfiguration;
-import org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration;
 import org.springframework.boot.security.oauth2.client.autoconfigure.OAuth2ClientAutoConfiguration;
-import org.springframework.boot.transaction.autoconfigure.TransactionAutoConfiguration;
-import org.springframework.boot.transaction.autoconfigure.TransactionManagerCustomizationAutoConfiguration;
-import org.springframework.boot.validation.autoconfigure.ValidationAutoConfiguration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
-import org.springframework.orm.jpa.SharedEntityManagerCreator;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import top.egon.cola.component.common.core.validation.ValidationUtils;
-import top.egon.cola.component.outbox.api.TransactionalOutbox;
-import top.egon.cola.component.outbox.autoconfigure.TransactionalOutboxAutoConfiguration;
-import top.egon.cola.component.outbox.autoconfigure.OutboxMybatisPlusAutoConfiguration;
-import top.egon.cola.component.outbox.autoconfigure.OutboxStateMachineAutoConfiguration;
-import top.egon.cola.component.outbox.delivery.DeliveryHandler;
-import top.egon.cola.component.outbox.delivery.DeliveryContext;
-import top.egon.cola.component.outbox.delivery.DeliveryResult;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.roleresource.service.RoleResourceGrantService;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.roleresource.repository.jpa.JpaRoleResourceGrantRepository;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.roleresource.domain.convertor.RoleFieldRuleReplacementConverter;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.roleresource.domain.convertor.RoleFieldRuleReplacementConverterImpl;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.apibinding.repository.jpa.JpaResourceApiBindingRepository;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.state.repository.jpa.JpaTenantAuthorizationStateRepository;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.AuthorizationEventPublisher;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.outbox.TransactionalOutboxAuthorizationEventPublisher;
-import top.egon.cola.component.common.id.autoconfigure.IdGeneratorAutoConfiguration;
-import top.egon.cola.component.common.mybatis.autoconfigure.EgonColaMybatisPlusAutoConfiguration;
-import top.egon.cola.component.common.mybatis.autoconfigure.EgonColaShardingAutoConfiguration;
-import top.egon.cola.component.rpc.config.EgonRpcAutoConfig;
 import top.egon.cola.component.rpc.provider.registration.RpcLeaseOperationResult;
 import top.egon.cola.component.rpc.provider.registration.RpcProviderLease;
 import top.egon.cola.component.rpc.provider.registration.RpcProviderLeaseIdentity;
@@ -60,13 +32,6 @@ import top.egon.cola.component.rpc.tianshu.client.registry.RpcDdcServiceRegistry
 import top.egon.cola.component.rpc.tianshu.registry.RpcDdcRegistrySnapshotLoader;
 import top.egon.cola.component.tianshu.api.client.DdcServiceRegistryClient;
 import top.egon.cola.component.tianshu.listener.registry.DdcRegistrySubscriptionCoordinator;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.permission.service.PermissionCatalogService;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.controller.cli.Rbac3ApplicationCatalogRegistrationCli;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.service.DeploymentPermissionRegistrationConverterImpl;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.service.GlobalResourceCatalogService;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.user.repository.IdentityProfileDirectory;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.user.repository.IdentityTenantMembershipDirectory;
-import top.egon.cola.platform.tianquan.jianshen.admin.shared.repository.jpa.JpaDatabaseClock;
 import top.egon.cola.platform.tianquan.shoubing.core.observability.IdpSecurityMetricsRecorder;
 import top.egon.cola.platform.tianquan.shoubing.starter.audit.OAuthUsageObservationProperties;
 import top.egon.cola.platform.tianquan.shoubing.starter.autoconfigure.IdpStarterAutoConfiguration;
@@ -75,8 +40,8 @@ import top.egon.cola.platform.tianquan.shoubing.starter.client.IdpClientCredenti
 import top.egon.cola.platform.tianquan.shoubing.starter.client.IdpServiceOAuth2Client;
 import top.egon.cola.platform.tianquan.shoubing.starter.observability.IdpSecurityMetricsComponent;
 import top.egon.cola.platform.tianquan.shoubing.starter.security.TrustedIssuerRegistry;
+import top.egon.cola.platform.tianquan.shoubing.starter.state.IdentityAuthorityProperties;
 import top.egon.cola.platform.tianquan.shoubing.starter.security.rpc.IdpRpcClientCredentialInterceptorFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -110,25 +75,22 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.manag
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.participation.repository.jdbc.PostgresqlParticipationRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.participation.service.ParticipationFacade;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.BusinessCatalogService;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.DdcCatalogGateway;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.repository.DdcCatalogGateway;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.RpcDdcCatalogGateway;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.business.service.UserBusinessAccessFacade;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.business.repository.UserBusinessAccessRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.application.service.TenantApplicationFacade;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.application.repository.jpa.JpaTenantApplicationRepository;
-import top.egon.cola.platform.tianquan.jianshen.admin.registration.ci.service.CiResourceRegistrationService;
-import top.egon.cola.platform.tianquan.jianshen.admin.registration.ci.service.JpaCiResourceRegistrationStore;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.repository.jpa.JpaRoleRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.service.RoleFacade;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.service.RoleEligibilityService;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.domain.dto.MutationWorkDTO;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.InitialAuthorizationContextRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.Rbac3RuntimePolicy;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.tianshu.AtomicRbac3RuntimePolicy;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.jpa.JpaAuthorizationMutationRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.jpa.JpaAuthorizationPublicationGuardRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.jpa.JpaIdempotencyRepository;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.redis.RedisAuthorizationRuntimeRepository;
+import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.postgresql.PostgresqlAuthorizationRuntimeRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.service.AuthorizationMutationCoordinator;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.service.AuthorizationMutationRecoveryService;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.service.AuthorizationPublicationGuardService;
@@ -238,7 +200,7 @@ public class Rbac3ApplicationConfiguration {
             JpaRoleActivationFactRepository factStore,
             JpaUserActiveRoleRepository transaction,
             UserAuthorizationSnapshotProjector projector,
-            RedisAuthorizationRuntimeRepository runtimeStore,
+            PostgresqlAuthorizationRuntimeRepository runtimeStore,
             Rbac3RuntimePolicy runtimePolicy,
             Clock clock) {
         return new RoleActivationFacade(
@@ -444,25 +406,25 @@ public class Rbac3ApplicationConfiguration {
     DdcCatalogGateway unavailableDdcCatalogGateway() {
         return new DdcCatalogGateway() {
             @Override
-            public java.util.Optional<top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.BusinessCatalogEntry>
+            public java.util.Optional<top.egon.cola.platform.tianquan.jianshen.admin.iam.business.domain.vo.BusinessCatalogEntry>
                     findBusiness(String ddcBusinessId) {
                 return java.util.Optional.empty();
             }
 
             @Override
-            public java.util.List<top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.BusinessCatalogEntry>
+            public java.util.List<top.egon.cola.platform.tianquan.jianshen.admin.iam.business.domain.vo.BusinessCatalogEntry>
                     listBusinesses(String keyword) {
                 return java.util.List.of();
             }
 
             @Override
-            public java.util.Optional<top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.ApplicationCatalogEntry>
+            public java.util.Optional<top.egon.cola.platform.tianquan.jianshen.admin.iam.business.domain.vo.ApplicationCatalogEntry>
                     findApplication(String ddcApplicationId) {
                 return java.util.Optional.empty();
             }
 
             @Override
-            public java.util.List<top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.ApplicationCatalogEntry>
+            public java.util.List<top.egon.cola.platform.tianquan.jianshen.admin.iam.business.domain.vo.ApplicationCatalogEntry>
                     listApplications(String ddcBusinessId, String keyword) {
                 return java.util.List.of();
             }
@@ -472,13 +434,6 @@ public class Rbac3ApplicationConfiguration {
     @Bean
     BusinessCatalogService businessCatalogService(DdcCatalogGateway catalog) {
         return new BusinessCatalogService(catalog);
-    }
-
-    @Bean
-    CiResourceRegistrationService ciResourceRegistrationService(
-            DdcCatalogGateway catalog,
-            JpaCiResourceRegistrationStore store) {
-        return new CiResourceRegistrationService(catalog, store);
     }
 
     @Bean
@@ -536,13 +491,9 @@ public class Rbac3ApplicationConfiguration {
      */
     @Bean
     SystemAuthorizationSnapshotService systemAuthorizationSnapshotService(
-            RedisAuthorizationRuntimeRepository snapshots,
-            InitialAuthorizationContextRepository initialContexts,
-            Clock clock,
-            @Value("${egon.tianquan-jianshen.initial-context.tianshu-enabled:false}")
-            boolean ddcInitialContextEnabled) {
-        return new SystemAuthorizationSnapshotService(
-                snapshots, initialContexts, clock, ddcInitialContextEnabled);
+            PostgresqlAuthorizationRuntimeRepository snapshots,
+            Clock clock) {
+        return new SystemAuthorizationSnapshotService(snapshots, clock);
     }
 
     /**
@@ -584,7 +535,7 @@ public class Rbac3ApplicationConfiguration {
      */
     @Bean
     AuthorizationDecisionService authorizationDecisionService(
-            RedisAuthorizationRuntimeRepository runtimeStore,
+            PostgresqlAuthorizationRuntimeRepository runtimeStore,
             Clock clock,
             RoleEligibilityService roleEligibility) {
         return new AuthorizationDecisionService(
@@ -716,148 +667,6 @@ public class Rbac3ApplicationConfiguration {
         return beans.getBean(candidates.getFirst(), DdcCatalogGateway.class);
     }
 
-    @Bean("rbac3ApplicationCatalogRegistrationCli")
-    public Rbac3ApplicationCatalogRegistrationCli catalogRegistrationCli(
-            @Qualifier("globalResourceCatalogService") GlobalResourceCatalogService catalog,
-            @Qualifier("identityTenantMembershipDirectory") IdentityTenantMembershipDirectory memberships,
-            @Qualifier("identityProfileDirectory") IdentityProfileDirectory profiles,
-            @Qualifier("jacksonObjectMapper") ObjectMapper mapper,
-            @Qualifier("defaultValidator") Validator validator,
-            @Qualifier("roleResourceGrantService") RoleResourceGrantService roleGrants,
-            @Qualifier("ddcCatalogGateway") DdcCatalogGateway deploymentCatalog) {
-        return new Rbac3ApplicationCatalogRegistrationCli(catalog, memberships, profiles, mapper, validator, roleGrants, deploymentCatalog);
-    }
-
-    /** Exact operator context: no main application scan, HTTP/RPC provider, scheduler or development bootstrap imports. */
-    @lombok.extern.slf4j.Slf4j
-    @Configuration(value = "rbac3CatalogCommandConfiguration", proxyBeanMethods = false)
-    @Profile("rbac3-catalog-command")
-    @EntityScan(basePackages = "top.egon.cola.platform.tianquan.jianshen.admin")
-    @ImportAutoConfiguration({
-            ValidationAutoConfiguration.class,
-            Jackson2AutoConfiguration.class,
-            DataSourceAutoConfiguration.class,
-            HibernateJpaAutoConfiguration.class,
-            DataSourceTransactionManagerAutoConfiguration.class,
-            TransactionAutoConfiguration.class,
-            TransactionManagerCustomizationAutoConfiguration.class,
-            IdGeneratorAutoConfiguration.class,
-            EgonColaMybatisPlusAutoConfiguration.class,
-            EgonColaShardingAutoConfiguration.class,
-            EgonRpcAutoConfig.class,
-            DdcRpcAutoConfiguration.class})
-    @Import({
-            GlobalResourceCatalogService.class,
-            PermissionCatalogService.class,
-            CatalogClientConfiguration.class,
-            FieldRuleCommandConfiguration.class})
-    public static class CatalogCommandConfiguration {
-        @Bean("deploymentPermissionRegistrationConverterImpl")
-        GlobalResourceCatalogService.PermissionRegistrationConverter permissionConverter() {
-            return new DeploymentPermissionRegistrationConverterImpl();
-        }
-
-        @Bean("jpaDatabaseClock")
-        DatabaseClock databaseClock(@Qualifier("jpaSharedEM_entityManagerFactory") EntityManager manager) {
-            return new JpaDatabaseClock(manager);
-        }
-
-        @Bean("identityProfileDirectory")
-        IdentityProfileDirectory identityProfiles() {
-            return new IdentityProfileDirectory();
-        }
-
-        @Bean("identityTenantMembershipDirectory")
-        IdentityTenantMembershipDirectory identityMemberships() {
-            return new IdentityTenantMembershipDirectory();
-        }
-
-        @Bean(name = "rbac3CatalogDdcClientHandle", destroyMethod = "close")
-        DdcRpcClientHandle<DdcManagementClient> managementHandle(
-                @Qualifier("ddcRpcClientFactory") DdcRpcClientFactory factory) {
-            return factory.managementClient();
-        }
-
-        @Bean("ddcCatalogGateway")
-        DdcCatalogGateway catalogGateway(@Qualifier("rbac3CatalogDdcClientHandle") DdcRpcClientHandle<DdcManagementClient> handle) {
-            return new RpcDdcCatalogGateway(handle.client());
-        }
-
-        @Bean("jpaSharedEM_entityManagerFactory")
-        EntityManager sharedEntityManager(@Qualifier("entityManagerFactory") EntityManagerFactory factory) {
-            return SharedEntityManagerCreator.createSharedEntityManager(factory);
-        }
-
-        @Bean("rbac3ApplicationCatalogRegistrationCli")
-        Rbac3ApplicationCatalogRegistrationCli registrationCli(
-                @Qualifier("globalResourceCatalogService") GlobalResourceCatalogService catalog,
-                @Qualifier("identityTenantMembershipDirectory") IdentityTenantMembershipDirectory memberships,
-                @Qualifier("identityProfileDirectory") IdentityProfileDirectory profiles,
-                @Qualifier("jacksonObjectMapper") ObjectMapper mapper,
-                @Qualifier("defaultValidator") Validator validator,
-                @Qualifier("roleResourceGrantService") ObjectProvider<RoleResourceGrantService> roleGrants,
-                @Qualifier("ddcCatalogGateway") DdcCatalogGateway deploymentCatalog) {
-            return new Rbac3ApplicationCatalogRegistrationCli(catalog, memberships, profiles, mapper, validator, roleGrants.getIfAvailable(), deploymentCatalog);
-        }
-    }
-
-    /** Imports the existing transactional writer only for an explicit field-rule command. */
-    @lombok.extern.slf4j.Slf4j
-    @Configuration(value = "rbac3FieldRuleCommandConfiguration", proxyBeanMethods = false)
-    @Profile("rbac3-catalog-command")
-    @ConditionalOnProperty(prefix = "rbac3.catalog", name = "field-rules-enabled", havingValue = "true")
-    @Import({RoleResourceGrantService.class, JpaRoleResourceGrantRepository.class})
-    @ImportAutoConfiguration({TransactionalOutboxAutoConfiguration.class, OutboxMybatisPlusAutoConfiguration.class,
-            OutboxStateMachineAutoConfiguration.class})
-    public static class FieldRuleCommandConfiguration {
-        @Bean("jpaResourceApiBindingRepository")
-        JpaResourceApiBindingRepository resourceBindings(@Qualifier("jpaSharedEM_entityManagerFactory") EntityManager manager) {
-            return new JpaResourceApiBindingRepository(manager);
-        }
-
-        @Bean("jpaTenantAuthorizationStateRepository")
-        JpaTenantAuthorizationStateRepository tenantState(@Qualifier("jpaSharedEM_entityManagerFactory") EntityManager manager,
-                @Qualifier("jpaDatabaseClock") DatabaseClock clock) {
-            return new JpaTenantAuthorizationStateRepository(manager, clock);
-        }
-
-        @Bean("roleFieldRuleReplacementConverterImpl")
-        RoleFieldRuleReplacementConverter fieldConverter() { return new RoleFieldRuleReplacementConverterImpl(); }
-
-        @Bean("authorizationEventPort")
-        AuthorizationEventPublisher fieldEvents(@Qualifier("transactionalOutbox") TransactionalOutbox outbox) {
-            return new TransactionalOutboxAuthorizationEventPublisher(outbox, Clock.systemUTC());
-        }
-
-        @Bean("catalogProjectionEventProducerAdapter")
-        DeliveryHandler producerDestinationValidator() { return new CatalogProjectionEventProducerAdapter(); }
-
-        @Bean("catalogOutboxProducerOnlyBeanFactoryPostProcessor")
-        static org.springframework.beans.factory.config.BeanFactoryPostProcessor producerOnlyOutbox() {
-            return factory -> {
-                var definitions = (org.springframework.beans.factory.support.BeanDefinitionRegistry) factory;
-                // Keep the Starter's durable writer, MP store and lifecycle engine; this process never consumes events.
-                for (String name : List.of("outboxDeliveryExecutor", "outboxTaskScheduler", "outboxDispatcher", "outboxCleanupJob",
-                        "outboxCommittedEventListener", "outboxPoller")) {
-                    if (definitions.containsBeanDefinition(name)) { definitions.removeBeanDefinition(name); }
-                }
-            };
-        }
-    }
-
-    /** Producer-side adapter validates the same field-event destination without running projection workers in the CLI. */
-    @lombok.extern.slf4j.Slf4j
-    @lombok.RequiredArgsConstructor
-    private static class CatalogProjectionEventProducerAdapter implements DeliveryHandler {
-        @Override public String channel() { return TransactionalOutboxAuthorizationEventPublisher.CHANNEL; }
-        @Override public void validateDestination(String destination) {
-            if (!"tianquan-jianshen.role.policy-changed.v1".equals(destination)) { throw new IllegalArgumentException("Unsupported field-rule event destination"); }
-        }
-        @Override public DeliveryResult deliver(DeliveryContext context) {
-            throw new IllegalStateException("The deployment CLI cannot deliver projection events");
-        }
-    }
-
     /** Client-only dependencies: use existing OAuth and read-only registry adapters, never register this process as a provider. */
     @lombok.extern.slf4j.Slf4j
     @Configuration(value = "rbac3CatalogClientConfiguration", proxyBeanMethods = false)
@@ -906,8 +715,15 @@ public class Rbac3ApplicationConfiguration {
                 @Qualifier("clientRegistrationRepository") ClientRegistrationRepository registrations,
                 @Qualifier("idpOAuth2AuthorizedClientService") OAuth2AuthorizedClientService clients,
                 @Qualifier("idpClientCredentialsRequestEntityConverter") IdpClientCredentialsRequestEntityConverter converter,
-                @Qualifier("idpStarterProperties") IdpStarterProperties properties) {
-            return new IdpStarterAutoConfiguration().idpOAuth2AuthorizedClientManager(registrations, clients, converter, properties);
+                @Qualifier("idpStarterProperties") IdpStarterProperties properties,
+                @Qualifier("identityAuthorityProperties") IdentityAuthorityProperties authorityProperties) {
+            return new IdpStarterAutoConfiguration().idpOAuth2AuthorizedClientManager(registrations, clients, converter, properties, authorityProperties);
+        }
+
+        @Bean("identityAuthorityProperties")
+        @ConfigurationProperties("egon.cola.platform.tianquan.shoubing.authority")
+        IdentityAuthorityProperties authorityProperties() {
+            return new IdentityAuthorityProperties();
         }
 
         @Bean("oauthUsageObservationProperties")

@@ -105,10 +105,9 @@ class DefaultRoleActivationResolverTest {
             List<DsdSetFact> dsdSets
     ) {
         AuthorizationRuleFacts facts = new AuthorizationRuleFacts(
-                List.of(
-                        new AuthorizationRuleFacts.ResourceGrantBinding("cashier", "payment:read"),
-                        new AuthorizationRuleFacts.ResourceGrantBinding("report", "payment:report")
-                ), List.of(), List.of(), List.of(), List.of()
+                List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
+                List.of(new AuthorizationRuleFacts.PermissionGrantBinding("scope", "app", "cashier", "payment:read"),
+                        new AuthorizationRuleFacts.PermissionGrantBinding("scope", "app", "report", "payment:report"))
         );
         return new RoleActivationInput("tenant", "user", requested,
                 assignments, hierarchy, dsdSets, facts, 7, 3,

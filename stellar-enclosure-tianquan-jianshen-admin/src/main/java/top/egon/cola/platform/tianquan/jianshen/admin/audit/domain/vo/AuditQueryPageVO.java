@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.audit.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -31,13 +37,21 @@ import java.util.TreeMap;
  *
  * 含义与用法：读取、传递或更新 `items` 时应保持 `AuditQueryPageVO` 的生命周期、不可变性和线程安全约束。
  * Meaning and usage: when reading, passing, or updating `items`, preserve `AuditQueryPageVO`'s lifecycle, immutability, and thread-safety constraints.
- */ List<AuditVO> items, /**
+ */ @PermissionResource(key = "tianquan-jianshen.field.audit.domain.vo.AuditQueryPageVO.items", type = ResourceType.FIELD,
+                labelPage = "tianquan-jianshen.permissions", labelKey = "field.items")
+        @FieldPermissions(valueType = PermissionManifest.JsonFieldType.ARRAY,
+                plainRead = @PermissionGroup(codes = {"system:audit:read"}))
+        List<AuditVO> items, /**
  * 字段 `nextCursor` 表示 `AuditQueryPageVO` 中与 `next Cursor` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
  * Field `nextCursor` stores the `next Cursor`-related state, dependency, configuration, or result of `AuditQueryPageVO` (declared type `String`); its lifecycle and value semantics are defined by its declared type and owning object.
  *
  * 含义与用法：读取、传递或更新 `nextCursor` 时应保持 `AuditQueryPageVO` 的生命周期、不可变性和线程安全约束。
  * Meaning and usage: when reading, passing, or updating `nextCursor`, preserve `AuditQueryPageVO`'s lifecycle, immutability, and thread-safety constraints.
- */ String nextCursor) {
+ */ @PermissionResource(key = "tianquan-jianshen.field.audit.domain.vo.AuditQueryPageVO.nextCursor", type = ResourceType.FIELD,
+                labelPage = "tianquan-jianshen.permissions", labelKey = "field.nextCursor")
+        @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                plainRead = @PermissionGroup(codes = {"system:audit:read"}))
+        String nextCursor) {
         /**
          * 构造器 `AuditQueryPageVO` 用于创建并初始化 `AuditQueryPageVO` 实例，建立该类型后续方法所依赖的状态和不变量。
          * Constructor `AuditQueryPageVO` creates and initializes `AuditQueryPageVO`, establishing the state and invariants required by subsequent operations.

@@ -1,5 +1,13 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.organization.controller;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -21,7 +29,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.iam.organization.service.O
 import top.egon.cola.platform.tianquan.jianshen.admin.shared.tenant.domain.TenantContext;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.CurrentRbac3User;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3UserDetails;
-import top.egon.cola.platform.tianquan.jianshen.starter.security.RequiresPermission;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.RequiresPermissions;
 
 import java.util.List;
 
@@ -44,8 +52,10 @@ public class OrganizationController {
         this.facade = facade;
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.Organization.list", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Organization.list")
     @GetMapping
-    @RequiresPermission(value = "system:organization:read")
+    @RequiresPermissions(codes = "system:organization:read")
     @Operation(
             operationId = "tianquan-jianshen-iam-organization-list-v1",
             summary = "查询手工组织",
@@ -59,8 +69,10 @@ public class OrganizationController {
         return ResultRecord.success(facade.list(tenantId(), parentId));
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.Organization.create", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Organization.create")
     @PostMapping
-    @RequiresPermission(value = "system:organization:manage")
+    @RequiresPermissions(codes = "system:organization:manage")
     @Operation(
             operationId = "tianquan-jianshen-iam-organization-create-v1",
             summary = "创建手工组织",
@@ -76,8 +88,10 @@ public class OrganizationController {
                 tenantId(), command, new CurrentRbac3User().require().rbac3UserId()));
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.Organization.update", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Organization.update")
     @PutMapping("/{orgUnitId}")
-    @RequiresPermission(value = "system:organization:manage")
+    @RequiresPermissions(codes = "system:organization:manage")
     @Operation(
             operationId = "tianquan-jianshen-iam-organization-update-v1",
             summary = "更新或移动手工组织",
@@ -94,8 +108,10 @@ public class OrganizationController {
                 tenantId(), orgUnitId, command, new CurrentRbac3User().require().rbac3UserId()));
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.Organization.remove", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Organization.remove")
     @DeleteMapping("/{orgUnitId}")
-    @RequiresPermission(value = "system:organization:manage")
+    @RequiresPermissions(codes = "system:organization:manage")
     @Operation(
             operationId = "tianquan-jianshen-iam-organization-delete-v1",
             summary = "停用手工组织",

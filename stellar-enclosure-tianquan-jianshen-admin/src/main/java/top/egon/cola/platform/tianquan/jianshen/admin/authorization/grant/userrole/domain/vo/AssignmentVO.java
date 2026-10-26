@@ -1,5 +1,9 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.userrole.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+
 import top.egon.cola.platform.tianquan.jianshen.core.constraint.PrerequisiteRoleSpecification;
 import top.egon.cola.platform.tianquan.jianshen.core.constraint.RoleCardinalitySpecification;
 import top.egon.cola.platform.tianquan.jianshen.core.constraint.SsdSpecification;
@@ -38,6 +42,8 @@ import java.util.function.Supplier;
              * 含义与用法：读取、传递或更新 `assignmentId` 时应保持 `AssignmentVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `assignmentId`, preserve `AssignmentVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.userrole.domain.vo.AssignmentVO.assignmentId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.assignmentId", access = ResourceAccess.PUBLIC)
             String assignmentId,
             /**
              * 字段 `roleId` 表示 `AssignmentVO` 中与 `role Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -46,6 +52,8 @@ import java.util.function.Supplier;
              * 含义与用法：读取、传递或更新 `roleId` 时应保持 `AssignmentVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `roleId`, preserve `AssignmentVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.userrole.domain.vo.AssignmentVO.roleId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.roleId", access = ResourceAccess.PUBLIC)
             String roleId,
             /**
              * 字段 `assignmentType` 表示 `AssignmentVO` 中与 `assignment Type` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -54,6 +62,8 @@ import java.util.function.Supplier;
              * 含义与用法：读取、传递或更新 `assignmentType` 时应保持 `AssignmentVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `assignmentType`, preserve `AssignmentVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.userrole.domain.vo.AssignmentVO.assignmentType", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.assignmentType", access = ResourceAccess.PUBLIC)
             String assignmentType,
             /**
              * 字段 `status` 表示 `AssignmentVO` 中与 `status` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -62,6 +72,8 @@ import java.util.function.Supplier;
              * 含义与用法：读取、传递或更新 `status` 时应保持 `AssignmentVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `status`, preserve `AssignmentVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.userrole.domain.vo.AssignmentVO.status", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.status", access = ResourceAccess.PUBLIC)
             String status,
             /**
              * 字段 `validFrom` 表示 `AssignmentVO` 中与 `valid From` 相关的状态、依赖、配置或结果（声明类型 `Instant`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -70,6 +82,9 @@ import java.util.function.Supplier;
              * 含义与用法：读取、传递或更新 `validFrom` 时应保持 `AssignmentVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `validFrom`, preserve `AssignmentVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.userrole.domain.vo.AssignmentVO.validFrom", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.validFrom", access = ResourceAccess.PUBLIC)
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant validFrom,
             /**
              * 字段 `validTo` 表示 `AssignmentVO` 中与 `valid To` 相关的状态、依赖、配置或结果（声明类型 `Instant`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -78,6 +93,9 @@ import java.util.function.Supplier;
              * 含义与用法：读取、传递或更新 `validTo` 时应保持 `AssignmentVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `validTo`, preserve `AssignmentVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.userrole.domain.vo.AssignmentVO.validTo", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.validTo", access = ResourceAccess.PUBLIC)
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant validTo,
             /**
              * 字段 `sourceType` 表示 `AssignmentVO` 中与 `source Type` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -86,6 +104,8 @@ import java.util.function.Supplier;
              * 含义与用法：读取、传递或更新 `sourceType` 时应保持 `AssignmentVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `sourceType`, preserve `AssignmentVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.userrole.domain.vo.AssignmentVO.sourceType", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.sourceType", access = ResourceAccess.PUBLIC)
             String sourceType,
             /**
              * 字段 `sourceId` 表示 `AssignmentVO` 中与 `source Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -94,6 +114,8 @@ import java.util.function.Supplier;
              * 含义与用法：读取、传递或更新 `sourceId` 时应保持 `AssignmentVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `sourceId`, preserve `AssignmentVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.userrole.domain.vo.AssignmentVO.sourceId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.sourceId", access = ResourceAccess.PUBLIC)
             String sourceId,
             /**
              * 字段 `version` 表示 `AssignmentVO` 中与 `version` 相关的状态、依赖、配置或结果（声明类型 `long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -102,6 +124,8 @@ import java.util.function.Supplier;
              * 含义与用法：读取、传递或更新 `version` 时应保持 `AssignmentVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `version`, preserve `AssignmentVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.userrole.domain.vo.AssignmentVO.version", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.version", access = ResourceAccess.PUBLIC)
             long version
     ) {
     }

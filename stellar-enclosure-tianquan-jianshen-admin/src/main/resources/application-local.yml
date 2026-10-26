@@ -2,7 +2,7 @@ spring:
   datasource:
     url: ${TIANQUAN_JIANSHEN_POSTGRES_URL:jdbc:postgresql://127.0.0.1:5432/egon_rbac3_unified_identity_local}
     username: ${TIANQUAN_JIANSHEN_POSTGRES_USER:postgres}
-    password: ${TIANQUAN_JIANSHEN_POSTGRES_PASSWORD:HomeLab666}
+    password: ${TIANQUAN_JIANSHEN_POSTGRES_PASSWORD}
 server:
   port: ${TIANQUAN_JIANSHEN_ADVERTISED_PORT:0}
 
@@ -29,8 +29,6 @@ management:
 egon.cola.platform:
   tianquan:
     shoubing:
-      revocation:
-        primary-endpoint: ${TIANQUAN_SHOUBING_REVOCATION_PRIMARY_ENDPOINT:redis://127.0.0.1:6379}
       usage-observation:
         receiver: JIANSHEN
         enabled: true
@@ -40,19 +38,15 @@ egon.cola.platform:
       jwk-set-uri: ${TIANQUAN_SHOUBING_JWK_SET_URI}
       resource-server-id: ${TIANQUAN_JIANSHEN_RESOURCE_SERVER_ID:permission-tianquan-jianshen-local}
       resource-uri: ${TIANQUAN_JIANSHEN_RESOURCE_URI:https://api.egon.internal/local/permission/tianquan-jianshen}
-      audit:
-        delivery:
-          receipt-ttl: PT1H
-          confirmation-timeout: PT30S
-          batch-size: 100
-        stream: egon:oauth:audit:v1
-        spool-directory: ${EGON_TIANQUAN_JIANSHEN_OAUTH_AUDIT_SPOOL_DIRECTORY}
-        spool-max-bytes: ${EGON_TIANQUAN_JIANSHEN_OAUTH_AUDIT_SPOOL_MAX_BYTES:1073741824}
-        hmac-key-file: ${EGON_TIANQUAN_SHOUBING_OAUTH_AUDIT_HMAC_KEY_FILE}
     jianshen:
       user-scope-policy:
         enabled: true
         permission-scopes:
+          "[system:role-permission:read]": ["system:role-permission:read"]
+          "[system:role-permission:manage]": ["system:role-permission:manage"]
+          "[system:permission-catalog:read]": ["system:permission-catalog:read"]
+          "[system:permission-catalog:manage]": ["system:permission-catalog:manage"]
+          "[system:permission-catalog:activate]": ["system:permission-catalog:activate"]
           "[system:about:read]": ["system:about:read"]
           "[system:application:manage]": ["system:application:manage"]
           "[system:application:read]": ["system:application:read"]
@@ -106,8 +100,7 @@ egon.cola.platform:
           "[system:user:manage]": ["system:user:manage"]
           "[system:user:read]": ["system:user:read"]
       runtime:
-        redis-address: ${TIANQUAN_JIANSHEN_AUTHORIZATION_REDIS_ADDRESS:redis://127.0.0.1:6379}
-        password-file: ${UNIFIED_IDENTITY_REDIS_PASSWORD_FILE:${UNIFIED_XINGYUAN_RUNTIME_DIR:target/local-unified-xingyuan}/secrets/redis.password}
+        artifact-digest: ${TIANQUAN_JIANSHEN_ARTIFACT_DIGEST:}
       authorization:
         endpoint: ${TIANQUAN_JIANSHEN_AUTHORIZATION_ENDPOINT:http://127.0.0.1:18130}
         service-token:
@@ -117,17 +110,12 @@ egon.cola.platform:
 
 egon:
   tianquan-jianshen:
-    initial-context:
-      tianshu-enabled: ${TIANQUAN_JIANSHEN_INITIAL_TIANSHU_BOOTSTRAP_ENABLED:true}
     development-bootstrap:
       enabled: ${TIANQUAN_JIANSHEN_DEVELOPMENT_BOOTSTRAP_ENABLED:false}
       auto-activate-local-admin-roles: ${TIANQUAN_JIANSHEN_DEVELOPMENT_AUTO_ACTIVATE_LOCAL_ADMIN_ROLES:false}
       tenant-ids: ${TIANQUAN_JIANSHEN_DEVELOPMENT_TENANT_IDS:}
       identity-sub: ${TIANQUAN_JIANSHEN_DEVELOPMENT_IDENTITY_SUB:}
     component-keys: ${TIANQUAN_JIANSHEN_COMPONENT_KEYS:tianquan-jianshen-page}
-    runtime:
-      redis-address: ${TIANQUAN_JIANSHEN_RUNTIME_REDIS_ADDRESS:redis://localhost:6379}
-      redis-password-file: ${TIANQUAN_JIANSHEN_RUNTIME_REDIS_PASSWORD_FILE:${UNIFIED_XINGYUAN_RUNTIME_DIR:target/local-unified-xingyuan}/secrets/redis.password}
     yuheng-status:
       admin-base-url: ${YUHENG_ADMIN_BASE_URL:http://localhost:8088}
       yuheng-group-id: ${YUHENG_GROUP_ID:local}

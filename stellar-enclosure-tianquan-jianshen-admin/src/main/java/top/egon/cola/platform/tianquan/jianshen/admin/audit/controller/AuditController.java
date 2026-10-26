@@ -1,5 +1,13 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.audit.controller;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,7 +27,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.audit.service.AuditQuerySe
 import top.egon.cola.platform.tianquan.jianshen.admin.shared.tenant.domain.TenantContext;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.CurrentRbac3User;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3UserDetails;
-import top.egon.cola.platform.tianquan.jianshen.starter.security.RequiresPermission;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.RequiresPermissions;
 
 import java.time.Instant;
 
@@ -58,8 +66,10 @@ public class AuditController {
      *
      * @return 审计查询分页结果 / paged audit-query result
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Audit.auditLogs", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Audit.auditLogs")
     @GetMapping("/audit-logs")
-    @RequiresPermission(value = "system:audit:read")
+    @RequiresPermissions(codes = "system:audit:read")
     @Operation(
             operationId = "tianquan-jianshen-audit-log-list-v1",
             summary = "按租户和精确过滤条件游标查询审计",

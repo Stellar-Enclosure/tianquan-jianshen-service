@@ -24,9 +24,9 @@ class Rbac3DevelopmentTopologyTest {
                 top.egon.cola.platform.tianquan.jianshen.admin.iam.position.controller.PositionController.class,
                 top.egon.cola.platform.tianquan.jianshen.admin.iam.position.controller.UserPositionAssignmentController.class)) {
             for (var method : controller.getDeclaredMethods()) {
-                var required = method.getAnnotation(top.egon.cola.platform.tianquan.jianshen.starter.security.RequiresPermission.class);
+                var required = method.getAnnotation(top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.RequiresPermissions.class);
                 if (required != null) {
-                    assertThat(permissions).as("local capability for %s", method).contains(required.value());
+                    assertThat(permissions).as("local capability for %s", method).contains(required.codes());
                 }
             }
         }
@@ -41,7 +41,7 @@ class Rbac3DevelopmentTopologyTest {
                 .containsExactly(
                         "tianquan-jianshen-admin",
                         "tianquan-shoubing-admin",
-                        "stellar-enclosure-yuheng-admin",
+                        "yuheng-admin",
                         "tianshu-admin",
                         "mock-backend",
                         "mock-backend");
@@ -74,7 +74,7 @@ class Rbac3DevelopmentTopologyTest {
                 "tianquan-shoubing:resource-server:status",
                 "tianquan-shoubing:resource-server:key",
                 "tianquan-shoubing:resource-server:grant");
-        assertThat(application("stellar-enclosure-yuheng-admin").permissions()).contains(
+        assertThat(application("yuheng-admin").permissions()).contains(
                 "yuheng:read",
                 "yuheng:releases:write",
                 "yuheng:mcp:read",

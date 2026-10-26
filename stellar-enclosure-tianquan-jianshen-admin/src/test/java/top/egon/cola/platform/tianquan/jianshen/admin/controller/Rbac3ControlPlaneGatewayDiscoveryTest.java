@@ -22,10 +22,14 @@ import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.controller.RoleCo
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.controller.ConstraintController;
 
 @WebMvcTest(
+        properties = {"egon.cola.component.tianshu.enabled=false", "egon.cola.component.tianshu.registry.enabled=false",
+                "egon.cola.component.yuheng.reporting.enabled=false", "egon.cola.platform.tianquan.jianshen.enabled=false",
+                "egon.cola.platform.tianquan.shoubing.enabled=false"},
         controllers = {
                 ApplicationResourceController.class,
                 RoleController.class,
-                ConstraintController.class
+                ConstraintController.class,
+                top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.rolepermission.controller.RolePermissionGrantController.class
         },
         excludeAutoConfiguration = {
                 SecurityAutoConfiguration.class,
@@ -48,6 +52,15 @@ class Rbac3ControlPlaneGatewayDiscoveryTest {
     @MockitoBean
     private DatabaseClock databaseClock;
 
+    @MockitoBean
+    private top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.rolepermission.service.RolePermissionGrantService rolePermissions;
+
+    @MockitoBean
+    private top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.domain.convertor.PermissionCatalogJson catalogJson;
+
+    @MockitoBean
+    private top.egon.cola.platform.tianquan.jianshen.starter.field.PermissionFieldBindingGuard fieldWrites;
+
     @Test
     void openApiAnnotationsExposeAllResourceRoleAndTypedConstraintOperations() {
         org.assertj.core.api.Assertions.assertThat(operationIds(ApplicationResourceController.class))
@@ -58,8 +71,10 @@ class Rbac3ControlPlaneGatewayDiscoveryTest {
                 .contains(
                         "tianquan-jianshen-sod-set-create-v1",
                         "tianquan-jianshen-data-rule-create-v1",
-                        "tianquan-jianshen-field-rule-create-v1",
-                        "tianquan-jianshen-operation-sod-create-v1");
+                        "tianquan-jianshen-operation-sod-create-v1")
+                .doesNotContain("tianquan-jianshen-field-rule-create-v1", "tianquan-jianshen-field-rule-update-v1");
+        org.assertj.core.api.Assertions.assertThat(operationIds(top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.rolepermission.controller.RolePermissionGrantController.class))
+                .contains("tianquan-jianshen-role-permissions-read-v1", "tianquan-jianshen-role-permissions-replace-v1");
     }
 
     private Set<String> operationIds(Class<?> controllerType) {

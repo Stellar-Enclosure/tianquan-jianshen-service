@@ -11,22 +11,14 @@ import top.egon.cola.platform.tianquan.jianshen.admin.bootstrap.repository.Platf
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.state.repository.TenantAuthorizationStateRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.user.domain.po.UserPO;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.application.domain.po.ApplicationPO;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.permission.domain.po.PermissionPO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.permission.domain.enums.PermissionRiskLevelEnum;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.permission.domain.enums.PermissionStatusEnum;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.po.RolePO;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.roleresource.domain.enums.RoleResourceGrantStatusEnum;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.roleresource.domain.po.RoleResourceGrantPO;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.domain.enums.ResourceStatusEnum;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.domain.enums.ResourceTypeEnum;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.domain.po.ResourcePO;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.application.domain.enums.TenantApplicationStatusEnum;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.enums.RoleTypeEnum;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.enums.RoleRiskLevelEnum;
@@ -75,32 +67,7 @@ public class JpaPlatformAdminBootstrapRepository
      * Meaning and usage: when reading, passing, or updating `ROLE_CODE`, preserve `JpaPlatformAdminBootstrapRepository`'s lifecycle, immutability, and thread-safety constraints.
      */
     private static final String ROLE_CODE = "ROLE_PLATFORM_ADMIN";
-    /**
-     * 字段 `PLATFORM_PERMISSIONS` 表示 `JpaPlatformAdminBootstrapRepository` 中与 `PLATFORM PERMISSIONS` 相关的状态、依赖、配置或结果（声明类型 `List&lt;String&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
-     * Field `PLATFORM_PERMISSIONS` stores the `PLATFORM PERMISSIONS`-related state, dependency, configuration, or result of `JpaPlatformAdminBootstrapRepository` (declared type `List&lt;String&gt;`); its lifecycle and value semantics are defined by its declared type and owning object.
-     *
-     * 含义与用法：读取、传递或更新 `PLATFORM_PERMISSIONS` 时应保持 `JpaPlatformAdminBootstrapRepository` 的生命周期、不可变性和线程安全约束。
-     * Meaning and usage: when reading, passing, or updating `PLATFORM_PERMISSIONS`, preserve `JpaPlatformAdminBootstrapRepository`'s lifecycle, immutability, and thread-safety constraints.
-     */
-    private static final List<String> REQUIRED_PLATFORM_ADMIN_RESOURCE_CODES = List.of(
-            "iam.overview",
-            "iam.users",
-            "iam.organizations",
-            "iam.positions",
-            "iam.roles",
-            "iam.permissions",
-            "iam.role-activation",
-            "iam.tenant-applications",
-            "iam.resources",
-            "iam.fields",
-            "iam.policies",
-            "iam.management-policies",
-            "iam.diagnostics.runtime",
-            "iam.diagnostics.audit",
-            "iam.diagnostics.simulation",
-            "iam.permissions.create",
-            "iam.resources.archive",
-            "iam.fields.manage");
+
 
     /**
      * 字段 `entityManager` 表示 `JpaPlatformAdminBootstrapRepository` 中与 `entity Manager` 相关的状态、依赖、配置或结果（声明类型 `EntityManager`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -201,49 +168,6 @@ public class JpaPlatformAdminBootstrapRepository
                 RoleRiskLevelEnum.CRITICAL, true, null, 0, null, ACTOR, now);
         entityManager.persist(administratorRole);
 
-        boolean grantsChanged = false;
-        List<ResourcePO> resources = entityManager.createQuery(
-                        "select resource from ResourceEntity resource "
-                                + "where resource.applicationId = :applicationId "
-                                + "and resource.resourceCode in :resourceCodes "
-                                + "and resource.status = :status", ResourcePO.class)
-                .setParameter("applicationId", applicationId)
-                .setParameter("resourceCodes", REQUIRED_PLATFORM_ADMIN_RESOURCE_CODES)
-                .setParameter("status", ResourceStatusEnum.ACTIVE)
-                .getResultList();
-        if (resources.size() != REQUIRED_PLATFORM_ADMIN_RESOURCE_CODES.size()) {
-            Set<String> found = resources.stream()
-                    .map(ResourcePO::getResourceCode)
-                    .collect(java.util.stream.Collectors.toSet());
-            List<String> missing = REQUIRED_PLATFORM_ADMIN_RESOURCE_CODES.stream()
-                    .filter(code -> !found.contains(code))
-                    .toList();
-            throw new IllegalStateException("required platform resources are missing: " + missing);
-        }
-        for (ResourcePO resource : resources) {
-            if (resource.getResourceType() != ResourceTypeEnum.ROUTE
-                    && resource.getResourceType() != ResourceTypeEnum.ACTION
-                    && resource.getResourceType() != ResourceTypeEnum.API) {
-                throw new IllegalStateException(
-                        "platform resource is not grantable: " + resource.getResourceCode());
-            }
-            Long permissionId = resource.getRequiredPermissionId();
-            PermissionPO permission = permissionId == null
-                    ? null : entityManager.find(PermissionPO.class, permissionId);
-            if (permission == null
-                    || !applicationId.equals(permission.getApplicationId())
-                    || permission.getStatus() != PermissionStatusEnum.ACTIVE) {
-                throw new IllegalStateException(
-                        "platform resource is not actively mapped: " + resource.getResourceCode());
-            }
-            if (!activeGrantExists(normalizedTenantId, roleId, resource.getId(), now)) {
-                entityManager.persist(new RoleResourceGrantPO(
-                        SnowflakeIdGenerator.nextLongId(), normalizedTenantId, applicationId,
-                        roleId, resource.getId(), now, null, ACTOR, now));
-                grantsChanged = true;
-            }
-        }
-
         UserPO administrator = new UserPO(
                 userId, normalizedTenantId, normalizedIdentitySub,
                 top.egon.cola.platform.tianquan.jianshen.admin.iam.user.domain.enums.UserStatusEnum.ACTIVE,
@@ -257,9 +181,7 @@ public class JpaPlatformAdminBootstrapRepository
                 null, ACTOR, now);
         entityManager.persist(assignment);
         entityManager.flush();
-        if (grantsChanged) {
-            authorizationState.increment(normalizedTenantId, ACTOR);
-        }
+        authorizationState.increment(normalizedTenantId, ACTOR);
         insertSelfClosure(normalizedTenantId, applicationId, roleId);
 
         String requestId = "bootstrap:" + normalizedTenantId;
@@ -310,25 +232,7 @@ public class JpaPlatformAdminBootstrapRepository
         }
     }
 
-    private boolean activeGrantExists(
-            Long tenantId,
-            Long roleId,
-            Long resourceId,
-            Instant now) {
-        Number count = (Number) entityManager.createQuery(
-                        "select count(grant) from RoleResourceGrantEntity grant "
-                                + "where grant.tenantId = :tenantId "
-                                + "and grant.roleId = :roleId and grant.resourceId = :resourceId "
-                                + "and grant.status = :status and grant.validFrom <= :now "
-                                + "and (grant.validTo is null or grant.validTo > :now)")
-                .setParameter("tenantId", tenantId)
-                .setParameter("roleId", roleId)
-                .setParameter("resourceId", resourceId)
-                .setParameter("status", RoleResourceGrantStatusEnum.ACTIVE)
-                .setParameter("now", now)
-                .getSingleResult();
-        return count.longValue() > 0L;
-    }
+
 
     /**
      * 方法 `acquireLock` 按照 `JpaPlatformAdminBootstrapRepository` 的职责处理输入，完成 `acquire Lock` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。

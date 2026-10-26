@@ -1,7 +1,14 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.controller;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.PositiveOrZero;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,15 +25,12 @@ import top.egon.cola.component.yuheng.openapi.annotation.EgonGatewayPolicy;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.domain.dto.ArchiveResourceRequestDTO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.domain.vo.ArchiveResultVO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.domain.vo.ResourceVO;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.field.domain.dto.ChangeFieldDefinitionStatusRequestDTO;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.field.domain.dto.CreateFieldDefinitionRequestDTO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.field.domain.vo.FieldDefinitionVO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.service.GlobalResourceCatalogService;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.application.domain.vo.ApplicationVO;
 import top.egon.cola.platform.tianquan.jianshen.admin.shared.domain.DatabaseClock;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.CurrentRbac3User;
-import top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3UserDetails;
-import top.egon.cola.platform.tianquan.jianshen.starter.security.RequiresPermission;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.RequiresPermissions;
 
 import java.util.List;
 
@@ -92,8 +96,10 @@ public class ApplicationResourceController {
      *
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.ApplicationResource.applications", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.ApplicationResource.applications")
     @GetMapping("/applications")
-    @RequiresPermission(value = "system:application:read")
+    @RequiresPermissions(codes = "system:application:read")
     @Operation(
             operationId = "tianquan-jianshen-application-list-v1",
             summary = "查询租户应用",
@@ -116,8 +122,10 @@ public class ApplicationResourceController {
      * @param applicationId 输入参数 `applicationId`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.ApplicationResource.resources", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.ApplicationResource.resources")
     @GetMapping("/applications/{applicationId}/resources")
-    @RequiresPermission(value = "system:resource:read")
+    @RequiresPermissions(codes = "system:resource:read")
     @Operation(
             operationId = "tianquan-jianshen-application-resource-list-v1",
             summary = "查询应用资源",
@@ -131,8 +139,10 @@ public class ApplicationResourceController {
         return ResultRecord.success(facade.resources(applicationId));
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.ApplicationResource.fields", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.ApplicationResource.fields")
     @GetMapping("/applications/{applicationId}/fields")
-    @RequiresPermission(value = "system:field-definition:read")
+    @RequiresPermissions(codes = "system:field-definition:read")
     @Operation(
             operationId = "tianquan-jianshen-application-field-list-v1",
             summary = "查询应用字段定义",
@@ -146,8 +156,10 @@ public class ApplicationResourceController {
         return ResultRecord.success(facade.fields(applicationId, null));
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.ApplicationResource.resourceFields", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.ApplicationResource.resourceFields")
     @GetMapping("/resources/{resourceId}/fields")
-    @RequiresPermission(value = "system:field-definition:read")
+    @RequiresPermissions(codes = "system:field-definition:read")
     @Operation(
             operationId = "tianquan-jianshen-resource-field-list-v1",
             summary = "查询资源字段定义",
@@ -162,41 +174,6 @@ public class ApplicationResourceController {
         return ResultRecord.success(facade.fields(applicationId, resourceId));
     }
 
-    @PostMapping("/fields")
-    @RequiresPermission(value = "system:field-definition:manage")
-    @Operation(
-            operationId = "tianquan-jianshen-resource-field-create-v1",
-            summary = "创建资源字段定义",
-            tags = {"tianquan-jianshen", "resource", "field"}
-    )
-    @EgonGatewayPolicy(
-            exposure = EgonGatewayPolicy.Exposure.EXTERNAL
-    )
-    public ResultRecord<FieldDefinitionVO> createField(
-            @Valid @RequestBody CreateFieldDefinitionRequestDTO command
-            ) {
-        return ResultRecord.success(facade.createField(
-                command, new CurrentRbac3User().require().rbac3UserId()));
-    }
-
-    @PutMapping("/fields/{fieldId}/status")
-    @RequiresPermission(value = "system:field-definition:manage")
-    @Operation(
-            operationId = "tianquan-jianshen-resource-field-status-v1",
-            summary = "变更资源字段状态",
-            tags = {"tianquan-jianshen", "resource", "field"}
-    )
-    @EgonGatewayPolicy(
-            exposure = EgonGatewayPolicy.Exposure.EXTERNAL
-    )
-    public ResultRecord<FieldDefinitionVO> changeFieldStatus(
-            @PathVariable String fieldId,
-            @Valid @RequestBody ChangeFieldDefinitionStatusRequestDTO command
-            ) {
-        return ResultRecord.success(facade.changeFieldStatus(
-                fieldId, command, new CurrentRbac3User().require().rbac3UserId()));
-    }
-
     /**
      * 方法 `archive` 按照 `ApplicationResourceController` 的职责处理输入，完成 `archive` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。
      * Method `archive` processes its inputs according to `ApplicationResourceController`'s responsibility, performs the `archive` operation, and returns a result or declared side effect; callers must follow its parameter and exception contract.
@@ -209,8 +186,10 @@ public class ApplicationResourceController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.ApplicationResource.archive", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.ApplicationResource.archive")
     @PostMapping("/resources/{resourceId}/archive")
-    @RequiresPermission(value = "system:resource:archive")
+    @RequiresPermissions(codes = "system:resource:archive")
     @Operation(
             operationId = "tianquan-jianshen-resource-archive-v1",
             summary = "归档已失效资源",

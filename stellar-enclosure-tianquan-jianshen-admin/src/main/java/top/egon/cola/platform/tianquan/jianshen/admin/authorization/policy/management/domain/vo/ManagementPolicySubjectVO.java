@@ -1,5 +1,12 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.management.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionMode;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import top.egon.cola.platform.tianquan.jianshen.core.delegation.ManagementPolicyDecisionService;
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
 import java.time.Instant;
@@ -23,11 +30,19 @@ import java.util.Set;
  *
  * 含义与用法：读取、传递或更新 `type` 时应保持 `ManagementPolicySubjectVO` 的生命周期、不可变性和线程安全约束。
  * Meaning and usage: when reading, passing, or updating `type`, preserve `ManagementPolicySubjectVO`'s lifecycle, immutability, and thread-safety constraints.
- */ String type, /**
+ */ @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.ManagementPolicySubjectVO.type", type = ResourceType.FIELD,
+                labelPage = "tianquan-jianshen.permissions", labelKey = "field.type")
+        @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:management-policy:manage", "system:management-policy:read"}))
+        String type, /**
  * 字段 `id` 表示 `ManagementPolicySubjectVO` 中与 `id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
  * Field `id` stores the `id`-related state, dependency, configuration, or result of `ManagementPolicySubjectVO` (declared type `String`); its lifecycle and value semantics are defined by its declared type and owning object.
  *
  * 含义与用法：读取、传递或更新 `id` 时应保持 `ManagementPolicySubjectVO` 的生命周期、不可变性和线程安全约束。
  * Meaning and usage: when reading, passing, or updating `id`, preserve `ManagementPolicySubjectVO`'s lifecycle, immutability, and thread-safety constraints.
- */ String id) {
+ */ @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.ManagementPolicySubjectVO.id", type = ResourceType.FIELD,
+                labelPage = "tianquan-jianshen.permissions", labelKey = "field.id")
+        @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:management-policy:manage", "system:management-policy:read"}))
+        String id) {
     }

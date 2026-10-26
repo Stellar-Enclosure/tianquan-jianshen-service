@@ -1,5 +1,8 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.repository;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.CatalogScope;
+import top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3UserDetails;
+
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
 import java.util.HashSet;
 import java.util.List;
@@ -8,7 +11,6 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domai
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.dto.PrerequisiteGroupCommandDTO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.dto.CardinalityCommandDTO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.dto.DataRuleCommandDTO;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.dto.FieldRuleCommandDTO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.dto.OperationSodRuleCommandDTO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.vo.MutationResultVO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.vo.SodVO;
@@ -80,10 +82,11 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domai
          * 用法：调用 `dataRules` 前准备符合契约的参数，并根据返回值、异常或副作用继续业务流程。
          * Usage: provide contract-compliant arguments before calling `dataRules`, then continue the business flow using its result, exception, or side effect.
          *
-         * @param tenantId 输入参数 `tenantId`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
+         * @param target 已验证租户下的完整目录归属；complete catalog identity in the verified tenant.
+     * @param actor 已认证 USER 身份；verified USER identity.
          * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
          */
-        List<DataRuleVO> dataRules(String tenantId);
+        List<DataRuleVO> dataRules(CatalogScope target, Rbac3UserDetails actor);
 
         /**
          * 方法 `saveDataRule` 按照 `ConstraintRepository` 的职责处理输入，完成 `save Data Rule` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。
@@ -109,17 +112,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domai
          */
         List<FieldRuleVO> fieldRules(String tenantId);
 
-        /**
-         * 方法 `saveFieldRule` 按照 `ConstraintRepository` 的职责处理输入，完成 `save Field Rule` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。
-         * Method `saveFieldRule` processes its inputs according to `ConstraintRepository`'s responsibility, performs the `save Field Rule` operation, and returns a result or declared side effect; callers must follow its parameter and exception contract.
-         *
-         * 用法：调用 `saveFieldRule` 前准备符合契约的参数，并根据返回值、异常或副作用继续业务流程。
-         * Usage: provide contract-compliant arguments before calling `saveFieldRule`, then continue the business flow using its result, exception, or side effect.
-         *
-         * @param command 输入参数 `command`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-         * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
-         */
-        MutationResultVO saveFieldRule(FieldRuleCommandDTO command);
+
 
         /**
          * 方法 `operationSodRules` 按照 `ConstraintRepository` 的职责处理输入，完成 `operation Sod Rules` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。

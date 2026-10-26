@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.management.domain.dto;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -46,6 +52,10 @@ import java.util.stream.Collectors;
              * 含义与用法：读取、传递或更新 `policyCode` 时应保持 `PolicyRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `policyCode`, preserve `PolicyRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.dto.PolicyRequestDTO.policyCode", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.policyCode")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:management-policy:manage"}))
             @NotBlank String policyCode,
             /**
              * 字段 `name` 表示 `PolicyRequestDTO` 中与 `name` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -54,6 +64,10 @@ import java.util.stream.Collectors;
              * 含义与用法：读取、传递或更新 `name` 时应保持 `PolicyRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `name`, preserve `PolicyRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.dto.PolicyRequestDTO.name", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.name")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:management-policy:manage"}))
             @NotBlank String name,
             /**
              * 字段 `validFrom` 表示 `PolicyRequestDTO` 中与 `valid From` 相关的状态、依赖、配置或结果（声明类型 `Instant`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -62,6 +76,11 @@ import java.util.stream.Collectors;
              * 含义与用法：读取、传递或更新 `validFrom` 时应保持 `PolicyRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `validFrom`, preserve `PolicyRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.dto.PolicyRequestDTO.validFrom", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.validFrom")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:management-policy:manage"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             @NotNull Instant validFrom,
             /**
              * 字段 `validTo` 表示 `PolicyRequestDTO` 中与 `valid To` 相关的状态、依赖、配置或结果（声明类型 `Instant`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -70,6 +89,11 @@ import java.util.stream.Collectors;
              * 含义与用法：读取、传递或更新 `validTo` 时应保持 `PolicyRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `validTo`, preserve `PolicyRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.dto.PolicyRequestDTO.validTo", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.validTo")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:management-policy:manage"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant validTo,
             /**
              * 字段 `subjects` 表示 `PolicyRequestDTO` 中与 `subjects` 相关的状态、依赖、配置或结果（声明类型 `List&lt;@Valid ManagementPolicySubjectDTO&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -78,6 +102,10 @@ import java.util.stream.Collectors;
              * 含义与用法：读取、传递或更新 `subjects` 时应保持 `PolicyRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `subjects`, preserve `PolicyRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.dto.PolicyRequestDTO.subjects", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.subjects")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.ARRAY,
+                    write = @PermissionGroup(codes = {"system:management-policy:manage"}))
             @NotEmpty List<@Valid ManagementPolicySubjectDTO> subjects,
             /**
              * 字段 `scopes` 表示 `PolicyRequestDTO` 中与 `scopes` 相关的状态、依赖、配置或结果（声明类型 `List&lt;@Valid ManagementPolicyScopeDTO&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -86,6 +114,10 @@ import java.util.stream.Collectors;
              * 含义与用法：读取、传递或更新 `scopes` 时应保持 `PolicyRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `scopes`, preserve `PolicyRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.dto.PolicyRequestDTO.scopes", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.scopes")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.ARRAY,
+                    write = @PermissionGroup(codes = {"system:management-policy:manage"}))
             @NotEmpty List<@Valid ManagementPolicyScopeDTO> scopes,
             /**
              * 字段 `activationRootRoleIds` 表示 `PolicyRequestDTO` 中与 `activation Root Role Ids` 相关的状态、依赖、配置或结果（声明类型 `List&lt;@NotBlank String&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -94,6 +126,10 @@ import java.util.stream.Collectors;
              * 含义与用法：读取、传递或更新 `activationRootRoleIds` 时应保持 `PolicyRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `activationRootRoleIds`, preserve `PolicyRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.dto.PolicyRequestDTO.activationRootRoleIds", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.activationRootRoleIds")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.ARRAY,
+                    write = @PermissionGroup(codes = {"system:management-policy:manage"}))
             @NotEmpty List<@NotBlank String> activationRootRoleIds,
             /**
              * 字段 `operations` 表示 `PolicyRequestDTO` 中与 `operations` 相关的状态、依赖、配置或结果（声明类型 `Set&lt;@NotBlank String&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -102,6 +138,10 @@ import java.util.stream.Collectors;
              * 含义与用法：读取、传递或更新 `operations` 时应保持 `PolicyRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `operations`, preserve `PolicyRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.dto.PolicyRequestDTO.operations", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.operations")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.ARRAY,
+                    write = @PermissionGroup(codes = {"system:management-policy:manage"}))
             @NotEmpty Set<@NotBlank String> operations,
             /**
              * 字段 `restrictions` 表示 `PolicyRequestDTO` 中与 `restrictions` 相关的状态、依赖、配置或结果（声明类型 `ManagementPolicyRestrictionsDTO`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -110,6 +150,10 @@ import java.util.stream.Collectors;
              * 含义与用法：读取、传递或更新 `restrictions` 时应保持 `PolicyRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `restrictions`, preserve `PolicyRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.dto.PolicyRequestDTO.restrictions", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.restrictions")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    write = @PermissionGroup(codes = {"system:management-policy:manage"}))
             @NotNull @Valid ManagementPolicyRestrictionsDTO restrictions
     ) {
         /**

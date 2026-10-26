@@ -1,5 +1,13 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.application.controller;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,7 +30,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.iam.application.domain.vo.
 import top.egon.cola.platform.tianquan.jianshen.admin.shared.tenant.domain.TenantContext;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.CurrentRbac3User;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3UserDetails;
-import top.egon.cola.platform.tianquan.jianshen.starter.security.RequiresPermission;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.RequiresPermissions;
 
 import java.util.List;
 
@@ -45,8 +53,10 @@ public class ApplicationController {
         this.facade = facade;
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.Application.admit", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Application.admit")
     @PostMapping("/tenant-applications")
-    @RequiresPermission(value = "system:application:manage")
+    @RequiresPermissions(codes = "system:application:manage")
     @Operation(
             operationId = "tianquan-jianshen-application-scope-admit-v1",
             summary = "将 Tianshu 应用纳入租户授权范围",
@@ -62,8 +72,10 @@ public class ApplicationController {
                 tenantId(), new CurrentRbac3User().require().rbac3UserId(), command));
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.Application.applications", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Application.applications")
     @GetMapping("/tenant-applications")
-    @RequiresPermission(value = "system:application:read")
+    @RequiresPermissions(codes = "system:application:read")
     @Operation(
             operationId = "tianquan-jianshen-application-scope-list-v1",
             summary = "查询租户应用授权范围",
@@ -76,8 +88,10 @@ public class ApplicationController {
         return ResultRecord.success(facade.applications(tenantId()));
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.Application.application", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Application.application")
     @GetMapping("/tenant-applications/{applicationId}")
-    @RequiresPermission(value = "system:application:read")
+    @RequiresPermissions(codes = "system:application:read")
     @Operation(
             operationId = "tianquan-jianshen-application-scope-get-v1",
             summary = "查询租户应用授权范围详情",
@@ -91,8 +105,10 @@ public class ApplicationController {
         return ResultRecord.success(facade.application(tenantId(), applicationId));
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.Application.changeStatus", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Application.changeStatus")
     @PutMapping("/tenant-applications/{applicationId}/status")
-    @RequiresPermission(value = "system:application:manage")
+    @RequiresPermissions(codes = "system:application:manage")
     @Operation(
             operationId = "tianquan-jianshen-application-scope-status-v1",
             summary = "变更租户应用授权范围状态",
@@ -110,8 +126,10 @@ public class ApplicationController {
                 new CurrentRbac3User().require().rbac3UserId(), command));
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.Application.remove", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Application.remove")
     @DeleteMapping("/tenant-applications/{applicationId}")
-    @RequiresPermission(value = "system:application:manage")
+    @RequiresPermissions(codes = "system:application:manage")
     @Operation(
             operationId = "tianquan-jianshen-application-scope-remove-v1",
             summary = "移除无依赖的租户应用授权范围",

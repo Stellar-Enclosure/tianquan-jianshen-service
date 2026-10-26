@@ -49,8 +49,7 @@ public class TianquanSecurityObservationConfiguration {
                 && java.util.Set.of("local", "dev").contains(environment.getProperty("DEPLOYMENT_ENV",
                         environment.getProperty("egon.cola.component.tianshu.env", ""))) && usage.isAllowLocalPlaintext();
         if (idp.getTrustedIssuers().isEmpty()) {
-            secureEndpoint(idp.getIssuer(), "https", false);
-            secureEndpoint(idp.getJwkSetUri(), "https", local);
+            throw new IllegalStateException("OAUTH_OBSERVATION_TRUSTED_ISSUERS_REQUIRED");
         } else {
             for (var entry : idp.getTrustedIssuers().values()) {
                 secureEndpoint(entry.getIssuer(), "https", false);
@@ -58,10 +57,8 @@ public class TianquanSecurityObservationConfiguration {
             }
         }
         secureEndpoint(idp.getResourceUri() == null ? null : idp.getResourceUri().toASCIIString(), "https", local);
-        secureEndpoint(idp.getRevocation().getPrimaryEndpoint(), "rediss", local);
-        boolean trustedFallback = idp.getTrustedIssuers().isEmpty()
-                ? usage.getFallbackIssuer().toASCIIString().equals(idp.getIssuer())
-                : idp.getTrustedIssuers().values().stream().anyMatch(entry -> usage.getFallbackIssuer().toASCIIString().equals(entry.getIssuer())
+        secureEndpoint(environment.getProperty("egon.cola.platform.tianquan.shoubing.authority.base-uri"), "https", false);
+        boolean trustedFallback = idp.getTrustedIssuers().values().stream().anyMatch(entry -> usage.getFallbackIssuer().toASCIIString().equals(entry.getIssuer())
                         && "ACTIVE".equals(entry.getStatus()));
         if (!trustedFallback) { throw new IllegalStateException("OAUTH_OBSERVATION_FALLBACK_UNTRUSTED"); }
         secureEndpoint(environment.getProperty("egon.cola.platform.tianquan.jianshen.authorization.endpoint"), "https", local);

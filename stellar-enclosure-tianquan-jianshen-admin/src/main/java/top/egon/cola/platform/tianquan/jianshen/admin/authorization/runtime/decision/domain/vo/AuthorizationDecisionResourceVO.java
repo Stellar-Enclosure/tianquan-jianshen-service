@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.decision.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 /**
      * 类型化授权判定的目标应用资源。
      * Target application resource for a typed authorization decision.
@@ -15,13 +21,23 @@ package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.dec
  *
  * 含义与用法：读取、传递或更新 `applicationCode` 时应保持 `AuthorizationDecisionResourceVO` 的生命周期、不可变性和线程安全约束。
  * Meaning and usage: when reading, passing, or updating `applicationCode`, preserve `AuthorizationDecisionResourceVO`'s lifecycle, immutability, and thread-safety constraints.
- */ String applicationCode, /**
+ */ @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.decision.domain.vo.AuthorizationDecisionResourceVO.applicationCode", type = ResourceType.FIELD,
+                labelPage = "tianquan-jianshen.permissions", labelKey = "field.applicationCode",
+                allowedPrincipals = {PermissionManifest.PrincipalType.USER, PermissionManifest.PrincipalType.SERVICE}, oauthScopes = {"service:authorization:decide"})
+        @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                write = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
+        String applicationCode, /**
  * 字段 `resourceCode` 表示 `AuthorizationDecisionResourceVO` 中与 `resource Code` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
  * Field `resourceCode` stores the `resource Code`-related state, dependency, configuration, or result of `AuthorizationDecisionResourceVO` (declared type `String`); its lifecycle and value semantics are defined by its declared type and owning object.
  *
  * 含义与用法：读取、传递或更新 `resourceCode` 时应保持 `AuthorizationDecisionResourceVO` 的生命周期、不可变性和线程安全约束。
  * Meaning and usage: when reading, passing, or updating `resourceCode`, preserve `AuthorizationDecisionResourceVO`'s lifecycle, immutability, and thread-safety constraints.
- */ String resourceCode) {
+ */ @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.decision.domain.vo.AuthorizationDecisionResourceVO.resourceCode", type = ResourceType.FIELD,
+                labelPage = "tianquan-jianshen.permissions", labelKey = "field.resourceCode",
+                allowedPrincipals = {PermissionManifest.PrincipalType.USER, PermissionManifest.PrincipalType.SERVICE}, oauthScopes = {"service:authorization:decide"})
+        @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                write = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
+        String resourceCode) {
 
         /**
          * 校验并规范化目标资源。

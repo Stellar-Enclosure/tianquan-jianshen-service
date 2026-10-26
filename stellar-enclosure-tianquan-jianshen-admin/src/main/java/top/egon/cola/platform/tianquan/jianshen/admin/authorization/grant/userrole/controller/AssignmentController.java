@@ -1,5 +1,13 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.userrole.controller;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,7 +39,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.shared.tenant.domain.Tenan
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.CurrentRbac3User;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3UserDetails;
-import top.egon.cola.platform.tianquan.jianshen.starter.security.RequiresPermission;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.RequiresPermissions;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -122,6 +130,8 @@ public class AssignmentController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Assignment.assignments", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Assignment.assignments", access = ResourceAccess.PUBLIC, allowedPrincipals = PermissionManifest.PrincipalType.USER)
     @GetMapping
     @Operation(
             operationId = "tianquan-jianshen-assignment-list-v1",
@@ -155,8 +165,10 @@ public class AssignmentController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Assignment.assign", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Assignment.assign")
     @PostMapping
-    @RequiresPermission(value = "system:role-assignment:manage")
+    @RequiresPermissions(codes = "system:role-assignment:manage")
     @Operation(
             operationId = "tianquan-jianshen-assignment-create-v1",
             summary = "按完整委托策略创建角色任职",
@@ -204,8 +216,10 @@ public class AssignmentController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Assignment.revoke", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Assignment.revoke")
     @PostMapping("/{assignmentId}/revoke")
-    @RequiresPermission(value = "system:role-assignment:manage")
+    @RequiresPermissions(codes = "system:role-assignment:manage")
     @Operation(
             operationId = "tianquan-jianshen-assignment-revoke-v1",
             summary = "撤销角色任职并保留历史",
@@ -238,8 +252,10 @@ public class AssignmentController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Assignment.suspend", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Assignment.suspend")
     @PostMapping("/{assignmentId}/suspend")
-    @RequiresPermission(value = "system:role-assignment:manage")
+    @RequiresPermissions(codes = "system:role-assignment:manage")
     @Operation(
             operationId = "tianquan-jianshen-assignment-suspend-v1",
             summary = "暂停角色任职",
@@ -272,8 +288,10 @@ public class AssignmentController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Assignment.resume", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Assignment.resume")
     @PostMapping("/{assignmentId}/resume")
-    @RequiresPermission(value = "system:role-assignment:manage")
+    @RequiresPermissions(codes = "system:role-assignment:manage")
     @Operation(
             operationId = "tianquan-jianshen-assignment-resume-v1",
             summary = "恢复角色任职",

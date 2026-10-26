@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.userrole.domain.dto;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -37,6 +43,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `reason` 时应保持 `RoleAssignmentChangeRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `reason`, preserve `RoleAssignmentChangeRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.userrole.domain.dto.RoleAssignmentChangeRequestDTO.reason", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.reason")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:role-assignment:manage"}))
             String reason,
             /**
              * 字段 `ticketNo` 表示 `RoleAssignmentChangeRequestDTO` 中与 `ticket No` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -45,6 +55,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `ticketNo` 时应保持 `RoleAssignmentChangeRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `ticketNo`, preserve `RoleAssignmentChangeRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.userrole.domain.dto.RoleAssignmentChangeRequestDTO.ticketNo", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.ticketNo")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:role-assignment:manage"}))
             String ticketNo,
             /**
              * 字段 `expectedAssignmentVersion` 表示 `RoleAssignmentChangeRequestDTO` 中与 `expected Assignment Version` 相关的状态、依赖、配置或结果（声明类型 `long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -53,6 +67,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `expectedAssignmentVersion` 时应保持 `RoleAssignmentChangeRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `expectedAssignmentVersion`, preserve `RoleAssignmentChangeRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.userrole.domain.dto.RoleAssignmentChangeRequestDTO.expectedAssignmentVersion", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.expectedAssignmentVersion")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    write = @PermissionGroup(codes = {"system:role-assignment:manage"}))
             @PositiveOrZero long expectedAssignmentVersion,
             /**
              * 字段 `expectedUserAuthVersion` 表示 `RoleAssignmentChangeRequestDTO` 中与 `expected User Auth Version` 相关的状态、依赖、配置或结果（声明类型 `long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -61,6 +79,10 @@ import java.util.List;
              * 含义与用法：读取、传递或更新 `expectedUserAuthVersion` 时应保持 `RoleAssignmentChangeRequestDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `expectedUserAuthVersion`, preserve `RoleAssignmentChangeRequestDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.userrole.domain.dto.RoleAssignmentChangeRequestDTO.expectedUserAuthVersion", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.expectedUserAuthVersion")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    write = @PermissionGroup(codes = {"system:role-assignment:manage"}))
             @PositiveOrZero long expectedUserAuthVersion
     ) {
     }

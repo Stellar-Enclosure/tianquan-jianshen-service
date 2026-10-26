@@ -41,6 +41,12 @@ public final class Rbac3RuntimeProjectionRecovery implements
     private final RuntimePublicationRepository runtime;
     private final TenantAuthorizationStateRepository authorizationState;
     private final Clock clock;
+    private top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.catalog.PermissionSnapshotRebuildRepository catalogRebuilds;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void catalogRebuilds(top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.catalog.PermissionSnapshotRebuildRepository value) {
+        this.catalogRebuilds = java.util.Objects.requireNonNull(value, "catalogRebuilds");
+    }
 
     public Rbac3RuntimeProjectionRecovery(RuntimeProjectionTargetRepository targets,
                                          ActivationTransaction activeRoles,
@@ -76,6 +82,8 @@ public final class Rbac3RuntimeProjectionRecovery implements
         Objects.requireNonNull(event, "event");
         // Policy versions are tenant-wide; unaffected users also need a snapshot
         // at the new version. Keyset paging avoids loading the tenant into memory.
+        if (catalogRebuilds == null) throw new IllegalStateException("AUTH_SQL_REBUILD_QUEUE_REQUIRED");
+        catalogRebuilds.enqueue(event);
         projectTenant(event.tenantId(), event.eventId());
     }
 

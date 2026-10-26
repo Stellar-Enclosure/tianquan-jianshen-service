@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -20,11 +26,19 @@ import java.util.Map;
  *
  * 含义与用法：读取、传递或更新 `state` 时应保持 `RedisProjectionStatusVO` 的生命周期、不可变性和线程安全约束。
  * Meaning and usage: when reading, passing, or updating `state`, preserve `RedisProjectionStatusVO`'s lifecycle, immutability, and thread-safety constraints.
- */ String state, /**
+ */ @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.RedisProjectionStatusVO.state", type = ResourceType.FIELD,
+                labelPage = "tianquan-jianshen.permissions", labelKey = "field.state")
+        @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
+        String state, /**
  * 字段 `checkpointLag` 表示 `RedisProjectionStatusVO` 中与 `checkpoint Lag` 相关的状态、依赖、配置或结果（声明类型 `long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
  * Field `checkpointLag` stores the `checkpoint Lag`-related state, dependency, configuration, or result of `RedisProjectionStatusVO` (declared type `long`); its lifecycle and value semantics are defined by its declared type and owning object.
  *
  * 含义与用法：读取、传递或更新 `checkpointLag` 时应保持 `RedisProjectionStatusVO` 的生命周期、不可变性和线程安全约束。
  * Meaning and usage: when reading, passing, or updating `checkpointLag`, preserve `RedisProjectionStatusVO`'s lifecycle, immutability, and thread-safety constraints.
- */ long checkpointLag) {
+ */ @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.domain.vo.RedisProjectionStatusVO.checkpointLag", type = ResourceType.FIELD,
+                labelPage = "tianquan-jianshen.permissions", labelKey = "field.checkpointLag")
+        @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                plainRead = @PermissionGroup(codes = {"system:authorization-runtime:read"}))
+        long checkpointLag) {
     }

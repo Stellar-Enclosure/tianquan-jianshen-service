@@ -1,5 +1,12 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.position.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionMode;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -42,6 +49,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `positionId` 时应保持 `PositionVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `positionId`, preserve `PositionVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.domain.vo.PositionVO.positionId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.positionId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:directory:read", "system:position:manage", "system:position:read"}))
             String positionId,
             /**
              * 字段 `snapshotId` 表示 `PositionVO` 中与 `snapshot Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -50,6 +61,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `snapshotId` 时应保持 `PositionVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `snapshotId`, preserve `PositionVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.domain.vo.PositionVO.snapshotId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.snapshotId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:directory:read", "system:position:manage", "system:position:read"}))
             String snapshotId,
             /**
              * 字段 `code` 表示 `PositionVO` 中与 `code` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -58,6 +73,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `code` 时应保持 `PositionVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `code`, preserve `PositionVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.domain.vo.PositionVO.code", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.code")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:directory:read", "system:position:manage", "system:position:read"}))
             String code,
             /**
              * 字段 `name` 表示 `PositionVO` 中与 `name` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -66,6 +85,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `name` 时应保持 `PositionVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `name`, preserve `PositionVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.domain.vo.PositionVO.name", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.name")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:directory:read", "system:position:manage", "system:position:read"}))
             String name,
             /**
              * 字段 `orgUnitId` 表示 `PositionVO` 中与 `org Unit Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -74,6 +97,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `orgUnitId` 时应保持 `PositionVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `orgUnitId`, preserve `PositionVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.domain.vo.PositionVO.orgUnitId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.orgUnitId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:directory:read", "system:position:manage", "system:position:read"}))
             String orgUnitId,
             /**
              * 字段 `status` 表示 `PositionVO` 中与 `status` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -82,10 +109,32 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `status` 时应保持 `PositionVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `status`, preserve `PositionVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.domain.vo.PositionVO.status", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.status")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:directory:read", "system:position:manage", "system:position:read"}))
             String status,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.domain.vo.PositionVO.externalId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.externalId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:directory:read", "system:position:manage", "system:position:read"}))
             String externalId,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.domain.vo.PositionVO.validFrom", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.validFrom")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:directory:read", "system:position:manage", "system:position:read"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant validFrom,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.domain.vo.PositionVO.validTo", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.validTo")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:directory:read", "system:position:manage", "system:position:read"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant validTo,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.position.domain.vo.PositionVO.version", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.version")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:directory:read", "system:position:manage", "system:position:read"}))
             long version
     ) {
     }

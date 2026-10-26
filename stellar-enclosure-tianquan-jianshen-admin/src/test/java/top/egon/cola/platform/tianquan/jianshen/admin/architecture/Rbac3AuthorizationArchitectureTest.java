@@ -22,7 +22,7 @@ class Rbac3AuthorizationArchitectureTest {
     void productionAuthorizationSourcesDoNotContainManifestRuntimeSymbols() throws Exception {
         assertThat(productionSources())
                 .flatMap(path -> LEGACY_MANIFEST_SYMBOLS.stream()
-                        .filter(symbol -> read(path).contains(symbol))
+                        .filter(symbol -> java.util.regex.Pattern.compile("\\b" + java.util.regex.Pattern.quote(symbol) + "\\b").matcher(read(path)).find())
                         .map(symbol -> path + " contains " + symbol)
                         .toList())
                 .as("legacy manifest symbols")

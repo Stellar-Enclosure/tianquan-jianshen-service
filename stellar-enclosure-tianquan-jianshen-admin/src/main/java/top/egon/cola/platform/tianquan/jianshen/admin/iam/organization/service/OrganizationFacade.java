@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.organization.service;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import org.springframework.stereotype.Service;
@@ -230,22 +236,82 @@ public class OrganizationFacade {
     }
 
     public record CreateCommand(
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.service.OrganizationFacade.CreateCommand.type", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.type")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:organization:manage"}))
             OrgUnitUnitTypeEnum type,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.service.OrganizationFacade.CreateCommand.code", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.code")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:organization:manage"}))
             String code,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.service.OrganizationFacade.CreateCommand.name", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.name")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:organization:manage"}))
             String name,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.service.OrganizationFacade.CreateCommand.parentId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.parentId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    write = @PermissionGroup(codes = {"system:organization:manage"}))
             Long parentId,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.service.OrganizationFacade.CreateCommand.externalId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.externalId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:organization:manage"}))
             String externalId,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.service.OrganizationFacade.CreateCommand.validFrom", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.validFrom")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:organization:manage"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant validFrom,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.service.OrganizationFacade.CreateCommand.validTo", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.validTo")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:organization:manage"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant validTo) {
     }
 
     public record UpdateCommand(
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.service.OrganizationFacade.UpdateCommand.type", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.type")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:organization:manage"}))
             OrgUnitUnitTypeEnum type,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.service.OrganizationFacade.UpdateCommand.name", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.name")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:organization:manage"}))
             String name,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.service.OrganizationFacade.UpdateCommand.parentId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.parentId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    write = @PermissionGroup(codes = {"system:organization:manage"}))
             Long parentId,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.service.OrganizationFacade.UpdateCommand.externalId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.externalId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:organization:manage"}))
             String externalId,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.service.OrganizationFacade.UpdateCommand.validFrom", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.validFrom")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:organization:manage"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant validFrom,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.service.OrganizationFacade.UpdateCommand.validTo", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.validTo")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:organization:manage"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant validTo,
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.service.OrganizationFacade.UpdateCommand.expectedVersion", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.expectedVersion")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    write = @PermissionGroup(codes = {"system:organization:manage"}))
             long expectedVersion) {
     }
 

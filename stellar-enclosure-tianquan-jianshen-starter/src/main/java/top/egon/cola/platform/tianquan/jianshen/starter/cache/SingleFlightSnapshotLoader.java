@@ -1,127 +1,53 @@
 package top.egon.cola.platform.tianquan.jianshen.starter.cache;
 
 import top.egon.cola.platform.tianquan.shoubing.contract.IdentityPrincipal;
+import top.egon.cola.platform.tianquan.shoubing.starter.security.VerifiedUserTokenCarrier;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.SystemAuthorizationSnapshot;
 import top.egon.cola.platform.tianquan.jianshen.starter.client.Rbac3AuthorizationClient;
-
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Loads one USER authorization projection per system/tenant/subject.
- */
+/** Every authorization boundary reads the SQL owner; expired or cached state cannot provide failure grace. */
 public final class SingleFlightSnapshotLoader {
-    private final AuthorizationSnapshotCache cache;
     private final Rbac3AuthorizationClient client;
     private final String systemCode;
-    private final Duration cacheTtl;
     private final Clock clock;
-    private final ConcurrentHashMap<AuthorizationSnapshotCache.Key,
-            CompletableFuture<SystemAuthorizationSnapshot>> flights = new ConcurrentHashMap<>();
 
-    public SingleFlightSnapshotLoader(AuthorizationSnapshotCache cache,
-                                      Rbac3AuthorizationClient client,
-                                      String systemCode,
-                                      Duration cacheTtl,
-                                      Clock clock) {
-        this.cache = Objects.requireNonNull(cache, "cache");
+    public SingleFlightSnapshotLoader(Rbac3AuthorizationClient client, String systemCode, Clock clock) {
         this.client = Objects.requireNonNull(client, "client");
-        this.systemCode = required(systemCode, "systemCode");
-        this.cacheTtl = Objects.requireNonNull(cacheTtl, "cacheTtl");
-        if (cacheTtl.compareTo(Duration.ofSeconds(1)) < 0 || cacheTtl.compareTo(Duration.ofMinutes(10)) > 0) {
-            throw new IllegalArgumentException("cacheTtl is outside the safe range");
-        }
+        if (systemCode == null || systemCode.isBlank()) throw new IllegalArgumentException("systemCode is required");
+        this.systemCode = systemCode;
         this.clock = Objects.requireNonNull(clock, "clock");
     }
 
+    /** Retains source compatibility while deliberately retiring both shared and near authorization caches. */
+    public SingleFlightSnapshotLoader(AuthorizationSnapshotCache cache, Rbac3AuthorizationClient client,
+                                      String systemCode, Duration cacheTtl, Clock clock) {
+        this(client, systemCode, clock);
+    }
+
     public SystemAuthorizationSnapshot load(IdentityPrincipal principal) {
-        return load(principal, null);
+        return load(principal, VerifiedUserTokenCarrier.currentOrNull());
     }
 
-    public SystemAuthorizationSnapshot load(
-            IdentityPrincipal principal,
-            String userAccessToken) {
+    public SystemAuthorizationSnapshot load(IdentityPrincipal principal, String userAccessToken) {
         Objects.requireNonNull(principal, "principal");
-        var key = new AuthorizationSnapshotCache.Key(systemCode, principal.tenantId(), principal.subject());
-        return cached(key)
-                .filter(snapshot -> boundTo(snapshot, principal))
-                .orElseGet(() -> join(key, principal, userAccessToken));
-    }
-
-    private SystemAuthorizationSnapshot join(
-            AuthorizationSnapshotCache.Key key,
-            IdentityPrincipal principal,
-            String userAccessToken) {
-        CompletableFuture<SystemAuthorizationSnapshot> created = new CompletableFuture<>();
-        CompletableFuture<SystemAuthorizationSnapshot> active = flights.putIfAbsent(key, created);
-        if (active == null) {
-            active = created;
-            try {
-                SystemAuthorizationSnapshot snapshot = cached(key)
-                        .filter(value -> boundTo(value, principal))
-                        .orElseGet(() -> fetch(principal, userAccessToken));
-                created.complete(snapshot);
-            } catch (Throwable failure) {
-                created.completeExceptionally(failure);
-            } finally {
-                flights.remove(key, created);
-            }
+        if (userAccessToken == null || userAccessToken.isBlank()) {
+            throw new Rbac3AuthorizationClient.AuthorizationUnavailableException("TIANQUAN_JIANSHEN_USER_TOKEN_UNAVAILABLE");
         }
         try {
-            SystemAuthorizationSnapshot snapshot = active.join();
-            if (!boundTo(snapshot, principal)) {
+            SystemAuthorizationSnapshot snapshot = client.fetch(systemCode, principal, userAccessToken);
+            if (snapshot == null || !systemCode.equals(snapshot.systemCode())
+                    || !principal.tenantId().equals(snapshot.tenantId()) || !principal.subject().equals(snapshot.identitySub())
+                    || snapshot.permissionSnapshot() == null || snapshot.policyBinding() == null
+                    || !snapshot.expiresAt().isAfter(clock.instant()) || snapshot.expiresAt().isAfter(principal.expiresAt())) {
                 throw new Rbac3AuthorizationClient.AuthorizationDeniedException("TIANQUAN_JIANSHEN_AUTHORIZATION_BINDING_MISMATCH");
             }
             return snapshot;
-        } catch (CompletionException exception) {
-            Throwable cause = exception.getCause();
-            if (cause instanceof RuntimeException runtime) throw runtime;
-            throw new Rbac3AuthorizationClient.AuthorizationUnavailableException("TIANQUAN_JIANSHEN_AUTHORIZATION_FETCH_FAILED", cause);
-        }
-    }
-
-    private SystemAuthorizationSnapshot fetch(
-            IdentityPrincipal principal,
-            String userAccessToken) {
-        try {
-            SystemAuthorizationSnapshot snapshot = userAccessToken == null
-                    ? client.fetch(systemCode, principal)
-                    : client.fetch(systemCode, principal, userAccessToken);
-            if (!boundTo(snapshot, principal)) {
-                throw new Rbac3AuthorizationClient.AuthorizationDeniedException("TIANQUAN_JIANSHEN_AUTHORIZATION_BINDING_MISMATCH");
-            }
-            Duration remaining = Duration.between(clock.instant(), snapshot.expiresAt());
-            cache.put(new AuthorizationSnapshotCache.Key(systemCode, principal.tenantId(), principal.subject()),
-                    snapshot, remaining.compareTo(cacheTtl) < 0 ? remaining : cacheTtl);
-            return snapshot;
-        } catch (InterruptedException exception) {
+        } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
-            throw new Rbac3AuthorizationClient.AuthorizationUnavailableException("TIANQUAN_JIANSHEN_AUTHORIZATION_FETCH_INTERRUPTED", exception);
+            throw new Rbac3AuthorizationClient.AuthorizationUnavailableException("TIANQUAN_JIANSHEN_AUTHORIZATION_FETCH_INTERRUPTED", interrupted);
         }
-    }
-
-    private Optional<SystemAuthorizationSnapshot> cached(AuthorizationSnapshotCache.Key key) {
-        try {
-            return cache.get(key);
-        } catch (RuntimeException exception) {
-            throw new Rbac3AuthorizationClient.AuthorizationUnavailableException("TIANQUAN_JIANSHEN_AUTHORIZATION_CACHE_UNAVAILABLE", exception);
-        }
-    }
-
-    private boolean boundTo(SystemAuthorizationSnapshot snapshot, IdentityPrincipal principal) {
-        return snapshot.systemCode().equals(systemCode)
-                && snapshot.tenantId().equals(principal.tenantId())
-                && snapshot.identitySub().equals(principal.subject())
-                && snapshot.expiresAt().isAfter(clock.instant());
-    }
-
-    private static String required(String value, String name) {
-        if (value == null || value.isBlank()) throw new IllegalArgumentException(name + " is required");
-        return value.trim();
     }
 }

@@ -1,5 +1,13 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.simulation.controller;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,7 +26,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.simulation.d
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.simulation.domain.vo.RoleChangeImpactResultVO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.simulation.domain.vo.SimulationResultVO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.simulation.service.AuthorizationSimulationService;
-import top.egon.cola.platform.tianquan.jianshen.starter.security.RequiresPermission;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.RequiresPermissions;
 
 /**
  * 授权模拟 HTTP 入口。
@@ -56,8 +64,10 @@ public class AuthorizationSimulationController {
      *
      * @return 授权模拟结果 / authorization simulation result
      */
+    @PermissionResource(key = "tianquan-jianshen.api.AuthorizationSimulation.simulate", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.AuthorizationSimulation.simulate")
     @PostMapping("/simulations/authorization")
-    @RequiresPermission(value = "system:authorization-simulation:execute")
+    @RequiresPermissions(codes = "system:authorization-simulation:execute")
     @Operation(
             operationId = "tianquan-jianshen-authorization-simulation-v1",
             summary = "基于一致快照执行无业务副作用的授权模拟",
@@ -83,8 +93,10 @@ public class AuthorizationSimulationController {
      *
      * @return 角色变更影响结果 / role-change impact result
      */
+    @PermissionResource(key = "tianquan-jianshen.api.AuthorizationSimulation.simulateRoleChangeImpact", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.AuthorizationSimulation.simulateRoleChangeImpact")
     @PostMapping("/simulations/role-change-impact")
-    @RequiresPermission(value = "system:authorization-simulation:execute")
+    @RequiresPermissions(codes = "system:authorization-simulation:execute")
     @Operation(
             operationId = "tianquan-jianshen-role-change-impact-simulation-v1",
             summary = "查询带策略版本和证据校验和的角色变更影响",

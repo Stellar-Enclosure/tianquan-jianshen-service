@@ -1,5 +1,12 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.management.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionMode;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import top.egon.cola.platform.tianquan.jianshen.core.delegation.ManagementPolicyDecisionService;
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
 import java.time.Instant;
@@ -35,6 +42,10 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `policyId` 时应保持 `PolicyVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `policyId`, preserve `PolicyVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.PolicyVO.policyId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.policyId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:management-policy:manage", "system:management-policy:read"}))
             String policyId,
             /**
              * 字段 `policyCode` 表示 `PolicyVO` 中与 `policy Code` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -43,6 +54,10 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `policyCode` 时应保持 `PolicyVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `policyCode`, preserve `PolicyVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.PolicyVO.policyCode", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.policyCode")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:management-policy:manage", "system:management-policy:read"}))
             String policyCode,
             /**
              * 字段 `name` 表示 `PolicyVO` 中与 `name` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -51,6 +66,10 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `name` 时应保持 `PolicyVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `name`, preserve `PolicyVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.PolicyVO.name", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.name")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:management-policy:manage", "system:management-policy:read"}))
             String name,
             /**
              * 字段 `status` 表示 `PolicyVO` 中与 `status` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -59,6 +78,10 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `status` 时应保持 `PolicyVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `status`, preserve `PolicyVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.PolicyVO.status", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.status")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:management-policy:manage", "system:management-policy:read"}))
             String status,
             /**
              * 字段 `validFrom` 表示 `PolicyVO` 中与 `valid From` 相关的状态、依赖、配置或结果（声明类型 `Instant`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -67,6 +90,11 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `validFrom` 时应保持 `PolicyVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `validFrom`, preserve `PolicyVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.PolicyVO.validFrom", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.validFrom")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:management-policy:manage", "system:management-policy:read"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant validFrom,
             /**
              * 字段 `validTo` 表示 `PolicyVO` 中与 `valid To` 相关的状态、依赖、配置或结果（声明类型 `Instant`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -75,6 +103,11 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `validTo` 时应保持 `PolicyVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `validTo`, preserve `PolicyVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.PolicyVO.validTo", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.validTo")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:management-policy:manage", "system:management-policy:read"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant validTo,
             /**
              * 字段 `restrictions` 表示 `PolicyVO` 中与 `restrictions` 相关的状态、依赖、配置或结果（声明类型 `ManagementPolicyRestrictionsVO`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -83,6 +116,10 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `restrictions` 时应保持 `PolicyVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `restrictions`, preserve `PolicyVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.PolicyVO.restrictions", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.restrictions")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:management-policy:manage", "system:management-policy:read"}))
             ManagementPolicyRestrictionsVO restrictions,
             /**
              * 字段 `subjects` 表示 `PolicyVO` 中与 `subjects` 相关的状态、依赖、配置或结果（声明类型 `List&lt;ManagementPolicySubjectVO&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -91,6 +128,10 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `subjects` 时应保持 `PolicyVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `subjects`, preserve `PolicyVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.PolicyVO.subjects", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.subjects")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.ARRAY,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:management-policy:manage", "system:management-policy:read"}))
             List<ManagementPolicySubjectVO> subjects,
             /**
              * 字段 `scopes` 表示 `PolicyVO` 中与 `scopes` 相关的状态、依赖、配置或结果（声明类型 `List&lt;ManagementPolicyScopeVO&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -99,6 +140,10 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `scopes` 时应保持 `PolicyVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `scopes`, preserve `PolicyVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.PolicyVO.scopes", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.scopes")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.ARRAY,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:management-policy:manage", "system:management-policy:read"}))
             List<ManagementPolicyScopeVO> scopes,
             /**
              * 字段 `activationRootRoleIds` 表示 `PolicyVO` 中与 `activation Root Role Ids` 相关的状态、依赖、配置或结果（声明类型 `List&lt;String&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -107,6 +152,10 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `activationRootRoleIds` 时应保持 `PolicyVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `activationRootRoleIds`, preserve `PolicyVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.PolicyVO.activationRootRoleIds", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.activationRootRoleIds")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.ARRAY,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:management-policy:manage", "system:management-policy:read"}))
             List<String> activationRootRoleIds,
             /**
              * 字段 `operations` 表示 `PolicyVO` 中与 `operations` 相关的状态、依赖、配置或结果（声明类型 `Set&lt;String&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -115,6 +164,10 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `operations` 时应保持 `PolicyVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `operations`, preserve `PolicyVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.PolicyVO.operations", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.operations")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.ARRAY,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:management-policy:manage", "system:management-policy:read"}))
             Set<String> operations,
             /**
              * 字段 `version` 表示 `PolicyVO` 中与 `version` 相关的状态、依赖、配置或结果（声明类型 `long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -123,6 +176,10 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `version` 时应保持 `PolicyVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `version`, preserve `PolicyVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.management.domain.vo.PolicyVO.version", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.version")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:management-policy:manage", "system:management-policy:read"}))
             long version
     ) {
         /**

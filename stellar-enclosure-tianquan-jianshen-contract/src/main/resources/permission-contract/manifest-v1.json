@@ -1,0 +1,149 @@
+{
+  "schemaVersion": "1.0",
+  "application": {
+    "businessCode": "trade",
+    "applicationCode": "order"
+  },
+  "producer": {
+    "id": "order-api",
+    "kind": "JAVA",
+    "snapshotMode": "FULL",
+    "ownedKeyPrefixes": [
+      "order."
+    ],
+    "expectedModules": [
+      "admin"
+    ],
+    "scannedModules": [
+      "admin"
+    ],
+    "clearIntent": false
+  },
+  "artifact": {
+    "repository": "order-service",
+    "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "buildId": "build-1",
+    "version": "0.0.1"
+  },
+  "permissionDefinitions": [
+    {
+      "code": "order:read",
+      "meaning": "Read orders",
+      "i18n": {
+        "pageCode": "order",
+        "labelKey": "permission.read"
+      },
+      "lifecycle": "ACTIVE"
+    },
+    {
+      "code": "order:amount:write",
+      "meaning": "Write order amount",
+      "i18n": {
+        "pageCode": "order",
+        "labelKey": "permission.amount.write"
+      },
+      "lifecycle": "ACTIVE"
+    }
+  ],
+  "permissionReferences": [],
+  "resources": [
+    {
+      "key": "order.api.detail",
+      "type": "API",
+      "target": {
+        "method": "GET",
+        "path": "/orders/{id}"
+      },
+      "access": "PROTECTED",
+      "requirement": {
+        "mode": "ALL",
+        "codes": [
+          "order:read"
+        ]
+      },
+      "allowedPrincipals": [
+        "USER"
+      ],
+      "oauthScopes": [
+        "order.read"
+      ],
+      "i18n": {
+        "pageCode": "order",
+        "labelKey": "api.detail"
+      },
+      "lifecycle": "ACTIVE"
+    },
+    {
+      "key": "order.field.amount",
+      "type": "FIELD",
+      "target": {
+        "model": "OrderDetail",
+        "fieldPath": "amount"
+      },
+      "access": "PROTECTED",
+      "fieldPolicy": {
+        "valueType": "NUMBER",
+        "plainRead": {
+          "mode": "ALL",
+          "codes": [
+            "order:read"
+          ]
+        },
+        "write": {
+          "mode": "ALL",
+          "codes": [
+            "order:amount:write"
+          ]
+        }
+      },
+      "allowedPrincipals": [
+        "USER"
+      ],
+      "oauthScopes": [],
+      "i18n": {
+        "pageCode": "order",
+        "labelKey": "field.amount"
+      },
+      "lifecycle": "ACTIVE"
+    }
+  ],
+  "resourceReferences": [],
+  "messages": [
+    {
+      "pageCode": "order",
+      "key": "permission.read",
+      "defaultLocale": "zh-CN",
+      "defaults": {
+        "zh-CN": "查看订单",
+        "en-US": "Read orders"
+      }
+    },
+    {
+      "pageCode": "order",
+      "key": "permission.amount.write",
+      "defaultLocale": "zh-CN",
+      "defaults": {
+        "zh-CN": "修改订单金额",
+        "en-US": "Write order amount"
+      }
+    },
+    {
+      "pageCode": "order",
+      "key": "api.detail",
+      "defaultLocale": "zh-CN",
+      "defaults": {
+        "zh-CN": "订单详情",
+        "en-US": "Order detail"
+      }
+    },
+    {
+      "pageCode": "order",
+      "key": "field.amount",
+      "defaultLocale": "zh-CN",
+      "defaults": {
+        "zh-CN": "金额",
+        "en-US": "Amount"
+      }
+    }
+  ]
+}

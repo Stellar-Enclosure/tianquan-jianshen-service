@@ -82,6 +82,26 @@ public final class HttpRbac3AuthorizationClient implements Rbac3AuthorizationCli
         }
     }
 
+    @Override
+    public top.egon.cola.platform.tianquan.jianshen.contract.authorization.ServicePolicySnapshot fetchPolicy(String systemCode,
+            top.egon.cola.platform.tianquan.shoubing.contract.ServiceIdentityPrincipal caller) throws InterruptedException {
+        if (caller == null || caller.tenantId() == null) throw new AuthorizationDeniedException("SERVICE_IDENTITY_DENIED");
+        URI uri = endpoint.resolve("/internal/v1/authorization/policies/current?systemCode=" + encode(systemCode));
+        try {
+            HttpResponse response = transport.get(uri, serviceTokens.apply(caller.tenantId()), null, timeout);
+            if (response.statusCode() == 401 || response.statusCode() == 403) throw new AuthorizationDeniedException("SERVICE_POLICY_DENIED");
+            if (response.statusCode() != 200) throw new AuthorizationUnavailableException("SERVICE_POLICY_RUNTIME_UNAVAILABLE");
+            JsonNode data = objectMapper.readTree(response.body()).get("data");
+            if (data == null || data.isNull()) throw new AuthorizationUnavailableException("SERVICE_POLICY_RESPONSE_INVALID");
+            var policy = objectMapper.treeToValue(data, top.egon.cola.platform.tianquan.jianshen.contract.authorization.ServicePolicySnapshot.class);
+            if (!caller.tenantId().equals(policy.catalogScope().tenantId()) || !systemCode.equals(policy.catalogScope().applicationCode())) {
+                throw new AuthorizationDeniedException("SERVICE_POLICY_BINDING_MISMATCH");
+            }
+            return policy;
+        } catch (AuthorizationDeniedException | AuthorizationUnavailableException known) { throw known; }
+        catch (IOException | RuntimeException failed) { throw new AuthorizationUnavailableException("SERVICE_POLICY_RUNTIME_UNAVAILABLE", failed); }
+    }
+
     private static String requiredUserToken(String value) {
         if (value == null || value.isBlank() || value.length() > 16_384) {
             throw new AuthorizationUnavailableException(
@@ -135,11 +155,10 @@ public final class HttpRbac3AuthorizationClient implements Rbac3AuthorizationCli
         @Override
         public HttpResponse get(URI uri, String serviceToken, String userToken, Duration timeout)
                 throws IOException, InterruptedException {
-            HttpRequest request = HttpRequest.newBuilder(uri).timeout(timeout)
-                    .header("Accept", "application/json")
-                    .header("Authorization", "Bearer " + serviceToken)
-                    .header("X-Egon-Subject-Token", userToken)
-                    .GET().build();
+            HttpRequest.Builder builder = HttpRequest.newBuilder(uri).timeout(timeout)
+                    .header("Accept", "application/json").header("Authorization", "Bearer " + serviceToken);
+            if (userToken != null) builder.header("X-Egon-Subject-Token", userToken);
+            HttpRequest request = builder.GET().build();
             var response = client.send(request, BodyHandlers.ofString());
             return new HttpResponse(response.statusCode(), response.body());
         }

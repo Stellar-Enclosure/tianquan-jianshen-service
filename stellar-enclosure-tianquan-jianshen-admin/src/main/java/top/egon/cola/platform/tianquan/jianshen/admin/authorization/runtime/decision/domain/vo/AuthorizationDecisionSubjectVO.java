@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.decision.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 /**
      * 类型化授权判定的用户主体定位信息。
      * User-subject locator for a typed authorization decision.
@@ -16,18 +22,33 @@ package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.dec
  *
  * 含义与用法：读取、传递或更新 `tenantId` 时应保持 `AuthorizationDecisionSubjectVO` 的生命周期、不可变性和线程安全约束。
  * Meaning and usage: when reading, passing, or updating `tenantId`, preserve `AuthorizationDecisionSubjectVO`'s lifecycle, immutability, and thread-safety constraints.
- */ String tenantId, /**
+ */ @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.decision.domain.vo.AuthorizationDecisionSubjectVO.tenantId", type = ResourceType.FIELD,
+                labelPage = "tianquan-jianshen.permissions", labelKey = "field.tenantId",
+                allowedPrincipals = {PermissionManifest.PrincipalType.USER, PermissionManifest.PrincipalType.SERVICE}, oauthScopes = {"service:authorization:decide"})
+        @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                write = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
+        String tenantId, /**
  * 字段 `userId` 表示 `AuthorizationDecisionSubjectVO` 中与 `user Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
  * Field `userId` stores the `user Id`-related state, dependency, configuration, or result of `AuthorizationDecisionSubjectVO` (declared type `String`); its lifecycle and value semantics are defined by its declared type and owning object.
  *
  * 含义与用法：读取、传递或更新 `userId` 时应保持 `AuthorizationDecisionSubjectVO` 的生命周期、不可变性和线程安全约束。
  * Meaning and usage: when reading, passing, or updating `userId`, preserve `AuthorizationDecisionSubjectVO`'s lifecycle, immutability, and thread-safety constraints.
- */ String userId, /**
+ */ @PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.decision.domain.vo.AuthorizationDecisionSubjectVO.userId", type = ResourceType.FIELD,
+                labelPage = "tianquan-jianshen.permissions", labelKey = "field.userId",
+                allowedPrincipals = {PermissionManifest.PrincipalType.USER, PermissionManifest.PrincipalType.SERVICE}, oauthScopes = {"service:authorization:decide"})
+        @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                write = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
+        String userId, /**
  * 字段 `identitySub` 表示 Tianquan-Shoubing 稳定主体标识；Field `identitySub` stores the stable Tianquan-Shoubing subject.
  *
  * 含义与用法：读取、传递或更新 `identitySub` 时应保持 `AuthorizationDecisionSubjectVO` 的生命周期、不可变性和线程安全约束。
  * Meaning and usage: preserve the lifecycle, immutability, and thread-safety constraints of `AuthorizationDecisionSubjectVO` when reading or passing `identitySub`.
- */String identitySub) {
+ */@PermissionResource(key = "tianquan-jianshen.field.authorization.runtime.decision.domain.vo.AuthorizationDecisionSubjectVO.identitySub", type = ResourceType.FIELD,
+                labelPage = "tianquan-jianshen.permissions", labelKey = "field.identitySub",
+                allowedPrincipals = {PermissionManifest.PrincipalType.USER, PermissionManifest.PrincipalType.SERVICE}, oauthScopes = {"service:authorization:decide"})
+        @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                write = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
+        String identitySub) {
 
         /**
          * 校验并规范化主体定位信息。

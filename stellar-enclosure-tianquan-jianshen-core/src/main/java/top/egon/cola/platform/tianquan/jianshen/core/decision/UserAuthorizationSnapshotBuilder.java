@@ -39,8 +39,10 @@ public final class UserAuthorizationSnapshotBuilder {
             effectiveRoleIds.addAll(family);
         }
 
-        Set<String> permissions = new PermissionSetMerger().merge(
-                facts.resourceGrantBindings(), effectiveRoleIds);
+        Set<String> permissions = facts.permissionGrantBindings().stream()
+                .filter(grant -> effectiveRoleIds.contains(grant.roleId()))
+                .map(AuthorizationRuleFacts.PermissionGrantBinding::permissionCode)
+                .collect(java.util.stream.Collectors.toCollection(TreeSet::new));
         if (permissions.size() > MAX_USER_PERMISSIONS) {
             throw new Rbac3RuleViolation("ROLE_FAMILY_SIZE_LIMIT_EXCEEDED");
         }

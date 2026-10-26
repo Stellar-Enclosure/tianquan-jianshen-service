@@ -1,5 +1,10 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.participation.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import top.egon.cola.platform.tianquan.shoubing.contract.ServiceIdentityPrincipal;
 import top.egon.cola.platform.tianquan.jianshen.contract.participation.BusinessParticipationCommand;
 import top.egon.cola.platform.tianquan.jianshen.core.participation.OperationSodSpecification;
@@ -36,6 +41,9 @@ import java.util.TreeSet;
              * 含义与用法：读取、传递或更新 `allowed` 时应保持 `ConflictDecisionVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `allowed`, preserve `ConflictDecisionVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.participation.domain.vo.ConflictDecisionVO.allowed", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.allowed", access = ResourceAccess.PUBLIC,
+                    allowedPrincipals = {PermissionManifest.PrincipalType.SERVICE}, oauthScopes = {"service:participation:read"})
             boolean allowed,
             /**
              * 字段 `reasonCode` 表示 `ConflictDecisionVO` 中与 `reason Code` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -44,6 +52,9 @@ import java.util.TreeSet;
              * 含义与用法：读取、传递或更新 `reasonCode` 时应保持 `ConflictDecisionVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `reasonCode`, preserve `ConflictDecisionVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.participation.domain.vo.ConflictDecisionVO.reasonCode", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.reasonCode", access = ResourceAccess.PUBLIC,
+                    allowedPrincipals = {PermissionManifest.PrincipalType.SERVICE}, oauthScopes = {"service:participation:read"})
             String reasonCode,
             /**
              * 字段 `evidenceIds` 表示 `ConflictDecisionVO` 中与 `evidence Ids` 相关的状态、依赖、配置或结果（声明类型 `List&lt;String&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -52,6 +63,9 @@ import java.util.TreeSet;
              * 含义与用法：读取、传递或更新 `evidenceIds` 时应保持 `ConflictDecisionVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `evidenceIds`, preserve `ConflictDecisionVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.participation.domain.vo.ConflictDecisionVO.evidenceIds", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.evidenceIds", access = ResourceAccess.PUBLIC,
+                    allowedPrincipals = {PermissionManifest.PrincipalType.SERVICE}, oauthScopes = {"service:participation:read"})
             List<String> evidenceIds,
             /**
              * 字段 `conflictingPriorActions` 表示 `ConflictDecisionVO` 中与 `conflicting Prior Actions` 相关的状态、依赖、配置或结果（声明类型 `Set&lt;String&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -60,5 +74,8 @@ import java.util.TreeSet;
              * 含义与用法：读取、传递或更新 `conflictingPriorActions` 时应保持 `ConflictDecisionVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `conflictingPriorActions`, preserve `ConflictDecisionVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.policy.participation.domain.vo.ConflictDecisionVO.conflictingPriorActions", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.conflictingPriorActions", access = ResourceAccess.PUBLIC,
+                    allowedPrincipals = {PermissionManifest.PrincipalType.SERVICE}, oauthScopes = {"service:participation:read"})
             Set<String> conflictingPriorActions) {
     }

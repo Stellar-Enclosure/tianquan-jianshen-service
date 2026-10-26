@@ -132,6 +132,11 @@ class Rbac3FieldWriteAuthorizationComponentTest {
                         org.springframework.boot.validation.autoconfigure.ValidationAutoConfiguration.class,
                         top.egon.cola.platform.tianquan.jianshen.starter.autoconfigure.Rbac3StarterAutoConfiguration.class))
                 .withPropertyValues("egon.cola.platform.tianquan.jianshen.enabled=true", "egon.cola.platform.tianquan.jianshen.system-code=cms")
+                .withBean(top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionPolicyRegistry.class,
+                        () -> mock(top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionPolicyRegistry.class))
+                .withBean(top.egon.cola.platform.tianquan.jianshen.starter.client.Rbac3AuthorizationClient.class,
+                        () -> mock(top.egon.cola.platform.tianquan.jianshen.starter.client.Rbac3AuthorizationClient.class))
+                .withBean(com.fasterxml.jackson.databind.ObjectMapper.class, com.fasterxml.jackson.databind.ObjectMapper::new)
                 .withBean("authorizationService", AuthorizationService.class, () -> authorization)
                 .withBean("currentRbac3User", CurrentRbac3User.class, () -> currentUser)
                 .run(context -> {

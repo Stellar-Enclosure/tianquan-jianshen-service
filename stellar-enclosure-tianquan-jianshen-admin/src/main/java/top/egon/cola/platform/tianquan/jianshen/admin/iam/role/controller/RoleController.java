@@ -1,5 +1,13 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.role.controller;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.PositiveOrZero;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -32,7 +40,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.shared.tenant.domain.Tenan
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.CurrentRbac3User;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3UserDetails;
-import top.egon.cola.platform.tianquan.jianshen.starter.security.RequiresPermission;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.RequiresPermissions;
 
 import java.time.Instant;
 import java.util.List;
@@ -98,8 +106,10 @@ public class RoleController {
      * @param applicationId 输入参数 `applicationId`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Role.roles", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Role.roles")
     @GetMapping
-    @RequiresPermission(value = "system:role:read")
+    @RequiresPermissions(codes = "system:role:read")
     @Operation(
             operationId = "tianquan-jianshen-role-list-v1",
             summary = "查询租户角色",
@@ -124,8 +134,10 @@ public class RoleController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Role.create", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Role.create")
     @PostMapping
-    @RequiresPermission(value = "system:role:create")
+    @RequiresPermissions(codes = "system:role:create")
     @Operation(
             operationId = "tianquan-jianshen-role-create-v1",
             summary = "创建应用角色",
@@ -167,8 +179,10 @@ public class RoleController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Role.update", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Role.update")
     @PutMapping("/{roleId}")
-    @RequiresPermission(value = "system:role:update")
+    @RequiresPermissions(codes = "system:role:update")
     @Operation(
             operationId = "tianquan-jianshen-role-update-v1",
             summary = "更新角色可变属性",
@@ -206,8 +220,10 @@ public class RoleController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Role.addInheritance", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Role.addInheritance")
     @PostMapping("/{roleId}/inheritances")
-    @RequiresPermission(value = "system:role-inheritance:manage")
+    @RequiresPermissions(codes = "system:role-inheritance:manage")
     @Operation(
             operationId = "tianquan-jianshen-role-inheritance-add-v1",
             summary = "新增角色继承边并重建闭包",
@@ -240,8 +256,10 @@ public class RoleController {
      * @param principal 输入参数 `principal`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Role.removeInheritance", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Role.removeInheritance")
     @DeleteMapping("/{roleId}/inheritances/{juniorRoleId}")
-    @RequiresPermission(value = "system:role-inheritance:manage")
+    @RequiresPermissions(codes = "system:role-inheritance:manage")
     @Operation(
             operationId = "tianquan-jianshen-role-inheritance-remove-v1",
             summary = "删除角色继承边并重建闭包",
@@ -272,8 +290,10 @@ public class RoleController {
      * @param roleId 输入参数 `roleId`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    @PermissionResource(key = "tianquan-jianshen.api.Role.impact", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Role.impact")
     @GetMapping("/{roleId}/impact-analysis")
-    @RequiresPermission(value = "system:role:read")
+    @RequiresPermissions(codes = "system:role:read")
     @Operation(
             operationId = "tianquan-jianshen-role-impact-v1",
             summary = "分析角色族与权限扩张影响",

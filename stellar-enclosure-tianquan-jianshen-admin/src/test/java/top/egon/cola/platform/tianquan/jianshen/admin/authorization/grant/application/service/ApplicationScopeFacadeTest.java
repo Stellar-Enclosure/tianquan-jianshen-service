@@ -4,8 +4,8 @@ import org.junit.jupiter.api.Test;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.application.domain.command.AdmitApplicationAuthorizationScopeCommand;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.application.domain.vo.ApplicationAuthorizationScopeVO;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.application.repository.ApplicationResourceRepository;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.ApplicationCatalogEntry;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.DdcCatalogGateway;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.domain.vo.ApplicationCatalogEntry;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.repository.DdcCatalogGateway;
 
 import java.util.Optional;
 

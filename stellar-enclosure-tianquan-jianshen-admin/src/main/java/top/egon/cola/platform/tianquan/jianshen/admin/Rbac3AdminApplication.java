@@ -31,36 +31,16 @@ public class Rbac3AdminApplication {
      * @param args 输入参数 `args`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      */
     public static void main(String[] args) {
-        if (isCatalogCommand(args)) {
-            SpringApplication preflight = new SpringApplication(CatalogInputConfiguration.class);
-            preflight.setWebApplicationType(WebApplicationType.NONE);
-            preflight.setAdditionalProfiles("rbac3-catalog-input");
-            preflight.setLogStartupInfo(false);
-            preflight.setBannerMode(org.springframework.boot.Banner.Mode.OFF);
-            int inputResult;
-            try (var input = preflight.run()) {
-                inputResult = top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.controller.cli.Rbac3ApplicationCatalogRegistrationCli.validateLocalInvocation(
-                        args, input.getBean("jacksonObjectMapper", com.fasterxml.jackson.databind.ObjectMapper.class),
-                        input.getBean("defaultValidator", jakarta.validation.Validator.class));
-            }
-            if (inputResult != 0) { System.exit(inputResult); return; }
-            SpringApplication application = new SpringApplication(
-                    top.egon.cola.platform.tianquan.jianshen.admin.config.runtime.Rbac3ApplicationConfiguration.CatalogCommandConfiguration.class);
-            application.setWebApplicationType(WebApplicationType.NONE);
-            application.setAdditionalProfiles("rbac3-catalog-command");
-            application.setLogStartupInfo(false);
-            application.setBannerMode(org.springframework.boot.Banner.Mode.OFF);
-            application.addInitializers(context -> context.getEnvironment().getPropertySources()
-                    .addFirst(new MapPropertySource("rbac3CatalogCommandRuntime", catalogCommandRuntimeProperties())));
-            application.addInitializers(context -> context.getEnvironment().getPropertySources().addFirst(new MapPropertySource("rbac3FieldRuleCommandRuntime",
-                    Map.of("rbac3.catalog.field-rules-enabled", args[0].equals(top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.controller.cli.Rbac3ApplicationCatalogRegistrationCli.FIELD_COMMAND)))));
-            int result;
-            try (var context = application.run(args)) {
-                result = context.getBean("rbac3ApplicationCatalogRegistrationCli",
-                        top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.controller.cli.Rbac3ApplicationCatalogRegistrationCli.class).run(args);
-            }
-            if (result != 0) { System.exit(result); }
+        if (top.egon.cola.platform.tianquan.jianshen.admin.bootstrap.controller.cli.PermissionBootstrapCli.matches(args)) {
+            int result = top.egon.cola.platform.tianquan.jianshen.admin.config.runtime.PermissionBootstrapCommandRunner.run(args);
+            if (result != 0) System.exit(result);
             return;
+        }
+        if (args.length > 0 && args[0].startsWith("bootstrap-permission-")) {
+            throw new IllegalArgumentException("Unknown permission bootstrap command");
+        }
+        if (args.length > 0 && ("register-application-catalog".equals(args[0]) || "replace-role-field-rules".equals(args[0]))) {
+            throw new IllegalArgumentException("Legacy catalog commands are retired; use the permission manifest protocol");
         }
         if (isBootstrapCommand(args)) {
             SpringApplication application = new SpringApplication(Rbac3AdminApplication.class);
@@ -110,40 +90,4 @@ public class Rbac3AdminApplication {
                 "egon.cola.component.transactional-outbox.polling.enabled", false,
                 "management.endpoint.health.validate-group-membership", false);
     }
-    public static boolean isCatalogCommand(String[] args) {
-        return args != null && args.length > 0 && (top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.controller.cli.Rbac3ApplicationCatalogRegistrationCli.COMMAND.equals(args[0])
-                || top.egon.cola.platform.tianquan.jianshen.admin.authorization.resource.controller.cli.Rbac3ApplicationCatalogRegistrationCli.FIELD_COMMAND.equals(args[0]));
-    }
-
-    public static Map<String, Object> catalogCommandRuntimeProperties() {
-        return Map.ofEntries(
-                Map.entry("egon.cola.component.rpc.provider.enabled", false),
-                Map.entry("egon.cola.component.rpc.provider.grpc.enabled", false),
-                Map.entry("egon.cola.component.tianshu.enabled", false),
-                Map.entry("egon.cola.component.tianshu.registry.enabled", false),
-                Map.entry("egon.cola.component.tianshu.registry.http.enabled", false),
-                Map.entry("egon.cola.component.yuheng.reporting.enabled", false),
-                Map.entry("egon.cola.component.transactional-outbox.polling.enabled", false),
-                Map.entry("egon.cola.component.transactional-outbox.storage.mp.auto-initialize-ddl", false),
-                Map.entry("egon.cola.component.mybatis-plus.ddl.enabled", false),
-                Map.entry("rbac3.bootstrap.auto-activate-local-admin-roles", false),
-                Map.entry("spring.main.web-application-type", "none"),
-                Map.entry("spring.jpa.hibernate.ddl-auto", "none"));
-    }
-
-    /** Local preflight deliberately has no datasource, RPC, cache or application component imports. */
-    @lombok.extern.slf4j.Slf4j
-    @org.springframework.context.annotation.Configuration(value = "rbac3CatalogInputConfiguration", proxyBeanMethods = false)
-    @org.springframework.context.annotation.Profile("rbac3-catalog-input")
-    @org.springframework.boot.autoconfigure.ImportAutoConfiguration({
-            org.springframework.boot.jackson2.autoconfigure.Jackson2AutoConfiguration.class,
-            org.springframework.boot.validation.autoconfigure.ValidationAutoConfiguration.class})
-    public static class CatalogInputConfiguration {
-        @org.springframework.context.annotation.Bean("jacksonObjectMapper")
-        com.fasterxml.jackson.databind.ObjectMapper jacksonObjectMapper(
-                org.springframework.http.converter.json.Jackson2ObjectMapperBuilder builder) {
-            return builder.build();
-        }
-    }
-
 }

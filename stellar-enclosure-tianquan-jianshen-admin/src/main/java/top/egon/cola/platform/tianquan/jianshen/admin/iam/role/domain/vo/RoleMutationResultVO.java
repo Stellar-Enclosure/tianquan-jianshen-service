@@ -1,5 +1,12 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionMode;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import top.egon.cola.platform.tianquan.jianshen.core.hierarchy.RoleEdge;
 import top.egon.cola.platform.tianquan.jianshen.core.hierarchy.RoleHierarchy;
 import top.egon.cola.platform.tianquan.jianshen.core.hierarchy.RoleHierarchyValidator;
@@ -30,6 +37,10 @@ import java.util.function.Function;
              * 含义与用法：读取、传递或更新 `resourceId` 时应保持 `RoleMutationResultVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `resourceId`, preserve `RoleMutationResultVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.role.domain.vo.RoleMutationResultVO.resourceId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.resourceId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:role:create", "system:role:update"}))
             String resourceId,
             /**
              * 字段 `policyVersion` 表示 `RoleMutationResultVO` 中与 `policy Version` 相关的状态、依赖、配置或结果（声明类型 `long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -38,6 +49,10 @@ import java.util.function.Function;
              * 含义与用法：读取、传递或更新 `policyVersion` 时应保持 `RoleMutationResultVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `policyVersion`, preserve `RoleMutationResultVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.role.domain.vo.RoleMutationResultVO.policyVersion", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.policyVersion")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:role:create", "system:role:update"}))
             long policyVersion,
             /**
              * 字段 `propagationId` 表示 `RoleMutationResultVO` 中与 `propagation Id` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -46,6 +61,10 @@ import java.util.function.Function;
              * 含义与用法：读取、传递或更新 `propagationId` 时应保持 `RoleMutationResultVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `propagationId`, preserve `RoleMutationResultVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.role.domain.vo.RoleMutationResultVO.propagationId", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.propagationId")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:role:create", "system:role:update"}))
             String propagationId,
             /**
              * 字段 `propagationPending` 表示 `RoleMutationResultVO` 中与 `propagation Pending` 相关的状态、依赖、配置或结果（声明类型 `boolean`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -54,6 +73,10 @@ import java.util.function.Function;
              * 含义与用法：读取、传递或更新 `propagationPending` 时应保持 `RoleMutationResultVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `propagationPending`, preserve `RoleMutationResultVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.role.domain.vo.RoleMutationResultVO.propagationPending", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.propagationPending")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.BOOLEAN,
+                    plainRead = @PermissionGroup(mode = PermissionMode.ANY, codes = {"system:role:create", "system:role:update"}))
             boolean propagationPending
     ) {
     }

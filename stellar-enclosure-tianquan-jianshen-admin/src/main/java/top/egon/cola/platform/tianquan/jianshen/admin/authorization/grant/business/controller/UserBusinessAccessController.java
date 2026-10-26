@@ -1,5 +1,13 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.business.controller;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,7 +28,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.domain.vo.Use
 import top.egon.cola.platform.tianquan.jianshen.admin.shared.tenant.domain.TenantContext;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.CurrentRbac3User;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3UserDetails;
-import top.egon.cola.platform.tianquan.jianshen.starter.security.RequiresPermission;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.RequiresPermissions;
 
 import java.util.List;
 
@@ -43,8 +51,10 @@ public class UserBusinessAccessController {
         this.facade = facade;
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.UserBusinessAccess.accesses", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.UserBusinessAccess.accesses")
     @GetMapping("/users/{userId}/business-accesses")
-    @RequiresPermission(value = "system:user-business-access:read")
+    @RequiresPermissions(codes = "system:user-business-access:read")
     @Operation(
             operationId = "tianquan-jianshen-user-business-access-list-v1",
             summary = "查询用户业务域授权",
@@ -58,8 +68,10 @@ public class UserBusinessAccessController {
         return ResultRecord.success(facade.accesses(tenantId(), userId));
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.UserBusinessAccess.replace", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.UserBusinessAccess.replace")
     @PutMapping("/users/{userId}/business-accesses")
-    @RequiresPermission(value = "system:user-business-access:manage")
+    @RequiresPermissions(codes = "system:user-business-access:manage")
     @Operation(
             operationId = "tianquan-jianshen-user-business-access-replace-v1",
             summary = "替换用户人工业务域授权",
@@ -76,8 +88,10 @@ public class UserBusinessAccessController {
                 tenantId(), userId, new CurrentRbac3User().require().rbac3UserId(), command));
     }
 
+    @PermissionResource(key = "tianquan-jianshen.api.UserBusinessAccess.applicationAccesses", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.UserBusinessAccess.applicationAccesses")
     @GetMapping("/users/{userId}/application-accesses")
-    @RequiresPermission(value = "system:user-application-access:read")
+    @RequiresPermissions(codes = "system:user-application-access:read")
     @Operation(
             operationId = "tianquan-jianshen-user-application-access-list-v1",
             summary = "查询用户派生应用访问范围",

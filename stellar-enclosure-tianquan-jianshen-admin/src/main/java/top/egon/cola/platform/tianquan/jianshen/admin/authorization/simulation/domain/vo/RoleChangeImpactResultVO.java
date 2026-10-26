@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.simulation.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Map;
@@ -27,6 +33,10 @@ import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.vo.RoleImp
              * 含义与用法：读取、传递或更新 `impact` 时应保持 `RoleChangeImpactResultVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `impact`, preserve `RoleChangeImpactResultVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.simulation.domain.vo.RoleChangeImpactResultVO.impact", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.impact")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
             RoleImpactVO impact,
             /**
              * 字段 `policyVersion` 表示 `RoleChangeImpactResultVO` 中与 `policy Version` 相关的状态、依赖、配置或结果（声明类型 `long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -35,6 +45,10 @@ import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.vo.RoleImp
              * 含义与用法：读取、传递或更新 `policyVersion` 时应保持 `RoleChangeImpactResultVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `policyVersion`, preserve `RoleChangeImpactResultVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.simulation.domain.vo.RoleChangeImpactResultVO.policyVersion", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.policyVersion")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
             long policyVersion,
             /**
              * 字段 `evidenceChecksum` 表示 `RoleChangeImpactResultVO` 中与 `evidence Checksum` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -43,6 +57,10 @@ import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.vo.RoleImp
              * 含义与用法：读取、传递或更新 `evidenceChecksum` 时应保持 `RoleChangeImpactResultVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `evidenceChecksum`, preserve `RoleChangeImpactResultVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.simulation.domain.vo.RoleChangeImpactResultVO.evidenceChecksum", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.evidenceChecksum")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
             String evidenceChecksum,
             /**
              * 字段 `expiresAt` 表示 `RoleChangeImpactResultVO` 中与 `expires At` 相关的状态、依赖、配置或结果（声明类型 `Instant`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -51,5 +69,10 @@ import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.vo.RoleImp
              * 含义与用法：读取、传递或更新 `expiresAt` 时应保持 `RoleChangeImpactResultVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `expiresAt`, preserve `RoleChangeImpactResultVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.simulation.domain.vo.RoleChangeImpactResultVO.expiresAt", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.expiresAt")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    plainRead = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             Instant expiresAt) {
     }

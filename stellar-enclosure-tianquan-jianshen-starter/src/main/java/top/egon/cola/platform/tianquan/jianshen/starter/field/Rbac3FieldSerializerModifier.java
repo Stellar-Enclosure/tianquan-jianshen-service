@@ -17,14 +17,22 @@ final class Rbac3FieldSerializerModifier extends BeanSerializerModifier {
 
     private final CurrentRbac3User currentUser;
     private final SensitiveStrategyRegistry strategyRegistry;
+    private final top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionPolicyRegistry policies;
+    private final PermissionFieldBindingGuard fieldGuard;
     private final SensitiveMetadataResolver metadataResolver =
             new SensitiveMetadataResolver();
 
     Rbac3FieldSerializerModifier(
             CurrentRbac3User currentUser,
             SensitiveStrategyRegistry strategyRegistry) {
+        this(currentUser, strategyRegistry, null, null);
+    }
+
+    Rbac3FieldSerializerModifier(CurrentRbac3User currentUser, SensitiveStrategyRegistry strategyRegistry,
+            top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionPolicyRegistry policies, PermissionFieldBindingGuard fieldGuard) {
         this.currentUser = currentUser;
         this.strategyRegistry = strategyRegistry;
+        this.policies = policies; this.fieldGuard = fieldGuard;
     }
 
     @Override
@@ -33,7 +41,15 @@ final class Rbac3FieldSerializerModifier extends BeanSerializerModifier {
             BeanDescription beanDesc,
             List<BeanPropertyWriter> beanProperties) {
         List<BeanPropertyWriter> result = new ArrayList<>(beanProperties.size());
+        var compiled = policies == null ? java.util.Map.<String, top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest.ResourceDefinition>of()
+                : policies.fields(beanDesc.getBeanClass());
         for (BeanPropertyWriter property : beanProperties) {
+            if (!compiled.isEmpty()) {
+                var field = compiled.get(property.getName());
+                if (field == null) throw new IllegalStateException("COMPILED_OUTPUT_FIELD_UNDECLARED");
+                result.add(new CompiledFieldPropertyWriter(property, field, policies, currentUser, strategyRegistry, fieldGuard));
+                continue;
+            }
             RBACFieldResource resource = property.getAnnotation(RBACFieldResource.class);
             Sensitive staticSensitive = metadataResolver.resolve(
                     property.getAnnotation(Sensitive.class), SensitiveScene.RESPONSE)

@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.organization.domain.vo;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -41,6 +47,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `items` 时应保持 `DirectoryPageVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `items`, preserve `DirectoryPageVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.domain.vo.DirectoryPageVO.items", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.items")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.ARRAY,
+                    plainRead = @PermissionGroup(codes = {"system:user:read"}))
             List<T> items,
             /**
              * 字段 `page` 表示 `DirectoryPageVO` 中与 `page` 相关的状态、依赖、配置或结果（声明类型 `int`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -49,6 +59,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `page` 时应保持 `DirectoryPageVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `page`, preserve `DirectoryPageVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.domain.vo.DirectoryPageVO.page", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.page")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    plainRead = @PermissionGroup(codes = {"system:user:read"}))
             int page,
             /**
              * 字段 `size` 表示 `DirectoryPageVO` 中与 `size` 相关的状态、依赖、配置或结果（声明类型 `int`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -57,6 +71,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `size` 时应保持 `DirectoryPageVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `size`, preserve `DirectoryPageVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.domain.vo.DirectoryPageVO.size", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.size")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    plainRead = @PermissionGroup(codes = {"system:user:read"}))
             int size,
             /**
              * 字段 `total` 表示 `DirectoryPageVO` 中与 `total` 相关的状态、依赖、配置或结果（声明类型 `long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -65,6 +83,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `total` 时应保持 `DirectoryPageVO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `total`, preserve `DirectoryPageVO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.domain.vo.DirectoryPageVO.total", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.total")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    plainRead = @PermissionGroup(codes = {"system:user:read"}))
             long total
     ) {
     }

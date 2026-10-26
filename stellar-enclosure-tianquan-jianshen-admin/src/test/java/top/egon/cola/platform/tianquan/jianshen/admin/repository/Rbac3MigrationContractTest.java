@@ -147,7 +147,8 @@ class Rbac3MigrationContractTest {
                 BUILTIN_AUTHORIZATION_MIGRATION,
                 BUILTIN_BUSINESS_ACCESS_MIGRATION,
                 TIANQUAN_JIANSHEN_ABOUT_PERMISSION_MIGRATION,
-                RESOURCE_GRANTS_MIGRATION, CURRENT_BASELINE, WORKER_CLAIM_MIGRATION);
+                RESOURCE_GRANTS_MIGRATION, CURRENT_BASELINE, WORKER_CLAIM_MIGRATION,
+                "db/migration/V16__permission_catalog_and_runtime.sql");
         assertThat(resourceSql(STRONG_AUTH_MIGRATION))
                 .contains("add column strong_authenticated_at timestamptz")
                 .contains("ck_rbac3_session_strong_authentication_time");

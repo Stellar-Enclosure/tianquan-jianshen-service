@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.simulation.domain.dto;
 
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Map;
@@ -24,6 +30,10 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `addedPermissions` 时应保持 `HypothesisDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `addedPermissions`, preserve `HypothesisDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.simulation.domain.dto.HypothesisDTO.addedPermissions", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.addedPermissions")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.ARRAY,
+                    write = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
             Set<String> addedPermissions,
             /**
              * 字段 `removedPermissions` 表示 `HypothesisDTO` 中与 `removed Permissions` 相关的状态、依赖、配置或结果（声明类型 `Set&lt;String&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -32,6 +42,10 @@ import java.util.Set;
              * 含义与用法：读取、传递或更新 `removedPermissions` 时应保持 `HypothesisDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `removedPermissions`, preserve `HypothesisDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.authorization.simulation.domain.dto.HypothesisDTO.removedPermissions", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.removedPermissions")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.ARRAY,
+                    write = @PermissionGroup(codes = {"system:authorization-simulation:execute"}))
             Set<String> removedPermissions) {
         /**
          * 构造器 `HypothesisDTO` 用于创建并初始化 `HypothesisDTO` 实例，建立该类型后续方法所依赖的状态和不变量。

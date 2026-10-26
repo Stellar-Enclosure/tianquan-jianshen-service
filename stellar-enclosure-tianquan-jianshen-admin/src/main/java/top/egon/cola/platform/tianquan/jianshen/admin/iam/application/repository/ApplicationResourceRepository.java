@@ -1,7 +1,7 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.application.repository;
 
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.application.domain.vo.ApplicationAuthorizationScopeVO;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.ApplicationCatalogEntry;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.domain.vo.ApplicationCatalogEntry;
 
 import java.util.List;
 import java.util.Optional;

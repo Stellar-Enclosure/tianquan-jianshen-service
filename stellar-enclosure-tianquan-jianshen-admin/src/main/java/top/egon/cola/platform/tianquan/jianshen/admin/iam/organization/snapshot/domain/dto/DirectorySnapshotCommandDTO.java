@@ -1,4 +1,10 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.organization.snapshot.domain.dto;
+
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionGroup;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.FieldPermissions;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -41,6 +47,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `providerCode` 时应保持 `DirectorySnapshotCommandDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `providerCode`, preserve `DirectorySnapshotCommandDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.snapshot.domain.dto.DirectorySnapshotCommandDTO.providerCode", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.providerCode")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:directory:sync"}))
             @NotBlank String providerCode,
             /**
              * 字段 `snapshotVersion` 表示 `DirectorySnapshotCommandDTO` 中与 `snapshot Version` 相关的状态、依赖、配置或结果（声明类型 `long`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -49,6 +59,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `snapshotVersion` 时应保持 `DirectorySnapshotCommandDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `snapshotVersion`, preserve `DirectorySnapshotCommandDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.snapshot.domain.dto.DirectorySnapshotCommandDTO.snapshotVersion", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.snapshotVersion")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
+                    write = @PermissionGroup(codes = {"system:directory:sync"}))
             @PositiveOrZero long snapshotVersion,
             /**
              * 字段 `checksum` 表示 `DirectorySnapshotCommandDTO` 中与 `checksum` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -57,6 +71,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `checksum` 时应保持 `DirectorySnapshotCommandDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `checksum`, preserve `DirectorySnapshotCommandDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.snapshot.domain.dto.DirectorySnapshotCommandDTO.checksum", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.checksum")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:directory:sync"}))
             @NotBlank String checksum,
             /**
              * 字段 `generatedAt` 表示 `DirectorySnapshotCommandDTO` 中与 `generated At` 相关的状态、依赖、配置或结果（声明类型 `Instant`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -65,6 +83,11 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `generatedAt` 时应保持 `DirectorySnapshotCommandDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `generatedAt`, preserve `DirectorySnapshotCommandDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.snapshot.domain.dto.DirectorySnapshotCommandDTO.generatedAt", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.generatedAt")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
+                    write = @PermissionGroup(codes = {"system:directory:sync"}))
+            @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
             @NotNull Instant generatedAt,
             /**
              * 字段 `payload` 表示 `DirectorySnapshotCommandDTO` 中与 `payload` 相关的状态、依赖、配置或结果（声明类型 `Map&lt;String, Object&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -73,6 +96,10 @@ import java.util.Map;
              * 含义与用法：读取、传递或更新 `payload` 时应保持 `DirectorySnapshotCommandDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `payload`, preserve `DirectorySnapshotCommandDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
+            @PermissionResource(key = "tianquan-jianshen.field.iam.organization.snapshot.domain.dto.DirectorySnapshotCommandDTO.payload", type = ResourceType.FIELD,
+                    labelPage = "tianquan-jianshen.permissions", labelKey = "field.payload")
+            @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
+                    write = @PermissionGroup(codes = {"system:directory:sync"}))
             @Schema(type = "object",
                     additionalProperties = Schema.AdditionalPropertiesValue.TRUE)
             @NotNull Map<String, Object> payload

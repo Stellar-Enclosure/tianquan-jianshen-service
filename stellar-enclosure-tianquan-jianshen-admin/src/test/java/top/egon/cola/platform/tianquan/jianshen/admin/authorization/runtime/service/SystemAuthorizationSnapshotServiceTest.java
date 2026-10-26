@@ -3,8 +3,6 @@ package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.ser
 import org.junit.jupiter.api.Test;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.InitialAuthorizationContextRepository.InitialAuthorizationContext;
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.decision.controller.Rbac3AboutController;
-import top.egon.cola.platform.tianquan.jianshen.starter.security.RequiresPermission;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.decision.domain.vo.SnapshotRecordVO;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.AppAuthorizationContext;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.UserAuthorizationSnapshot;
@@ -25,23 +23,18 @@ class SystemAuthorizationSnapshotServiceTest {
     private static final Instant NOW = Instant.parse("2026-08-23T12:00:00Z");
 
     @Test
-    void businessOnlyActivationRetainsOnlyRbacSelfServicePermissions() {
-        var snapshot = activatedService("mock-backend", true)
-                .snapshot("1", "alice-sub", "tianquan-jianshen-admin");
-        assertThat(snapshot.permissions()).containsExactlyInAnyOrder(
-                "system:about:read", "system:role-activation:read", "system:role-activation:use");
-        assertThat(snapshot.activeRoleIds()).isEmpty();
-        assertThat(snapshot.resourceCodes()).isEmpty();
-        assertThat(snapshot.authVersion()).isEqualTo(1L);
-        assertThat(snapshot.policyVersion()).isEqualTo(2L);
+    void anotherApplicationCannotSynthesizeRbacSelfServicePermissions() {
+        assertThatThrownBy(() -> activatedService("mock-backend", true)
+                .snapshot("1", "alice-sub", "tianquan-jianshen-admin"))
+                .hasMessage("AUTHORIZATION_DENIED");
     }
 
     @Test
-    void anActivatedRbacRoleCannotRemoveTheUsersOwnRoleSelectionEntry() {
+    void activatedRbacRoleContainsOnlyExplicitPermissionGrants() {
         var snapshot = activatedService("tianquan-jianshen-admin", true)
                 .snapshot("1", "alice-sub", "tianquan-jianshen-admin");
         assertThat(snapshot.permissions()).containsExactlyInAnyOrder(
-                "test:read", "system:about:read", "system:role-activation:read", "system:role-activation:use");
+                "test:read");
         assertThat(snapshot.activeRoleIds()).containsExactly("10");
     }
 
@@ -71,27 +64,13 @@ class SystemAuthorizationSnapshotServiceTest {
     }
 
     @Test
-    void initialContextCanReadItsOwnAboutEndpointToRenderRoleSelection() throws Exception {
-        String permission = Rbac3AboutController.class.getMethod("about")
-                .getAnnotation(RequiresPermission.class).value();
-        assertThat(service().snapshot("1", "alice-sub", "tianquan-jianshen-admin").permissions()).contains(permission);
-    }
-
-    @Test
-    void exposesOnlySelfContextAndRoleActivationPermissionsBeforeFirstRuntimeSnapshot() {
-        var service = service();
-
-        var snapshot = service.snapshot("1", "alice-sub", "tianquan-jianshen-admin");
-
-        assertThat(snapshot.rbac3UserId()).isEqualTo("101");
-        assertThat(snapshot.activeRoleIds()).isEmpty();
-        assertThat(snapshot.permissions()).containsExactlyInAnyOrder(
-                "system:about:read",
-                "system:role-activation:read",
-                "system:role-activation:use"
-        );
-        assertThat(snapshot.authVersion()).isEqualTo(1L);
-        assertThat(snapshot.policyVersion()).isEqualTo(2L);
+    void legacyInitialContextCannotCreateAnyUserPermission() {
+        for (boolean legacyBootstrap : List.of(false, true)) {
+            for (String application : List.of("tianquan-jianshen-admin", "tianshu-admin")) {
+                assertThatThrownBy(() -> service(legacyBootstrap).snapshot("1", "alice-sub", application))
+                        .isInstanceOf(Rbac3RuleViolation.class).hasMessage("AUTH_SNAPSHOT_NOT_READY");
+            }
+        }
     }
 
     @Test
@@ -122,19 +101,6 @@ class SystemAuthorizationSnapshotServiceTest {
                 "1", "alice-sub", "tianshu-admin"))
                 .isInstanceOf(Rbac3RuleViolation.class)
                 .hasMessage("AUTH_SNAPSHOT_NOT_READY");
-    }
-
-    @Test
-    void exposesDdcManagementPermissionsForLocalBootstrap() {
-        var service = service(true);
-
-        var snapshot = service.snapshot("1", "alice-sub", "tianshu-admin");
-
-        assertThat(snapshot.rbac3UserId()).isEqualTo("101");
-        assertThat(snapshot.permissions()).containsExactlyInAnyOrder(
-                "TIANSHU_READ", "TIANSHU_WRITE", "TIANSHU_PUBLISH", "TIANSHU_CACHE");
-        assertThat(snapshot.authVersion()).isEqualTo(1L);
-        assertThat(snapshot.policyVersion()).isEqualTo(2L);
     }
 
     private SystemAuthorizationSnapshotService service() {

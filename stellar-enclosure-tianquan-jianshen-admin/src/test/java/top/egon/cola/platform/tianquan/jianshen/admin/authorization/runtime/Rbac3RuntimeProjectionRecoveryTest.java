@@ -38,6 +38,8 @@ import static org.mockito.Mockito.when;
 class Rbac3RuntimeProjectionRecoveryTest {
 
     private static final Instant NOW = Instant.parse("2026-09-06T00:00:00Z");
+    private final top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.catalog.PermissionSnapshotRebuildRepository rebuilds =
+            mock(top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.catalog.PermissionSnapshotRebuildRepository.class);
     private final RuntimeProjectionTargetRepository targets = mock(RuntimeProjectionTargetRepository.class);
     private final ActivationTransaction activeRoles = mock(ActivationTransaction.class);
     private final RoleActivationFacade activation = mock(RoleActivationFacade.class);
@@ -50,6 +52,7 @@ class Rbac3RuntimeProjectionRecoveryTest {
 
     @BeforeEach
     void setUp() {
+        recovery.catalogRebuilds(rebuilds);
         var tenant = new TenantAuthorizationStatePO(7L, "bootstrap", NOW);
         tenant.incrementPolicyVersion("actor", NOW);
         when(state.require(7L)).thenReturn(tenant);
@@ -74,6 +77,7 @@ class Rbac3RuntimeProjectionRecoveryTest {
         recovery.rebuild(event());
         recovery.rebuild(event());
         verify(activation, times(2)).refresh(any());
+        verify(rebuilds, times(2)).enqueue(event());
         verify(targets, times(2)).page("7", 9L, 200);
         verifyNoInteractions(reselection);
     }
