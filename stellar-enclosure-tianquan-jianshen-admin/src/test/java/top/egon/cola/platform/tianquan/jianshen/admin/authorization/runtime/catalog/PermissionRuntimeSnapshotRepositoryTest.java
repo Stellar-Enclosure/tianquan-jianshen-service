@@ -34,8 +34,13 @@ class PermissionRuntimeSnapshotRepositoryTest {
     }
     @Test void staleOrForeignDeploymentCannotWriteAnySnapshotOrHead() {
         Fixture fixture=new Fixture(); fixture.artifact="f".repeat(64);
-        assertEquals("AUTH_DEPLOYMENT_BINDING_MISMATCH",assertThrows(Rbac3RuleViolation.class,()->fixture.repository.current(
-                new PermissionRuntimeProofService.VerifiedRequest(binding(),ISSUER,user()))).reasonCode());
+        var denied = assertThrows(Rbac3RuleViolation.class,()->fixture.repository.current(
+                new PermissionRuntimeProofService.VerifiedRequest(binding(),ISSUER,user())));
+        assertEquals("AUTH_DEPLOYMENT_BINDING_MISMATCH", denied.reasonCode());
+        var evidence = assertInstanceOf(top.egon.cola.platform.tianquan.jianshen.starter.permission.RuntimeBindingMismatchEvidence.class, denied.getCause());
+        assertEquals(List.of("ARTIFACT_DIGEST_MISMATCH"), evidence.failedChecks());
+        assertEquals("f".repeat(64), evidence.selected().artifactDigest());
+        assertEquals("a".repeat(64), evidence.configuredProducer().get("artifactDigest"));
         assertTrue(fixture.writes.isEmpty());
     }
     @Test void databaseVersionDriftRejectsRatherThanCombiningOldFactsAndNewVersion() {
@@ -43,6 +48,62 @@ class PermissionRuntimeSnapshotRepositoryTest {
         assertEquals("AUTH_RUNTIME_VERSION_CONFLICT",assertThrows(Rbac3RuleViolation.class,()->fixture.repository.current(
                 new PermissionRuntimeProofService.VerifiedRequest(binding(),ISSUER,user()))).reasonCode());
         assertTrue(fixture.writes.isEmpty());
+    }
+    @Test void localClientKeepsBindingEvidenceAsAnInternalCauseWithoutChangingThePublicReason() {
+        Fixture fixture = new Fixture(); fixture.artifact = "f".repeat(64);
+        var proof = new PermissionRuntimeProofService.VerifiedRequest(binding(), ISSUER, user());
+        var failure = assertThrows(Rbac3RuleViolation.class, () -> fixture.repository.current(proof));
+        var proofs = mock(PermissionRuntimeProofService.class);
+        var snapshots = mock(PermissionRuntimeSnapshotRepository.class);
+        when(proofs.local(user(), "verified-proof")).thenReturn(proof);
+        when(snapshots.current(proof)).thenThrow(failure);
+        var client = new PermissionRuntimeConfiguration().localCatalogAuthorizationClient(proofs, snapshots);
+        var denied = assertThrows(top.egon.cola.platform.tianquan.jianshen.starter.client.Rbac3AuthorizationClient.AuthorizationDeniedException.class,
+                () -> client.fetch("shop", user(), "verified-proof"));
+        assertEquals("AUTH_DEPLOYMENT_BINDING_MISMATCH", denied.getMessage());
+        assertSame(failure, denied.getCause());
+    }
+    @Test void verifiedLocalUserReceivesAnIdForAnActualPreSnapshotBindingFailure() throws Exception {
+        Fixture fixture = new Fixture(); fixture.artifact = "f".repeat(64);
+        var verified = new PermissionRuntimeProofService.VerifiedRequest(binding(), ISSUER, user());
+        var proofs = mock(PermissionRuntimeProofService.class);
+        when(proofs.local(user(), "verified-proof")).thenReturn(verified);
+        var client = new PermissionRuntimeConfiguration().localCatalogAuthorizationClient(proofs, fixture.repository);
+        var loader = new top.egon.cola.platform.tianquan.jianshen.starter.cache.AuthorizationSnapshotLoader(client, "shop",
+                java.time.Clock.fixed(NOW, java.time.ZoneOffset.UTC));
+        var events = new ArrayList<top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionDenialDiagnostic>();
+        var audit = new top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionDenialAudit(() -> null, events::add,
+                java.time.Clock.fixed(NOW, java.time.ZoneOffset.UTC));
+        var filter = new top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3BearerAuthenticationFilter(loader, new ObjectMapper(), audit);
+        var observations = mock(top.egon.cola.platform.tianquan.shoubing.starter.security.IdpObservedVerificationComponent.class);
+        var tokenProof = new top.egon.cola.platform.tianquan.shoubing.starter.security.domain.TokenAuditProofBO(
+                ISSUER, RESOURCE, "a".repeat(64), null, "b".repeat(64));
+        when(observations.enabled()).thenReturn(true);
+        when(observations.authorizationDenied(eq(tokenProof), anyString())).thenReturn(true);
+        var request = new org.springframework.mock.web.MockHttpServletRequest("GET", "/api/shop");
+        var response = new org.springframework.mock.web.MockHttpServletResponse();
+        top.egon.cola.platform.tianquan.shoubing.starter.security.VerifiedUserTokenCarrier.set(request, "verified-proof");
+        org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(
+                new org.springframework.web.context.request.ServletRequestAttributes(request, response));
+        var authentication = new top.egon.cola.platform.tianquan.shoubing.starter.security.IdpAuthenticationToken(user(), List.of(), ISSUER);
+        authentication.setDetails(tokenProof);
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(authentication);
+        try {
+            new top.egon.cola.platform.tianquan.shoubing.starter.security.IdpSecurityObservationFilter(observations,
+                    new top.egon.cola.platform.tianquan.shoubing.starter.security.IdpEndpointAuthenticationPolicy())
+                    .doFilter(request, response, (incoming, outgoing) -> filter.doFilter(incoming, outgoing, new org.springframework.mock.web.MockFilterChain()));
+            assertEquals(403, response.getStatus());
+            assertEquals(1, events.size());
+            assertEquals(response.getHeader("X-Permission-Decision-Id"), events.getFirst().decisionId());
+            assertEquals("RUNTIME_BINDING", events.getFirst().decisionKind());
+            assertEquals("unavailable", events.getFirst().authVersion());
+            assertEquals("f".repeat(64), events.getFirst().binding().artifactDigest());
+            assertFalse(events.getFirst().resolvePermissionSources());
+            assertTrue(fixture.writes.isEmpty());
+        } finally {
+            org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
     }
     @Test void laterRolePolicyVersionDoesNotRequireAnotherCatalogActivation() {
         Fixture fixture = new Fixture(); fixture.policy = 4L;

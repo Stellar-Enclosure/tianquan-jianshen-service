@@ -7,6 +7,7 @@ import top.egon.cola.platform.tianquan.jianshen.contract.permission.*;
 import top.egon.cola.platform.tianquan.jianshen.starter.client.Rbac3AuthorizationClient;
 import java.io.IOException;
 import java.time.Clock;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -27,6 +28,17 @@ public final class PermissionPolicyRegistry {
     private final Map<String, PermissionManifest.ResourceDefinition> resources;
     private final Clock clock;
     private final java.util.List<CatalogScope> expectedScopes;
+    private final ClassValue<Map<String, PermissionManifest.ResourceDefinition>> fieldsByClass = new ClassValue<>() {
+        @Override protected Map<String, PermissionManifest.ResourceDefinition> computeValue(Class<?> dto) {
+            var owners = new java.util.HashSet<String>();
+            for (Class<?> current = dto; current != null && current != Object.class; current = current.getSuperclass()) {
+                owners.add(current.getCanonicalName() == null ? current.getName() : current.getCanonicalName());
+            }
+            return resources.values().stream().filter(resource -> resource.type() == ResourceType.FIELD
+                            && owners.contains(resource.target().get("dto")))
+                    .collect(Collectors.toUnmodifiableMap(resource -> resource.target().get("property").toString(), resource -> resource));
+        }
+    };
 
     public PermissionPolicyRegistry(PermissionManifest manifest, String artifactDigest, Clock clock) {
         this(manifest, artifactDigest, clock, java.util.List.of());
@@ -124,13 +136,7 @@ public final class PermissionPolicyRegistry {
     }
 
     public Map<String, PermissionManifest.ResourceDefinition> fields(Class<?> dto) {
-        var owners = new java.util.HashSet<String>();
-        for (Class<?> current = dto; current != null && current != Object.class; current = current.getSuperclass()) {
-            owners.add(current.getCanonicalName() == null ? current.getName() : current.getCanonicalName());
-        }
-        return resources.values().stream().filter(resource -> resource.type() == ResourceType.FIELD
-                        && owners.contains(resource.target().get("dto")))
-                .collect(Collectors.toUnmodifiableMap(resource -> resource.target().get("property").toString(), resource -> resource));
+        return fieldsByClass.get(dto);
     }
 
     public void requireActive(SystemAuthorizationSnapshot snapshot, String resourceKey) {
@@ -143,6 +149,32 @@ public final class PermissionPolicyRegistry {
     public void requireActive(top.egon.cola.platform.tianquan.jianshen.contract.authorization.ServicePolicySnapshot snapshot, String key) {
         if (snapshot == null) throw new Rbac3AuthorizationClient.AuthorizationDeniedException("SERVICE_POLICY_UNAVAILABLE");
         requireBinding(snapshot.catalogScope(), snapshot.policyBinding(), snapshot.expiresAt(), snapshot.resourceKeys(), key);
+    }
+
+    /** Diagnostic use only: never treat an unconfigured scope as trusted evidence. */
+    public boolean trustedScope(SystemAuthorizationSnapshot snapshot) {
+        return snapshot != null && snapshot.permissionSnapshot() != null && snapshot.policyBinding() != null
+                && expectedScopes.contains(snapshot.permissionSnapshot().catalogScope());
+    }
+
+    /** Compares the running producer to the Runtime-selected binding without changing the binding check. */
+    public Map<String, Object> bindingFailureDetails(SystemAuthorizationSnapshot snapshot, String resourceKey) {
+        if (!trustedScope(snapshot)) return Map.of();
+        var view = snapshot.permissionSnapshot();
+        var binding = snapshot.policyBinding();
+        var failures = new java.util.ArrayList<String>();
+        if (!snapshot.expiresAt().isAfter(clock.instant())) failures.add("SNAPSHOT_EXPIRED");
+        if (!manifest.producer().id().equals(binding.producerId())) failures.add("PRODUCER_MISMATCH");
+        if (!artifactDigest.equals(binding.artifactDigest())) failures.add("ARTIFACT_DIGEST_MISMATCH");
+        if (!digests.policyDigest().equals(binding.policyDigest())) failures.add("POLICY_DIGEST_MISMATCH");
+        if (!digests.manifestDigest().equals(binding.manifestDigest())) failures.add("MANIFEST_DIGEST_MISMATCH");
+        if (!manifest.application().applicationCode().equals(view.catalogScope().applicationCode())
+                || !manifest.application().businessCode().equals(view.catalogScope().businessCode())) failures.add("APPLICATION_MISMATCH");
+        if (!snapshot.resourceCodes().contains(resourceKey)) failures.add("RESOURCE_NOT_ACTIVE");
+        if (failures.isEmpty()) return Map.of();
+        return Map.of("failedChecks", List.copyOf(failures), "executingProducer", Map.of(
+                "producerId", manifest.producer().id(), "artifactDigest", artifactDigest,
+                "policyDigest", digests.policyDigest(), "manifestDigest", digests.manifestDigest()));
     }
 
     private void requireBinding(CatalogScope scope,

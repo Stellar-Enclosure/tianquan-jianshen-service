@@ -175,7 +175,30 @@ public class PermissionRuntimeSnapshotRepository {
                 || number(deployed[1]) > policyVersion
                 || instant(deployed[6]).isBefore(instant(deployed[7]))
                 || !instant(deployed[6]).isBefore(instant(deployed[8]))) {
-            throw new Rbac3RuleViolation("AUTH_DEPLOYMENT_BINDING_MISMATCH");
+            var denied = new Rbac3RuleViolation("AUTH_DEPLOYMENT_BINDING_MISMATCH");
+            if (binding.local()) {
+                try {
+                    var failedChecks = new java.util.ArrayList<String>();
+                    if (!binding.producerVersion().equals(text(deployed[2]))) failedChecks.add("PRODUCER_VERSION_MISMATCH");
+                    if (!binding.manifestDigest().equals(text(deployed[3]).trim())) failedChecks.add("MANIFEST_DIGEST_MISMATCH");
+                    if (!binding.policyDigest().equals(text(deployed[4]).trim())) failedChecks.add("POLICY_DIGEST_MISMATCH");
+                    if (!binding.artifactDigest().equals(text(deployed[5]).trim())) failedChecks.add("ARTIFACT_DIGEST_MISMATCH");
+                    if (number(deployed[1]) > policyVersion) failedChecks.add("ACTIVATION_POLICY_AHEAD");
+                    if (instant(deployed[6]).isBefore(instant(deployed[7]))) failedChecks.add("QUALIFICATION_AFTER_ACTIVATION");
+                    if (!instant(deployed[6]).isBefore(instant(deployed[8]))) failedChecks.add("QUALIFICATION_EXPIRED_AT_ACTIVATION");
+                    var selected = new RuntimePolicyBinding(binding.producerId(), text(deployed[2]), text(deployed[5]).trim(),
+                            text(deployed[4]).trim(), text(deployed[3]).trim());
+                    denied.initCause(new top.egon.cola.platform.tianquan.jianshen.starter.permission.RuntimeBindingMismatchEvidence(
+                            scope, Long.toString(catalogVersion), Long.toString(policyVersion), selected,
+                            Map.of("producerId", binding.producerId(), "producerVersion", binding.producerVersion(),
+                                    "artifactDigest", binding.artifactDigest(), "policyDigest", binding.policyDigest(),
+                                    "manifestDigest", binding.manifestDigest()), failedChecks));
+                } catch (RuntimeException diagnosticFailure) {
+                    org.slf4j.LoggerFactory.getLogger(PermissionRuntimeSnapshotRepository.class).warn(
+                            "Runtime binding diagnostic unavailable failureType={}", diagnosticFailure.getClass().getSimpleName());
+                }
+            }
+            throw denied;
         }
         return new PolicyState(number(scopeRow[6]), catalogVersion, policyVersion);
     }
@@ -211,6 +234,7 @@ public class PermissionRuntimeSnapshotRepository {
     private Map<String, top.egon.cola.platform.tianquan.jianshen.contract.authorization.DataScopeDecision> dataScopes(
             long scope, long user, List<String> roles, List<String> permissions, long auth, long policy, String tenant, Instant now) {
         if (roles.isEmpty() || permissions.isEmpty()) return Map.of();
+        Set<String> grantedPermissions = Set.copyOf(permissions);
         var values = new java.util.ArrayList<top.egon.cola.platform.tianquan.jianshen.core.activation.AuthorizationRuleFacts.DataScopeFact>();
         for (Object[] row : rows("""
                 select d.role_id, p.permission_code, d.scope_type, r.ref_type, r.ref_id, coalesce(d.directory_snapshot_version,0)
@@ -219,7 +243,7 @@ public class PermissionRuntimeSnapshotRepository {
                  where d.catalog_scope_id = :scope and d.role_id in (:roles) and d.status = 'ACTIVE'
                    and d.valid_from <= :now and (d.valid_to is null or d.valid_to > :now)
                 """, Map.of("scope", scope, "roles", roles.stream().map(Long::valueOf).toList(), "now", now))) {
-            if (!permissions.contains(text(row[1]))) continue;
+            if (!grantedPermissions.contains(text(row[1]))) continue;
             String kind = text(row[2]);
             String dimension = "NONE"; String reference = null;
             if ("ALL".equals(kind)) dimension = "TENANT_ALL";

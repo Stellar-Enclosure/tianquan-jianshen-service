@@ -110,8 +110,17 @@ public class Rbac3StarterAutoConfiguration {
         return new top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionAnonymousBoundary(registry, endpointPolicy::getIfAvailable);
     }
 
-    @Bean
+    @Bean(name = "permissionDenialAudit")
     @ConditionalOnMissingBean
+    public top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionDenialAudit permissionDenialAuditWithDiagnostics(
+            ObjectProvider<top.egon.cola.platform.tianquan.shoubing.starter.security.IdpObservedVerificationComponent> observations,
+            org.springframework.context.ApplicationEventPublisher events, @Qualifier("rbac3Clock") Clock clock) {
+        return new top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionDenialAudit(
+                observations::getIfAvailable, events::publishEvent, clock);
+    }
+
+    /** Retains the former direct factory signature for existing callers. */
+    @Deprecated(since = "0.0.1", forRemoval = false)
     public top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionDenialAudit permissionDenialAudit(
             ObjectProvider<top.egon.cola.platform.tianquan.shoubing.starter.security.IdpObservedVerificationComponent> observations) {
         return new top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionDenialAudit(observations::getIfAvailable);
@@ -391,13 +400,28 @@ public class Rbac3StarterAutoConfiguration {
     @org.springframework.context.annotation.Primary
     @ConditionalOnBean(name = "rbac3AuthorizationDelegate")
     @ConditionalOnMissingBean(name = "authorizationService")
-    public AuthorizationService authorizationService(@Qualifier("rbac3AuthorizationDelegate") AuthorizationService delegate,
+    public AuthorizationService authorizationServiceWithDiagnostics(@Qualifier("rbac3AuthorizationDelegate") AuthorizationService delegate,
             @Qualifier("oauthUsageObservationProperties") org.springframework.beans.factory.ObjectProvider<top.egon.cola.platform.tianquan.shoubing.starter.audit.OAuthUsageObservationProperties> properties,
             @Qualifier("idpSecurityMetricsRecorder") org.springframework.beans.factory.ObjectProvider<top.egon.cola.platform.tianquan.shoubing.core.observability.IdpSecurityMetricsRecorder> metrics,
             @Qualifier("idpObservedVerificationComponent") org.springframework.beans.factory.ObjectProvider<top.egon.cola.platform.tianquan.shoubing.starter.security.IdpObservedVerificationComponent> observations,
-            @Qualifier("defaultValidator") org.springframework.beans.factory.ObjectProvider<jakarta.validation.Validator> validators) {
+            @Qualifier("defaultValidator") org.springframework.beans.factory.ObjectProvider<jakarta.validation.Validator> validators,
+            top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionDenialAudit diagnostic,
+            top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionPolicyRegistry registry) {
         var usage = properties.getIfAvailable();
         if (usage == null || !usage.isEnabled()) { return delegate; }
+        return new top.egon.cola.platform.tianquan.jianshen.starter.authorization.Rbac3ObservedAuthorizationService(delegate,
+                metrics.getObject(), observations.getObject(), validators.getObject(), diagnostic, registry);
+    }
+
+    /** Preserves the former direct factory signature for existing consumers. */
+    @Deprecated(since = "0.0.1", forRemoval = false)
+    public AuthorizationService authorizationService(AuthorizationService delegate,
+            org.springframework.beans.factory.ObjectProvider<top.egon.cola.platform.tianquan.shoubing.starter.audit.OAuthUsageObservationProperties> properties,
+            org.springframework.beans.factory.ObjectProvider<top.egon.cola.platform.tianquan.shoubing.core.observability.IdpSecurityMetricsRecorder> metrics,
+            org.springframework.beans.factory.ObjectProvider<top.egon.cola.platform.tianquan.shoubing.starter.security.IdpObservedVerificationComponent> observations,
+            org.springframework.beans.factory.ObjectProvider<jakarta.validation.Validator> validators) {
+        var usage = properties.getIfAvailable();
+        if (usage == null || !usage.isEnabled()) return delegate;
         return new top.egon.cola.platform.tianquan.jianshen.starter.authorization.Rbac3ObservedAuthorizationService(delegate,
                 metrics.getObject(), observations.getObject(), validators.getObject());
     }
@@ -494,12 +518,19 @@ public class Rbac3StarterAutoConfiguration {
      * @param objectMapper 输入参数 `objectMapper`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
-    @Bean
+    @Bean(name = "rbac3BearerAuthenticationFilter")
     @ConditionalOnBean({IdpJwtVerifier.class, AuthorizationSnapshotLoader.class})
     @ConditionalOnMissingBean
-    public Rbac3BearerAuthenticationFilter rbac3BearerAuthenticationFilter(
+    public Rbac3BearerAuthenticationFilter rbac3BearerAuthenticationFilterWithDiagnostics(
             AuthorizationSnapshotLoader snapshotLoader,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionDenialAudit diagnostic) {
+        return new Rbac3BearerAuthenticationFilter(snapshotLoader, objectMapper, diagnostic);
+    }
+
+    @Deprecated(since = "0.0.1", forRemoval = false)
+    public Rbac3BearerAuthenticationFilter rbac3BearerAuthenticationFilter(AuthorizationSnapshotLoader snapshotLoader,
+                                                                            ObjectMapper objectMapper) {
         return new Rbac3BearerAuthenticationFilter(snapshotLoader, objectMapper);
     }
 

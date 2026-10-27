@@ -136,4 +136,56 @@ class ApiRequirementEnforcementTest {
         assertThrows(Rbac3AuthorizationClient.AuthorizationDeniedException.class,
                 () -> registry.requireActive(snapshot(manifest, Set.of("order:read", "order:approve")), "shop.api.update"));
     }
+
+    @Test void buildMismatchCapturesOnlyTrustedBindingEvidenceWithoutEvaluatingRoles() {
+        Set<String> granted = Set.of("order:read", "order:approve");
+        manager(granted);
+        var events = new ArrayList<PermissionDenialDiagnostic>();
+        var registry = new PermissionPolicyRegistry(manifest, "b".repeat(64), CLOCK, List.of(SCOPE));
+        Rbac3AuthorizationClient client = (system, user) -> snapshot(manifest, granted);
+        var guard = new PermissionExecutionGuard(registry, new CurrentRbac3User(), new SingleFlightSnapshotLoader(client, "shop", CLOCK),
+                null, new top.egon.cola.platform.tianquan.jianshen.starter.autoconfigure.Rbac3StarterProperties.UserScopePolicyProperties(),
+                new PermissionDenialAudit(() -> null, events::add, CLOCK));
+        var error = assertThrows(org.springframework.security.authorization.AuthorizationDeniedException.class,
+                () -> guard.require("shop.api.update"));
+        assertEquals("AUTH_DEPLOYMENT_BINDING_MISMATCH", error.getMessage());
+        assertEquals(1, events.size());
+        var event = events.getFirst();
+        assertEquals("DEPLOYMENT_BINDING", event.decisionKind());
+        assertEquals(List.of("ARTIFACT_DIGEST_MISMATCH"), event.details().get("failedChecks"));
+        assertFalse(event.resolvePermissionSources());
+        assertTrue(event.rootRoleIds().isEmpty());
+        assertTrue(event.permissionFacts().isEmpty());
+        events.clear();
+        var foreign = new CatalogScope("10", "20", "commerce", "shop", "other", "production");
+        var foreignGuard = new PermissionExecutionGuard(new PermissionPolicyRegistry(manifest, ARTIFACT, CLOCK, List.of(foreign)),
+                new CurrentRbac3User(), new SingleFlightSnapshotLoader(client, "shop", CLOCK), null,
+                new top.egon.cola.platform.tianquan.jianshen.starter.autoconfigure.Rbac3StarterProperties.UserScopePolicyProperties(),
+                new PermissionDenialAudit(() -> null, events::add, CLOCK));
+        assertThrows(org.springframework.security.authorization.AuthorizationDeniedException.class, () -> foreignGuard.require("shop.api.update"));
+        assertTrue(events.isEmpty());
+    }
+
+    @Test void diagnosticsDistinguishScopeFromMissingPermissionWithoutChangingTheExternalDenial() {
+        var granted = new java.util.concurrent.atomic.AtomicReference<>(Set.of("order:read", "order:approve"));
+        manager(granted.get());
+        Rbac3AuthorizationClient client = (system, user) -> snapshot(manifest, granted.get());
+        var scopePolicy = new top.egon.cola.platform.tianquan.jianshen.starter.autoconfigure.Rbac3StarterProperties.UserScopePolicyProperties()
+                .setEnabled(true).setPermissionScopes(Map.of("order:read", Set.of("api:read"), "order:approve", Set.of("api:approve")));
+        var audit = mock(PermissionDenialAudit.class);
+        when(audit.denied(anyString(), anyString(), anyString(), any(), any(), any(), any(), any())).thenAnswer(call ->
+                new org.springframework.security.authorization.AuthorizationDeniedException(call.getArgument(0)));
+        var guard = new PermissionExecutionGuard(registry(manifest), new CurrentRbac3User(),
+                new SingleFlightSnapshotLoader(client, "shop", CLOCK), null, scopePolicy, audit);
+        var details = new Rbac3UserDetails(USER, snapshot(manifest, granted.get()));
+        SecurityContextHolder.getContext().setAuthentication(new Rbac3AuthenticationToken(details, List.of(
+                new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_api:read"))));
+        assertEquals("PERMISSION_DENIED", assertThrows(org.springframework.security.authorization.AuthorizationDeniedException.class,
+                () -> guard.require("shop.api.update")).getMessage());
+        verify(audit).denied(eq("PERMISSION_DENIED"), eq("OAUTH_SCOPE_DENIED"), eq("shop.api.update"), any(), any(), any(), any(), any());
+        granted.set(Set.of("order:read"));
+        assertEquals("PERMISSION_DENIED", assertThrows(org.springframework.security.authorization.AuthorizationDeniedException.class,
+                () -> guard.require("shop.api.update")).getMessage());
+        verify(audit).denied(eq("PERMISSION_DENIED"), eq("PERMISSION_DENIED"), eq("shop.api.update"), any(), any(), any(), any(), any());
+    }
 }

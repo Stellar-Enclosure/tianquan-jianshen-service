@@ -134,28 +134,35 @@ public final class DefaultAuthorizationService implements AuthorizationService {
      */
     @Override
     public DataScopeDecision decideDataScope(DataScopeRequest request) {
+        return evaluateDataScope(request).decision();
+    }
+
+    record DataScopeEvaluation(DataScopeDecision decision,
+                               top.egon.cola.platform.tianquan.jianshen.contract.authorization.SystemAuthorizationSnapshot snapshot) { }
+
+    DataScopeEvaluation evaluateDataScope(DataScopeRequest request) {
         try {
             RuntimeAuthorizationContext context = contextSource.load();
             if (context.fenced()) {
-                return dataScopeDecision(
+                return new DataScopeEvaluation(dataScopeDecision(
                         context, request.permissionCode(), Decision.DENY,
-                        "AUTHORIZATION_FENCED");
+                        "AUTHORIZATION_FENCED"), context.snapshot());
             }
             if (!hasPermission(context, request.permissionCode())) {
-                return dataScopeDecision(
+                return new DataScopeEvaluation(dataScopeDecision(
                         context, request.permissionCode(), Decision.DENY,
-                        "PERMISSION_DENIED");
+                        "PERMISSION_DENIED"), context.snapshot());
             }
             DataScopeDecision decision = context.snapshot().dataScopes()
                     .get(request.permissionCode());
-            return decision == null
+            return new DataScopeEvaluation(decision == null
                     ? dataScopeDecision(context, request.permissionCode(),
                     Decision.DENY, "DATA_SCOPE_MISSING")
-                    : decision;
+                    : decision, context.snapshot());
         } catch (RuntimeUnavailableException exception) {
-            return dataScopeDecision(
+            return new DataScopeEvaluation(dataScopeDecision(
                     unavailable(exception), request.permissionCode(), Decision.INDETERMINATE,
-                    exception.reasonCode());
+                    exception.reasonCode()), null);
         }
     }
 

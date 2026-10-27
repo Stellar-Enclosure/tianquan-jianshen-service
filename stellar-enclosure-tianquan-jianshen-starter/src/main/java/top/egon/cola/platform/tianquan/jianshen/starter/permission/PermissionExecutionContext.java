@@ -25,6 +25,8 @@ public final class PermissionExecutionContext implements AutoCloseable {
         return key;
     }
 
+    public static String currentApiKeyOrNull() { return apiKeyOrNull(); }
+
     private static String apiKeyOrNull() {
         if (API.get() != null) return API.get().apiKey;
         var attributes = RequestContextHolder.getRequestAttributes();

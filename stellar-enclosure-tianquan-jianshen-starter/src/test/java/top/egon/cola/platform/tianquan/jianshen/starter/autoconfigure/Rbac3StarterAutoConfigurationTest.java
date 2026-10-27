@@ -72,6 +72,43 @@ class Rbac3StarterAutoConfigurationTest {
             });
         }finally{SecurityContextHolder.clearContext();RequestContextHolder.resetRequestAttributes();}
     }
+    @Test void configuredGuardPublishesSafeDecisionEvidence() {
+        try {
+            var request = new MockHttpServletRequest();
+            VerifiedUserTokenCarrier.set(request, "original-proof");
+            RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+            configured(true).run(context -> {
+                var events = new ArrayList<PermissionDenialDiagnostic>();
+                context.getSourceApplicationContext().addApplicationListener((org.springframework.context.ApplicationListener<org.springframework.context.ApplicationEvent>) event -> {
+                    if (event instanceof org.springframework.context.PayloadApplicationEvent<?> payload
+                            && payload.getPayload() instanceof PermissionDenialDiagnostic diagnostic) events.add(diagnostic);
+                });
+                SecurityContextHolder.getContext().setAuthentication(new Rbac3AuthenticationToken(new Rbac3UserDetails(USER, snapshot(MANIFEST, Set.of("order:read")))));
+                assertThatThrownBy(() -> context.getBean(PermissionExecutionGuard.class).require("shop.api.read"))
+                        .isInstanceOf(org.springframework.security.authorization.AuthorizationDeniedException.class);
+                assertThat(events).hasSize(1);
+                assertThat(events.getFirst().reasonCode()).isEqualTo("OAUTH_SCOPE_DENIED");
+                assertThat(events.getFirst().missingResourceScopes()).containsExactly("api:orders:read");
+                assertThat(events.getFirst().toString()).doesNotContain("original-proof");
+            });
+        } finally { SecurityContextHolder.clearContext(); RequestContextHolder.resetRequestAttributes(); }
+    }
+    @Test void enabledAuditWrapsTheDefaultDataScopeServiceWithoutReplacingTheExistingBeanName() {
+        var usage = new top.egon.cola.platform.tianquan.shoubing.starter.audit.OAuthUsageObservationProperties(true,
+                java.net.URI.create("https://idp.example/tenants/20"), false,
+                top.egon.cola.platform.tianquan.shoubing.starter.observability.IdpSecurityObservationReceiverEnum.JIANSHEN);
+        configured(true)
+                .withBean("oauthUsageObservationProperties", top.egon.cola.platform.tianquan.shoubing.starter.audit.OAuthUsageObservationProperties.class, () -> usage)
+                .withBean("idpSecurityMetricsRecorder", top.egon.cola.platform.tianquan.shoubing.core.observability.IdpSecurityMetricsRecorder.class,
+                        () -> top.egon.cola.platform.tianquan.shoubing.core.observability.IdpSecurityMetricsRecorder.NOOP)
+                .withBean("idpObservedVerificationComponent", top.egon.cola.platform.tianquan.shoubing.starter.security.IdpObservedVerificationComponent.class,
+                        () -> mock(top.egon.cola.platform.tianquan.shoubing.starter.security.IdpObservedVerificationComponent.class))
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context.getBean("authorizationService"))
+                            .isInstanceOf(top.egon.cola.platform.tianquan.jianshen.starter.authorization.Rbac3ObservedAuthorizationService.class);
+                });
+    }
     @Test void serviceTokenClientUsesTheQualifiedIdentityProperties(){
         configured(false).withPropertyValues("egon.cola.platform.tianquan.jianshen.authorization.service-token.enabled=true",
                         "egon.cola.platform.tianquan.jianshen.authorization.service-token.resource-uri=https://api.example/permission",

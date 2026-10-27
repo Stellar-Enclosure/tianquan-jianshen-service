@@ -20,6 +20,7 @@ import top.egon.cola.platform.tianquan.jianshen.starter.authorization.Authorizat
 import top.egon.cola.platform.tianquan.jianshen.starter.cache.AuthorizationSnapshotLoader;
 import top.egon.cola.platform.tianquan.jianshen.starter.cache.SingleFlightSnapshotLoader;
 import top.egon.cola.platform.tianquan.jianshen.starter.client.Rbac3AuthorizationClient;
+import top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionDenialAudit;
 
 import java.io.IOException;
 import java.util.List;
@@ -53,6 +54,7 @@ public final class Rbac3BearerAuthenticationFilter extends OncePerRequestFilter 
      */
     @Qualifier("jacksonObjectMapper")
     private final ObjectMapper objectMapper;
+    private final PermissionDenialAudit diagnostic;
 
     /**
      * 构造器 `Rbac3BearerAuthenticationFilter` 用于创建并初始化 `Rbac3BearerAuthenticationFilter` 实例，建立该类型后续方法所依赖的状态和不变量。
@@ -68,8 +70,13 @@ public final class Rbac3BearerAuthenticationFilter extends OncePerRequestFilter 
             AuthorizationSnapshotLoader snapshotLoader,
             ObjectMapper objectMapper
     ) {
+        this(snapshotLoader, objectMapper, PermissionDenialAudit.UNOBSERVED);
+    }
+
+    public Rbac3BearerAuthenticationFilter(AuthorizationSnapshotLoader snapshotLoader, ObjectMapper objectMapper,
+                                           PermissionDenialAudit diagnostic) {
         this(new Rbac3UserDetailsLoader(Objects.requireNonNull(snapshotLoader, "snapshotLoader")),
-                Objects.requireNonNull(objectMapper, "objectMapper"));
+                Objects.requireNonNull(objectMapper, "objectMapper"), Objects.requireNonNull(diagnostic, "diagnostic"));
     }
 
     /**
@@ -142,6 +149,7 @@ public final class Rbac3BearerAuthenticationFilter extends OncePerRequestFilter 
             filterChain.doFilter(request, response);
         } catch (Rbac3AuthorizationClient.AuthorizationDeniedException exception) {
             boolean delivered = IdpSecurityObservationFilter.beforeAuthorizationDenied(request);
+            if (delivered) diagnostic.observedRuntimeBindingDenied(exception, user, request, response, null);
             failure(response, delivered ? HttpServletResponse.SC_FORBIDDEN : HttpServletResponse.SC_SERVICE_UNAVAILABLE,
                     delivered ? exception.getMessage() : "OAUTH_AUDIT_DELIVERY_UNAVAILABLE");
         } catch (Rbac3AuthorizationClient.AuthorizationUnavailableException exception) {

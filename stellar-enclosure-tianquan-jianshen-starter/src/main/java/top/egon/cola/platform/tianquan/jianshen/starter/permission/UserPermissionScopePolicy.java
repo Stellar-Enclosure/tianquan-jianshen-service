@@ -29,6 +29,14 @@ public final class UserPermissionScopePolicy {
         return mixed(resource) || scopes.containsAll(resource.oauthScopes());
     }
 
+    boolean hasScopeMapping(String permission) { return enabled && mappings.containsKey(permission); }
+
+    Set<String> missingScopes(String permission, Set<String> scopes) {
+        if (!hasScopeMapping(permission)) return Set.of();
+        return mappings.get(permission).stream().filter(scope -> !scopes.contains(scope))
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
     public static boolean mixed(PermissionManifest.ResourceDefinition resource) {
         return resource.allowedPrincipals().contains(PermissionManifest.PrincipalType.USER)
                 && resource.allowedPrincipals().contains(PermissionManifest.PrincipalType.SERVICE);

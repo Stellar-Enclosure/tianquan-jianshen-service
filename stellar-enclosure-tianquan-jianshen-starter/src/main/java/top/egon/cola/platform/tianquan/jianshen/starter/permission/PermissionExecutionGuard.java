@@ -121,7 +121,14 @@ public final class PermissionExecutionGuard {
     public Rbac3UserDetails require(String resourceKey) {
         try { return requireUser(resourceKey); }
         catch (top.egon.cola.platform.tianquan.jianshen.starter.client.Rbac3AuthorizationClient.AuthorizationDeniedException denied) {
-            throw audit.denied(denied.getMessage());
+            var outcome = audit.denied(denied.getMessage());
+            if (outcome instanceof org.springframework.security.authorization.AuthorizationDeniedException
+                    && org.springframework.web.context.request.RequestContextHolder.getRequestAttributes()
+                       instanceof org.springframework.web.context.request.ServletRequestAttributes servlet) {
+                users.current().ifPresent(user -> audit.observedRuntimeBindingDenied(
+                        denied, user.identity(), servlet.getRequest(), servlet.getResponse(), resourceKey));
+            }
+            throw outcome;
         }
     }
 
@@ -130,7 +137,10 @@ public final class PermissionExecutionGuard {
         Rbac3UserDetails current = users.require();
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         Rbac3UserDetails refreshed = new Rbac3UserDetails(current.identity(), snapshots.load(current.identity()));
-        registry.requireActive(refreshed.snapshot(), resourceKey);
+        try { registry.requireActive(refreshed.snapshot(), resourceKey); }
+        catch (top.egon.cola.platform.tianquan.jianshen.starter.client.Rbac3AuthorizationClient.AuthorizationDeniedException denied) {
+            throw audit.deniedBinding(denied.getMessage(), resourceKey, refreshed.snapshot(), registry);
+        }
         PermissionExecutionContext.verifyInput(resourceKey, refreshed.snapshot());
         Set<String> scopes = authentication.getAuthorities().stream().map(value -> value.getAuthority())
                 .filter(value -> value.startsWith("SCOPE_")).map(value -> value.substring(6)).collect(Collectors.toSet());
@@ -140,7 +150,12 @@ public final class PermissionExecutionGuard {
                 || UserPermissionScopePolicy.mixed(resource) && resource.requirement() == null
                 || resource.access() == ResourceAccess.PROTECTED
                    && (resource.requirement() == null || !resource.requirement().allows(qualifiedPermissions))) {
-            throw audit.denied("PERMISSION_DENIED");
+            String diagnostic = !resource.allowedPrincipals().contains(PermissionManifest.PrincipalType.USER) ? "PRINCIPAL_TYPE_DENIED"
+                    : !userScopes.explicitScopesAllow(resource, scopes) ? "OAUTH_SCOPE_DENIED"
+                    : resource.requirement() != null && resource.requirement().allows(refreshed.permissions())
+                            && !resource.requirement().allows(qualifiedPermissions) ? "OAUTH_SCOPE_DENIED" : "PERMISSION_DENIED";
+            throw audit.denied("PERMISSION_DENIED", diagnostic, resourceKey, refreshed.snapshot(),
+                    resource, qualifiedPermissions, scopes, userScopes);
         }
         var replacement = new Rbac3AuthenticationToken(refreshed, authentication.getAuthorities());
         replacement.setDetails(authentication.getDetails());

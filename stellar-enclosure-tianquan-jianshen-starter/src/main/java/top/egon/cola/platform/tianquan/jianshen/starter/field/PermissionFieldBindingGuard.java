@@ -6,10 +6,12 @@ import top.egon.cola.platform.tianquan.jianshen.contract.permission.*;
 import top.egon.cola.platform.tianquan.jianshen.starter.permission.*;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.CurrentRbac3User;
 import top.egon.cola.platform.tianquan.shoubing.contract.ServiceIdentityPrincipal;
+import java.util.List;
 import java.util.Set;
 
 /** JSON and alternative binders validate every submitted property before a business write. */
 public final class PermissionFieldBindingGuard {
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(PermissionFieldBindingGuard.class);
     private final PermissionPolicyRegistry registry;
     private final CurrentRbac3User users;
     private final java.util.function.Supplier<PermissionServicePolicyGuard> services;
@@ -49,14 +51,19 @@ public final class PermissionFieldBindingGuard {
         return anonymous != null && anonymous.readOnlyField(field, readOnly);
     }
 
-    RuntimeException denyInput(String reason) { return audit.denied(reason); }
+    RuntimeException denyInput(String reason) {
+        top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3UserDetails user;
+        String apiKey;
+        try { user = users.current().orElse(null); apiKey = PermissionExecutionContext.currentApiKeyOrNull(); }
+        catch (RuntimeException failure) {
+            LOG.warn("Field input diagnostic unavailable failureType={}", failure.getClass().getSimpleName());
+            return audit.denied(reason);
+        }
+        return user == null ? audit.denied(reason) : audit.deniedFieldInput(reason, apiKey, user.snapshot(), registry);
+    }
 
     public void require(Class<?> dto, SubmittedFieldSet submitted, Set<String> writableBindings) {
-        try { requireFields(dto, submitted, writableBindings); }
-        catch (AuthorizationDeniedException denied) { throw audit.denied(denied.getMessage()); }
-        catch (top.egon.cola.platform.tianquan.jianshen.starter.client.Rbac3AuthorizationClient.AuthorizationDeniedException denied) {
-            throw audit.denied(denied.getMessage());
-        }
+        requireFields(dto, submitted, writableBindings);
     }
 
     private void requireFields(Class<?> dto, SubmittedFieldSet submitted, Set<String> writableBindings) {
@@ -66,22 +73,44 @@ public final class PermissionFieldBindingGuard {
         ServiceIdentityPrincipal service = authentication != null && authentication.isAuthenticated()
                 && authentication.getPrincipal() instanceof ServiceIdentityPrincipal caller ? caller : null;
         var user = service == null ? users.require() : null;
+        Set<String> scopes = null;
+        List<com.fasterxml.jackson.databind.introspect.BeanPropertyDefinition> properties = null;
         for (String property : submitted.paths()) {
             var field = fields.get(property);
-            if (field == null) throw new AuthorizationDeniedException("FIELD_BINDING_UNDECLARED");
-            boolean input = writableBindings.contains(property) && !readOnly(dto, property);
+            if (field == null) throw denyInput("FIELD_BINDING_UNDECLARED");
+            boolean input = false;
+            if (writableBindings.contains(property)) {
+                if (properties == null) {
+                    properties = metadata.getDeserializationConfig().introspect(metadata.constructType(dto)).findProperties();
+                }
+                input = !readOnly(properties, property);
+            }
             if (service != null) {
-                requireService(field, service, true);
-                if (!input || field.access() != ResourceAccess.PUBLIC
-                        && (field.fieldPolicy() == null || field.fieldPolicy().write() == null)) {
-                    throw new AuthorizationDeniedException("FIELD_ACCESS_DENIED");
+                try {
+                    requireService(field, service, true);
+                    if (!input || field.access() != ResourceAccess.PUBLIC
+                            && (field.fieldPolicy() == null || field.fieldPolicy().write() == null)) {
+                        throw new AuthorizationDeniedException("FIELD_ACCESS_DENIED");
+                    }
+                } catch (AuthorizationDeniedException denied) { throw audit.denied(denied.getMessage()); }
+                catch (top.egon.cola.platform.tianquan.jianshen.starter.client.Rbac3AuthorizationClient.AuthorizationDeniedException denied) {
+                    throw audit.denied(denied.getMessage());
                 }
             } else {
-                registry.requireActive(user.snapshot(), field.key());
-                Set<String> scopes = UserPermissionScopePolicy.currentScopes();
-                if (!userScopes.explicitScopesAllow(field, scopes)
-                        || !PermissionFieldPolicy.writable(field, userScopes.qualify(field, user.permissions(), scopes), input)) {
-                    throw new AuthorizationDeniedException("FIELD_ACCESS_DENIED");
+                try { registry.requireActive(user.snapshot(), field.key()); }
+                catch (top.egon.cola.platform.tianquan.jianshen.starter.client.Rbac3AuthorizationClient.AuthorizationDeniedException denied) {
+                    throw audit.deniedBinding(denied.getMessage(), field.key(), user.snapshot(), registry);
+                }
+                if (scopes == null) scopes = UserPermissionScopePolicy.currentScopes();
+                var qualified = userScopes.qualify(field, user.permissions(), scopes);
+                boolean scopeAllowed = userScopes.explicitScopesAllow(field, scopes);
+                if (!scopeAllowed || !PermissionFieldPolicy.writable(field, qualified, input)) {
+                    var rule = field.fieldPolicy() == null ? null : field.fieldPolicy().write();
+                    String reason = !scopeAllowed ? "OAUTH_SCOPE_DENIED" : !input ? "FIELD_INPUT_READ_ONLY"
+                            : rule == null ? "FIELD_WRITE_RULE_MISSING"
+                            : rule.allows(user.permissions()) && !rule.allows(qualified) ? "OAUTH_SCOPE_DENIED"
+                            : "FIELD_PERMISSION_DENIED";
+                    throw audit.deniedField(reason, field, user.snapshot(), qualified, scopes, userScopes, input);
                 }
             }
         }
@@ -137,8 +166,8 @@ public final class PermissionFieldBindingGuard {
         if (write) PermissionExecutionContext.rememberInput(current);
     }
 
-    private boolean readOnly(Class<?> dto, String name) {
-        for (var property : metadata.getDeserializationConfig().introspect(metadata.constructType(dto)).findProperties()) {
+    private boolean readOnly(List<com.fasterxml.jackson.databind.introspect.BeanPropertyDefinition> properties, String name) {
+        for (var property : properties) {
             if (!name.equals(property.getName())) continue;
             for (var member : new com.fasterxml.jackson.databind.introspect.AnnotatedMember[]{property.getPrimaryMember(),
                     property.getField(), property.getGetter(), property.getSetter(), property.getConstructorParameter()}) {

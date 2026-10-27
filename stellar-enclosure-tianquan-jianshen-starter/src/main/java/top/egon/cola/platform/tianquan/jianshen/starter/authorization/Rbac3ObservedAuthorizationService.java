@@ -14,7 +14,6 @@ import top.egon.cola.platform.tianquan.shoubing.contract.IdentityPrincipal;
 import top.egon.cola.platform.tianquan.shoubing.core.observability.SecurityMetricObservationBO;
 import top.egon.cola.platform.tianquan.shoubing.starter.security.IdpSecurityObservationFilter;
 import top.egon.cola.platform.tianquan.shoubing.starter.security.domain.TokenAuditProofBO;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.AuthorizationDecision;
@@ -26,17 +25,32 @@ import top.egon.cola.platform.tianquan.jianshen.contract.authorization.Permissio
 import top.egon.cola.platform.tianquan.shoubing.core.observability.IdpSecurityMetricsRecorder;
 import top.egon.cola.platform.tianquan.shoubing.starter.security.IdpObservedVerificationComponent;
 import top.egon.cola.platform.tianquan.shoubing.starter.security.rpc.IdpRpcSecurityContext;
+import top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionDenialAudit;
+import top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionPolicyRegistry;
 
 /** Observes the original PDP once without changing its policy results or exception contract. */
 @Slf4j
-@RequiredArgsConstructor
 public class Rbac3ObservedAuthorizationService implements AuthorizationService {
     @Qualifier("rbac3AuthorizationDelegate") private final AuthorizationService delegate;
     @Qualifier("idpSecurityMetricsRecorder") private final IdpSecurityMetricsRecorder metrics;
     @Qualifier("idpObservedVerificationComponent") private final IdpObservedVerificationComponent observations;
     @Qualifier("defaultValidator") private final Validator validator;
+    private final PermissionDenialAudit diagnostic;
+    private final PermissionPolicyRegistry registry;
 
     private final AtomicBoolean metricFailureLogged = new AtomicBoolean();
+
+    public Rbac3ObservedAuthorizationService(AuthorizationService delegate, IdpSecurityMetricsRecorder metrics,
+            IdpObservedVerificationComponent observations, Validator validator) {
+        this(delegate, metrics, observations, validator, null, null);
+    }
+
+    public Rbac3ObservedAuthorizationService(AuthorizationService delegate, IdpSecurityMetricsRecorder metrics,
+            IdpObservedVerificationComponent observations, Validator validator,
+            PermissionDenialAudit diagnostic, PermissionPolicyRegistry registry) {
+        this.delegate = delegate; this.metrics = metrics; this.observations = observations; this.validator = validator;
+        this.diagnostic = diagnostic; this.registry = registry;
+    }
 
     @Override public AuthorizationDecision requirePermission(PermissionRequest request) {
         new ValidationUtils(validator).validate(request);
@@ -44,6 +58,14 @@ public class Rbac3ObservedAuthorizationService implements AuthorizationService {
     }
     @Override public DataScopeDecision decideDataScope(DataScopeRequest request) {
         new ValidationUtils(validator).validate(request);
+        if (diagnostic != null && registry != null && delegate instanceof DefaultAuthorizationService service) {
+            var evaluation = new DefaultAuthorizationService.DataScopeEvaluation[1];
+            return observe(() -> {
+                evaluation[0] = service.evaluateDataScope(request);
+                return evaluation[0].decision();
+            }, DataScopeDecision::decision,
+                    result -> diagnostic.observedDataScopeDenied(result, evaluation[0].snapshot(), registry));
+        }
         return observe(() -> delegate.decideDataScope(request), DataScopeDecision::decision);
     }
     @Override public FieldPolicyDecision decideFields(FieldPolicyRequest request) {
@@ -60,6 +82,10 @@ public class Rbac3ObservedAuthorizationService implements AuthorizationService {
     }
 
     private <T> T observe(Supplier<T> original, Function<T, Decision> classify) {
+        return observe(original, classify, ignored -> { });
+    }
+
+    private <T> T observe(Supplier<T> original, Function<T, Decision> classify, java.util.function.Consumer<T> confirmedDenial) {
         T result;
         try { result = original.get(); }
         catch (RuntimeException failure) {
@@ -73,13 +99,19 @@ public class Rbac3ObservedAuthorizationService implements AuthorizationService {
         new ValidationUtils(validator).validate(result);
         Decision decision = classify.apply(result);
         metric(decision.name());
-        if (decision != Decision.ALLOW) { deniedHandoff(); }
+        if (decision != Decision.ALLOW) {
+            boolean confirmed = deniedHandoff();
+            if (decision == Decision.DENY && confirmed) {
+                try { confirmedDenial.accept(result); }
+                catch (RuntimeException failure) { log.warn("Data scope diagnostic unavailable failureType={}", failure.getClass().getSimpleName()); }
+            }
+        }
         return result;
     }
 
-    private void deniedHandoff() {
+    private boolean deniedHandoff() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !(authentication.getDetails() instanceof TokenAuditProofBO proof)) { return; }
+        if (authentication == null || !(authentication.getDetails() instanceof TokenAuditProofBO proof)) { return false; }
         boolean confirmed;
         if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes servlet) {
             var marker = IdpSecurityObservationFilter.authorizationObservationContext(servlet.getRequest());
@@ -99,6 +131,7 @@ public class Rbac3ObservedAuthorizationService implements AuthorizationService {
         if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes servlet) {
             IdpSecurityObservationFilter.authorizationDeniedRecorded(servlet.getRequest());
         }
+        return true;
     }
 
     private void metric(String result) {

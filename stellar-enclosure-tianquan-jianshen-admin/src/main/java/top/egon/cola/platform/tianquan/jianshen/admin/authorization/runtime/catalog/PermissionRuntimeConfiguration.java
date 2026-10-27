@@ -52,7 +52,12 @@ public class PermissionRuntimeConfiguration {
             String code = violation.reasonCode();
             if (!code.startsWith("AUTH_RUNTIME_") && !code.startsWith("AUTH_SNAPSHOT_")
                     && !java.util.Set.of("AUTH_PROPAGATION_PENDING", "AUTH_VERSION_MISMATCH", "POLICY_VERSION_MISMATCH").contains(code)) {
-                return new Rbac3AuthorizationClient.AuthorizationDeniedException(code);
+                var denied = new Rbac3AuthorizationClient.AuthorizationDeniedException(code);
+                if ("AUTH_DEPLOYMENT_BINDING_MISMATCH".equals(code)
+                        && violation.getCause() instanceof top.egon.cola.platform.tianquan.jianshen.starter.permission.RuntimeBindingMismatchEvidence) {
+                    denied.initCause(violation);
+                }
+                return denied;
             }
         }
         return new Rbac3AuthorizationClient.AuthorizationUnavailableException("AUTH_RUNTIME_UNAVAILABLE", failure);

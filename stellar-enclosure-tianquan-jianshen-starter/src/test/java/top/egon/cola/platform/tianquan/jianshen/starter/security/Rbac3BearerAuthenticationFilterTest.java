@@ -15,6 +15,9 @@ import top.egon.cola.platform.tianquan.shoubing.starter.security.IdpAuthenticati
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.SystemAuthorizationSnapshot;
 import top.egon.cola.platform.tianquan.jianshen.starter.cache.SingleFlightSnapshotLoader;
 import top.egon.cola.platform.tianquan.jianshen.starter.client.Rbac3AuthorizationClient;
+import top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionDenialAudit;
+import top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionDenialDiagnostic;
+import top.egon.cola.platform.tianquan.jianshen.starter.permission.RuntimeBindingMismatchEvidence;
 
 import java.net.URI;
 import java.time.Instant;
@@ -27,6 +30,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 
 class Rbac3BearerAuthenticationFilterTest {
 
@@ -51,6 +56,70 @@ class Rbac3BearerAuthenticationFilterTest {
 
         assertThat(chain.getRequest()).isSameAs(request);
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @Test
+    void localRuntimeBindingFailureIsCorrelatedBeforeASnapshotExists() throws Exception {
+        var events = new java.util.ArrayList<PermissionDenialDiagnostic>();
+        var logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(PermissionDenialAudit.class);
+        var logs = new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
+        logs.start(); logger.addAppender(logs);
+        try {
+            var response = bindingFailure(true, "1001", events);
+            assertThat(response.getStatus()).isEqualTo(403);
+            assertThat(events).hasSize(1);
+            var event = events.getFirst();
+            assertThat(event.decisionKind()).isEqualTo("RUNTIME_BINDING");
+            assertThat(event.decisionId()).isEqualTo(response.getHeader("X-Permission-Decision-Id"));
+            assertThat(event.authVersion()).isEqualTo("unavailable");
+            assertThat(event.userId()).startsWith("sha256:").doesNotContain(principal().subject());
+            assertThat(event.details()).containsEntry("failedChecks", List.of("ARTIFACT_DIGEST_MISMATCH"));
+            assertThat(event.resolvePermissionSources()).isFalse();
+            assertThat(response.getContentAsString()).doesNotContain("a".repeat(64), principal().subject());
+            var line = logs.list.getLast().getFormattedMessage();
+            assertThat(line).contains("decisionId=" + event.decisionId(), "traceId=")
+                    .doesNotContain(principal().subject(), "original-proof");
+        } finally { logger.detachAppender(logs); logs.stop(); }
+    }
+
+    @Test
+    void failedStrictReceiptOrAnotherTenantNeverPublishesBindingEvidence() throws Exception {
+        var events = new java.util.ArrayList<PermissionDenialDiagnostic>();
+        assertThat(bindingFailure(false, "1001", events).getStatus()).isEqualTo(503);
+        assertThat(events).isEmpty();
+        assertThat(bindingFailure(true, "9999", events).getStatus()).isEqualTo(403);
+        assertThat(events).isEmpty();
+    }
+
+    private MockHttpServletResponse bindingFailure(boolean receipt, String tenant, List<PermissionDenialDiagnostic> events) throws Exception {
+        var identity = principal();
+        var loader = mock(SingleFlightSnapshotLoader.class);
+        var selected = new top.egon.cola.platform.tianquan.jianshen.contract.authorization.RuntimePolicyBinding(
+                "shop-java", "1", "a".repeat(64), "b".repeat(64), "c".repeat(64));
+        var evidence = new RuntimeBindingMismatchEvidence(new top.egon.cola.platform.tianquan.jianshen.contract.permission.CatalogScope(
+                "1", tenant, "commerce", "shop", "default", "test"), "3", "4", selected,
+                Map.of("artifactDigest", "d".repeat(64)), List.of("ARTIFACT_DIGEST_MISMATCH"));
+        var violation = new top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation("AUTH_DEPLOYMENT_BINDING_MISMATCH");
+        violation.initCause(evidence);
+        var denied = new Rbac3AuthorizationClient.AuthorizationDeniedException("AUTH_DEPLOYMENT_BINDING_MISMATCH");
+        denied.initCause(violation);
+        when(loader.load(identity)).thenThrow(denied);
+        var audit = new PermissionDenialAudit(() -> null, events::add, java.time.Clock.fixed(NOW, java.time.ZoneOffset.UTC));
+        var filter = new Rbac3BearerAuthenticationFilter(loader, new ObjectMapper(), audit);
+        var observer = mock(top.egon.cola.platform.tianquan.shoubing.starter.security.IdpObservedVerificationComponent.class);
+        var proof = new top.egon.cola.platform.tianquan.shoubing.starter.security.domain.TokenAuditProofBO(
+                VERIFIED_ISSUER, URI.create("https://api.example/shop"), "a".repeat(64), null, "b".repeat(64));
+        when(observer.enabled()).thenReturn(true);
+        when(observer.authorizationDenied(eq(proof), anyString())).thenReturn(receipt);
+        var request = new MockHttpServletRequest("GET", "/api/shop");
+        var response = new MockHttpServletResponse();
+        var authentication = new IdpAuthenticationToken(identity, List.of(), VERIFIED_ISSUER);
+        authentication.setDetails(proof);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        new top.egon.cola.platform.tianquan.shoubing.starter.security.IdpSecurityObservationFilter(observer,
+                new top.egon.cola.platform.tianquan.shoubing.starter.security.IdpEndpointAuthenticationPolicy())
+                .doFilter(request, response, (incoming, outgoing) -> filter.doFilter(incoming, outgoing, new MockFilterChain()));
+        return response;
     }
 
     @Test
