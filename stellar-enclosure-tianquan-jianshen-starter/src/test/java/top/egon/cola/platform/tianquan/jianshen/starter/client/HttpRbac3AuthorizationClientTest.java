@@ -121,6 +121,20 @@ class HttpRbac3AuthorizationClientTest {
                 .hasMessageContaining("HTTPS");
     }
 
+    @Test
+    void runtimeRequestPropagatesTheCurrentTraceWithoutInventingOne() {
+        var uri = URI.create("https://authorization.example/internal");
+        assertThat(HttpRbac3AuthorizationClient.request(uri, "service", "user", Duration.ofSeconds(1))
+                .headers().firstValue("traceparent")).isEmpty();
+        var trace = top.egon.cola.component.common.trace.TraceContext.root();
+        try (var ignored = trace.open()) {
+            var request = HttpRbac3AuthorizationClient.request(uri, "service", "user", Duration.ofSeconds(1));
+            assertThat(request.headers().firstValue("traceparent")).hasValueSatisfying(value ->
+                    assertThat(value).startsWith("00-" + trace.traceId() + "-"));
+            assertThat(request.headers().firstValue("X-Egon-Subject-Token")).hasValue("user");
+        }
+    }
+
     private HttpRbac3AuthorizationClient client(
             HttpRbac3AuthorizationClient.Transport transport) {
         return new HttpRbac3AuthorizationClient(

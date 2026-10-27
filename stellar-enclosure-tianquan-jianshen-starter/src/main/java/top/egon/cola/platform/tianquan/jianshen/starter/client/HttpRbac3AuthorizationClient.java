@@ -144,6 +144,15 @@ public final class HttpRbac3AuthorizationClient implements Rbac3AuthorizationCli
     record HttpResponse(int statusCode, String body) {
     }
 
+    static HttpRequest request(URI uri, String serviceToken, String userToken, Duration timeout) {
+        HttpRequest.Builder builder = HttpRequest.newBuilder(uri).timeout(timeout)
+                .header("Accept", "application/json").header("Authorization", "Bearer " + serviceToken);
+        if (userToken != null) builder.header("X-Egon-Subject-Token", userToken);
+        var trace = top.egon.cola.component.common.trace.TraceContext.capture();
+        if (trace.traceId() != null) trace.child().inject(builder::header);
+        return builder.GET().build();
+    }
+
     private static final class JdkTransport implements Transport {
         private final HttpClient client;
 
@@ -155,11 +164,7 @@ public final class HttpRbac3AuthorizationClient implements Rbac3AuthorizationCli
         @Override
         public HttpResponse get(URI uri, String serviceToken, String userToken, Duration timeout)
                 throws IOException, InterruptedException {
-            HttpRequest.Builder builder = HttpRequest.newBuilder(uri).timeout(timeout)
-                    .header("Accept", "application/json").header("Authorization", "Bearer " + serviceToken);
-            if (userToken != null) builder.header("X-Egon-Subject-Token", userToken);
-            HttpRequest request = builder.GET().build();
-            var response = client.send(request, BodyHandlers.ofString());
+            var response = client.send(request(uri, serviceToken, userToken, timeout), BodyHandlers.ofString());
             return new HttpResponse(response.statusCode(), response.body());
         }
     }
