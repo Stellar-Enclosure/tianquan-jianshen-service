@@ -27,17 +27,26 @@ public class CatalogAdministrationGuard {
     }
 
     public PermissionCatalogScopeRepository.ScopeState require(CatalogScope target, Rbac3UserDetails actor, String permission, Instant now) {
+        return require(target, actor, permission, now, true);
+    }
+
+    public PermissionCatalogScopeRepository.ScopeState requireRead(CatalogScope target, Rbac3UserDetails actor, String permission, Instant now) {
+        return require(target, actor, permission, now, false);
+    }
+
+    private PermissionCatalogScopeRepository.ScopeState require(CatalogScope target, Rbac3UserDetails actor, String permission, Instant now, boolean lock) {
         if (actor == null || !target.tenantId().equals(actor.tenantId()) || !actor.hasPermission(permission)
                 || !now.isBefore(actor.identity().expiresAt()) || !now.isBefore(actor.snapshot().expiresAt())) {
             throw new Rbac3RuleViolation("PERMISSION_DENIED");
         }
-        var scope = scopes.lockScope(target);
-        if (policy.requireForUpdate(Long.parseLong(target.tenantId())).getPolicyVersion() != actor.policyVersion()) {
+        var scope = lock ? scopes.lockScope(target) : scopes.readScope(target);
+        var state = lock ? policy.requireForUpdate(Long.parseLong(target.tenantId())) : policy.require(Long.parseLong(target.tenantId()));
+        if (state.getPolicyVersion() != actor.policyVersion()) {
             throw new Rbac3RuleViolation("AUTH_SNAPSHOT_NOT_READY");
         }
         var rows = entityManager.createNativeQuery("""
-                select auth_version from rbac3_user where id=:user and tenant_id=:tenant and identity_sub=:subject and status='ACTIVE' for update
-                """).setParameter("user", Long.parseLong(actor.rbac3UserId())).setParameter("tenant", Long.parseLong(target.tenantId()))
+                select auth_version from rbac3_user where id=:user and tenant_id=:tenant and identity_sub=:subject and status='ACTIVE'
+                """ + (lock ? " for update" : "")).setParameter("user", Long.parseLong(actor.rbac3UserId())).setParameter("tenant", Long.parseLong(target.tenantId()))
                 .setParameter("subject", actor.identitySub()).getResultList();
         if (rows.size() != 1 || ((Number) rows.getFirst()).longValue() != actor.authVersion()) {
             throw new Rbac3RuleViolation("AUTH_SNAPSHOT_NOT_READY");

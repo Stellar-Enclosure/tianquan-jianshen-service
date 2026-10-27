@@ -33,7 +33,7 @@ class PermissionCatalogQueryTest {
     @BeforeEach
     void prepare() {
         when(clock.transactionNow()).thenReturn(NOW);
-        when(scopes.lockExistingOwner(SCOPE, "api")).thenReturn(owner(2));
+        when(scopes.readExistingOwner(SCOPE, "api")).thenReturn(owner(2));
     }
 
     @Test
@@ -50,7 +50,8 @@ class PermissionCatalogQueryTest {
         assertEquals(1, page.candidates().size());
         assertEquals("FAILED", page.candidates().getFirst().state());
         assertEquals("2", page.nextBeforeVersion());
-        verify(guard).require(SCOPE, actor, PermissionCatalogActivationService.READ, NOW);
+        verify(guard).requireRead(SCOPE, actor, PermissionCatalogActivationService.READ, NOW);
+        verify(scopes, never()).lockExistingOwner(any(), anyString());
         verifyNoInteractions(manifests);
     }
 

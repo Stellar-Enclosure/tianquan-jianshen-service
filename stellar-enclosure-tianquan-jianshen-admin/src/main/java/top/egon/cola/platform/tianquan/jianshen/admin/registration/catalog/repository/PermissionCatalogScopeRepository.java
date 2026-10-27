@@ -81,6 +81,15 @@ public class PermissionCatalogScopeRepository {
 
     @Transactional(propagation = Propagation.MANDATORY)
     public ScopeState lockScope(CatalogScope target) {
+        return scope(target, true);
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY, readOnly = true)
+    public ScopeState readScope(CatalogScope target) {
+        return scope(target, false);
+    }
+
+    private ScopeState scope(CatalogScope target, boolean lock) {
         long scopeId = Long.parseLong(target.catalogScopeId());
         List<?> scopes = entityManager.createNativeQuery("""
                         select s.id, s.tenant_id, s.business_code, s.application_code, s.namespace_code,
@@ -89,16 +98,15 @@ public class PermissionCatalogScopeRepository {
                          where s.id = :scope and s.status = 'ACTIVE' and a.status = 'ACTIVE'
                            and a.application_code = s.application_code and a.ddc_business_id = s.ddc_business_id
                            and a.ddc_application_id = s.ddc_application_id
-                         for update of s
-                        """).setParameter("scope", scopeId).getResultList();
+                        """ + (lock ? " for update of s" : "")).setParameter("scope", scopeId).getResultList();
         if (scopes.size() != 1) throw new Rbac3RuleViolation("APPLICATION_BINDING_DENIED");
         Object[] scope = (Object[]) scopes.getFirst();
         CatalogScope stored = new CatalogScope(scope[0].toString(), scope[1].toString(), scope[2].toString(),
                 scope[3].toString(), scope[4].toString(), scope[5].toString());
         if (!target.equals(stored)) throw new Rbac3RuleViolation("APPLICATION_BINDING_DENIED");
         List<?> pointers = entityManager.createNativeQuery("""
-                        select revision, policy_version from rbac3_catalog_active_pointer where catalog_scope_id = :scope for update
-                        """).setParameter("scope", scopeId).getResultList();
+                        select revision, policy_version from rbac3_catalog_active_pointer where catalog_scope_id = :scope
+                        """ + (lock ? " for update" : "")).setParameter("scope", scopeId).getResultList();
         if (pointers.size() != 1) throw new Rbac3RuleViolation("AUTH_SNAPSHOT_NOT_READY");
         Object[] pointer = (Object[]) pointers.getFirst();
         return new ScopeState(target, number(scope[6]), number(pointer[0]), number(pointer[1]));
@@ -106,22 +114,26 @@ public class PermissionCatalogScopeRepository {
 
     @Transactional(propagation = Propagation.MANDATORY)
     public Owner lockOwner(CatalogScope target, String producerId) {
-        return lockOwner(target, producerId, true);
+        return owner(target, producerId, true, true);
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
     public Owner lockExistingOwner(CatalogScope target, String producerId) {
-        return lockOwner(target, producerId, false);
+        return owner(target, producerId, false, true);
     }
 
-    private Owner lockOwner(CatalogScope target, String producerId, boolean enabledOnly) {
-        ScopeState scope = lockScope(target);
+    @Transactional(propagation = Propagation.MANDATORY, readOnly = true)
+    public Owner readExistingOwner(CatalogScope target, String producerId) {
+        return owner(target, producerId, false, false);
+    }
+
+    private Owner owner(CatalogScope target, String producerId, boolean enabledOnly, boolean lock) {
+        ScopeState scope = scope(target, lock);
         List<?> owners = entityManager.createNativeQuery("""
                         select kind, owned_key_prefixes::text, owned_permission_prefixes::text,
                                owned_message_prefixes::text, expected_modules::text, current_revision, version
                           from rbac3_catalog_producer where catalog_scope_id = :scope and producer_id = :producer and (not :enabledOnly or enabled)
-                         for update
-                        """).setParameter("scope", Long.parseLong(target.catalogScopeId())).setParameter("producer", producerId)
+                        """ + (lock ? " for update" : "")).setParameter("scope", Long.parseLong(target.catalogScopeId())).setParameter("producer", producerId)
                 .setParameter("enabledOnly", enabledOnly).getResultList();
         if (owners.size() != 1) throw new Rbac3RuleViolation("SERVICE_IDENTITY_DENIED");
         Object[] owner = (Object[]) owners.getFirst();

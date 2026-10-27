@@ -60,6 +60,25 @@ class CatalogAdministrationGuardTest {
     }
 
     @Test
+    void readGuardChecksTheSameScopeAndVersionsWithoutLocking() {
+        when(scopes.readScope(SCOPE)).thenReturn(new PermissionCatalogScopeRepository.ScopeState(SCOPE, 20, 1, 0));
+        when(policy.require(10L)).thenReturn(new TenantAuthorizationStatePO(10L, "test", NOW));
+
+        assertEquals(20, guard.requireRead(SCOPE, actor, "manage", NOW).applicationId());
+
+        verify(policy, never()).requireForUpdate(anyLong());
+        verify(scopes, never()).lockScope(any());
+        var sql = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(entityManager).createNativeQuery(sql.capture());
+        assertFalse(sql.getValue().toLowerCase(java.util.Locale.ROOT).contains("for update"));
+        verify(query).setParameter("tenant", 10L);
+        verify(query).setParameter("subject", "9001");
+        when(query.getResultList()).thenReturn(List.of(1L));
+        assertEquals("AUTH_SNAPSHOT_NOT_READY", assertThrows(Rbac3RuleViolation.class,
+                () -> guard.requireRead(SCOPE, actor, "manage", NOW)).reasonCode());
+    }
+
+    @Test
     void crossTenantMissingCapabilityAndExpiredSnapshotStopBeforeDatabase() {
         when(actor.tenantId()).thenReturn("11");
         assertThrows(Rbac3RuleViolation.class, () -> guard.require(SCOPE, actor, "manage", NOW));

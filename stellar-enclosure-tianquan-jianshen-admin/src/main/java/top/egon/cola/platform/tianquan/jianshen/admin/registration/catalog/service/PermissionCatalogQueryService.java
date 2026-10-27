@@ -115,7 +115,7 @@ public class PermissionCatalogQueryService {
 
     @Transactional
     public Producers producers(CatalogScope target, Rbac3UserDetails actor) {
-        var scope = guard.require(target, actor, PermissionCatalogActivationService.READ, clock.transactionNow());
+        var scope = guard.requireRead(target, actor, PermissionCatalogActivationService.READ, clock.transactionNow());
         return new Producers(target, Long.toString(scope.activeRevision()), queries.producers(target));
     }
 
@@ -123,8 +123,8 @@ public class PermissionCatalogQueryService {
     public Candidates candidates(CatalogScope target, String producer, long beforeVersion, int limit, Rbac3UserDetails actor) {
         new ManifestRegistrationRequest.Target(target, producer);
         var now = clock.transactionNow();
-        guard.require(target, actor, PermissionCatalogActivationService.READ, now);
-        var owner = scopes.lockExistingOwner(target, producer);
+        guard.requireRead(target, actor, PermissionCatalogActivationService.READ, now);
+        var owner = scopes.readExistingOwner(target, producer);
         var rows = queries.candidates(target, producer, beforeVersion, limit, now);
         var values = rows.stream().limit(limit).map(row -> {
             var candidate = row.value();
@@ -138,8 +138,8 @@ public class PermissionCatalogQueryService {
     @Transactional
     public Diff diff(CatalogScope target, String producer, long revision, Rbac3UserDetails actor) {
         new ManifestRegistrationRequest.Target(target, producer);
-        guard.require(target, actor, PermissionCatalogActivationService.READ, clock.transactionNow());
-        var owner = scopes.lockExistingOwner(target, producer);
+        guard.requireRead(target, actor, PermissionCatalogActivationService.READ, clock.transactionNow());
+        var owner = scopes.readExistingOwner(target, producer);
         var candidate = manifests.findVersion(target, producer, revision).orElseThrow(() -> new Rbac3RuleViolation("RESOURCE_NOT_FOUND"));
         var previous = manifests.activeManifest(target, producer).orElse(null);
         return new Diff(target, producer, Long.toString(revision), Long.toString(owner.activeRevision()), candidate.digests(),
