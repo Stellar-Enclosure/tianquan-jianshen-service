@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.orm.jpa.JpaTransactionManager;
+import java.util.Map;
 import top.egon.cola.component.common.mybatis.sharding.bootstrap.EgonColaShardingDataSourceBootstrapper.LogicalDataSourceFactory;
 import top.egon.cola.component.outbox.migration.OutboxLogicalDataSourceFactory;
 import top.egon.cola.component.outbox.migration.OutboxManagedDdlInitializer;
@@ -25,14 +26,17 @@ public class Rbac3FlywayConfiguration {
 
     @Bean("egonColaShardingLogicalDataSourceFactory")
     LogicalDataSourceFactory logicalDataSourceFactory(@Qualifier("outboxManagedDdlInitializer") OutboxManagedDdlInitializer outbox) {
-        return (physical, yaml) -> {
-            if (physical.size() != 1 || !physical.containsKey("rbac_primary")) {
-                throw new IllegalStateException("RBAC_SINGLE_PRIMARY_REQUIRED");
+        return new OutboxLogicalDataSourceFactory(outbox) {
+            @Override
+            public DataSource create(Map<String, DataSource> physical, byte[] yaml) throws Exception {
+                if (physical.size() != 1 || !physical.containsKey("rbac_primary")) {
+                    throw new IllegalStateException("RBAC_SINGLE_PRIMARY_REQUIRED");
+                }
+                // Flyway must finish before ShardingSphere inspects the business table metadata.
+                Flyway.configure().configuration(buildRbac3Flyway(physical.get("rbac_primary")).getConfiguration())
+                        .defaultSchema("public").schemas("public").load().migrate();
+                return super.create(physical, yaml);
             }
-            // Flyway must finish before ShardingSphere inspects the business table metadata.
-            Flyway.configure().configuration(buildRbac3Flyway(physical.get("rbac_primary")).getConfiguration())
-                    .defaultSchema("public").schemas("public").load().migrate();
-            return new OutboxLogicalDataSourceFactory(outbox).create(physical, yaml);
         };
     }
 

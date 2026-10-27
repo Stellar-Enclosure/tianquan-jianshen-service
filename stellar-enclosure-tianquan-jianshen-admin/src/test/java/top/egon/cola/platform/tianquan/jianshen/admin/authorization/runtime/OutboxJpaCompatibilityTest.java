@@ -23,6 +23,8 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import top.egon.cola.component.common.mybatis.autoconfigure.EgonColaMybatisPlusAutoConfiguration;
 import top.egon.cola.component.common.mybatis.autoconfigure.EgonColaMybatisPlusProperties;
 import top.egon.cola.component.common.mybatis.routing.EgonColaRoutingProfileBO;
+import top.egon.cola.component.common.mybatis.routing.EgonColaPhysicalTargetBO;
+import top.egon.cola.component.common.mybatis.sharding.strategy.EgonColaShardingStrategyNodes;
 import top.egon.cola.component.common.mybatis.sharding.EgonColaShardingProperties;
 import top.egon.cola.component.common.mybatis.sharding.bootstrap.EgonColaShardingTopologyValidator;
 import top.egon.cola.component.outbox.persistence.dao.OutboxMessageDAO;
@@ -114,12 +116,17 @@ class OutboxJpaCompatibilityTest {
     }
 
     @Test
-    void stillRejectsMultiplePrimariesAndMissingMapperXml() throws Exception {
-        for (String key : List.of("multiple-primary", "mapper-xml-missing")) {
+    void rejectsMultiplePrimariesMissingMapperXmlAndMissingOutboxRoute() throws Exception {
+        for (String key : List.of("multiple-primary", "mapper-xml-missing", "missing-profile")) {
             DataSource selected = mock(DataSource.class);
             mpFixture(selected).withPropertyValues("test.outbox." + key + "=true").run(context -> {
                 assertThat(context).hasFailed();
-                assertThat(rootCause(context.getStartupFailure())).isInstanceOf(OutboxConfigurationException.class);
+                Throwable cause = rootCause(context.getStartupFailure());
+                if (key.equals("multiple-primary")) {
+                    assertThat(cause).isInstanceOf(IllegalStateException.class).hasMessage("OUTBOX_SINGLE_PRIMARY_REQUIRED");
+                } else {
+                    assertThat(cause).isInstanceOf(OutboxConfigurationException.class);
+                }
             });
             verify(selected, never()).getConnection();
         }
@@ -202,8 +209,11 @@ class OutboxJpaCompatibilityTest {
         }
 
         @Bean("egonColaRoutingProfiles")
-        Map<String, EgonColaRoutingProfileBO> routingProfiles() {
-            return Map.of();
+        Map<String, EgonColaRoutingProfileBO> routingProfiles(org.springframework.core.env.Environment environment) {
+            if (environment.getProperty("test.outbox.missing-profile", Boolean.class, false)) { return Map.of(); }
+            return Map.of("egon_cola_outbox_message", EgonColaShardingStrategyNodes.simple(
+                    "egon_cola_outbox_message", EgonColaRoutingProfileBO.TableKindEnum.SINGLE,
+                    List.of(new EgonColaPhysicalTargetBO("primary_a", "egon_outbox", "egon_cola_outbox_message"))));
         }
 
         @Bean("egonColaWriteTargetResolver")
