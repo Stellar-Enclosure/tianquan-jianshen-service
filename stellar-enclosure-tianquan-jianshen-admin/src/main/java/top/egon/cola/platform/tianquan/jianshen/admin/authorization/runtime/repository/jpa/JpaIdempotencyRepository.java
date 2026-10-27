@@ -1,7 +1,6 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.jpa;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.LockModeType;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import top.egon.cola.component.common.id.snowflake.SnowflakeIdGenerator;
@@ -76,7 +75,6 @@ public class JpaIdempotencyRepository implements IdempotencyRepository {
                 .setParameter("actorId", command.actorId())
                 .setParameter("operationCode", command.operationCode())
                 .setParameter("keyHash", command.keyHash())
-                .setLockMode(LockModeType.PESSIMISTIC_WRITE)
                 .getResultList();
         if (!records.isEmpty()) {
             IdempotencyRecordPO record = records.getFirst();
@@ -94,6 +92,7 @@ public class JpaIdempotencyRepository implements IdempotencyRepository {
                 IdempotencyRecordActorTypeEnum.valueOf(command.actorType()),
                 command.actorId(), command.operationCode(), command.keyHash(),
                 command.requestHash(), command.expiresAt(), command.now()));
+        entityManager.flush();
         return new IdempotencyClaimVO(
                 id.toString(), IdempotencyOutcomeEnum.CLAIMED,
                 null, null, null);
@@ -123,14 +122,23 @@ public class JpaIdempotencyRepository implements IdempotencyRepository {
             String responseDigest,
             Instant now
     ) {
-        IdempotencyRecordPO record = entityManager.find(
-                IdempotencyRecordPO.class, Long.valueOf(recordId),
-                LockModeType.PESSIMISTIC_WRITE);
-        if (record == null) {
-            throw new IllegalStateException("idempotency record is missing");
+        if (responseStatus < 100 || responseStatus > 599) {
+            throw new IllegalArgumentException("invalid response status");
         }
-        record.complete(
-                resourceType, resourceId, responseStatus, responseDigest, now);
+        Long id = Long.valueOf(recordId);
+        entityManager.flush();
+        int changed = entityManager.createNativeQuery("""
+                update rbac3_idempotency_record
+                   set resource_type = :resourceType, resource_id = :resourceId, response_status = :responseStatus,
+                       response_digest = :responseDigest, status = 'COMPLETED', version = version + 1,
+                       updated_at = :now, updated_by = actor_id
+                 where id = :id and status = 'PROCESSING'
+                """).setParameter("resourceType", resourceType).setParameter("resourceId", resourceId)
+                .setParameter("responseStatus", responseStatus).setParameter("responseDigest", responseDigest)
+                .setParameter("now", now).setParameter("id", id).executeUpdate();
+        if (changed != 1) { throw new IllegalStateException("idempotency record is missing or already completed"); }
+        // A bulk update bypasses JPA's managed state, including a claim created in this transaction.
+        entityManager.detach(entityManager.getReference(IdempotencyRecordPO.class, id));
     }
 
     /**
