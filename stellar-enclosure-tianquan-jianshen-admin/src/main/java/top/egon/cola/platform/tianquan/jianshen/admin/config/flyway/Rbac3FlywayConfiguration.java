@@ -13,8 +13,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import java.util.Map;
 import top.egon.cola.component.common.mybatis.sharding.bootstrap.EgonColaShardingDataSourceBootstrapper.LogicalDataSourceFactory;
+import top.egon.cola.component.common.mybatis.sharding.EgonColaShardingProperties;
 import top.egon.cola.component.outbox.migration.OutboxLogicalDataSourceFactory;
 import top.egon.cola.component.outbox.migration.OutboxManagedDdlInitializer;
+import top.egon.cola.component.outbox.migration.OutboxStorageTopology;
 
 /** Initializes RBAC and managed Outbox on the same physical PRIMARY before creating the shared logical datasource. */
 @Configuration(proxyBeanMethods = false)
@@ -25,19 +27,28 @@ public class Rbac3FlywayConfiguration {
     public static final String OUTBOX_INITIALIZER = "outboxFlywayInitializer";
 
     @Bean("egonColaShardingLogicalDataSourceFactory")
-    LogicalDataSourceFactory logicalDataSourceFactory(@Qualifier("outboxManagedDdlInitializer") OutboxManagedDdlInitializer outbox) {
+    LogicalDataSourceFactory logicalDataSourceFactory(@Qualifier("outboxManagedDdlInitializer") OutboxManagedDdlInitializer outbox,
+                                                      EgonColaShardingProperties sharding) {
         return new OutboxLogicalDataSourceFactory(outbox) {
             @Override
             public DataSource create(Map<String, DataSource> physical, byte[] yaml) throws Exception {
-                if (physical.size() != 1 || !physical.containsKey("rbac_primary")) {
-                    throw new IllegalStateException("RBAC_SINGLE_PRIMARY_REQUIRED");
-                }
                 // Flyway must finish before ShardingSphere inspects the business table metadata.
-                Flyway.configure().configuration(buildRbac3Flyway(physical.get("rbac_primary")).getConfiguration())
+                Flyway.configure().configuration(buildRbac3Flyway(rbacPrimary(physical, sharding)).getConfiguration())
                         .defaultSchema("public").schemas("public").load().migrate();
                 return super.create(physical, yaml);
             }
         };
+    }
+
+    static DataSource rbacPrimary(Map<String, DataSource> physical, EgonColaShardingProperties sharding) {
+        var primary = OutboxStorageTopology.singlePrimary(sharding);
+        var configured = sharding.getDataSources().stream().map(source -> source.name())
+                .collect(java.util.stream.Collectors.toSet());
+        if (!"rbac_primary".equals(primary.name()) || !physical.keySet().equals(configured)
+                || physical.get(primary.name()) == null) {
+            throw new IllegalStateException("RBAC_SINGLE_PRIMARY_REQUIRED");
+        }
+        return physical.get(primary.name());
     }
 
     /** Read-only migration status points at the same physical PRIMARY prepared by the datasource factory. */
