@@ -32,6 +32,7 @@ import top.egon.cola.platform.tianquan.jianshen.starter.authorization.DefaultAut
 import top.egon.cola.platform.tianquan.jianshen.starter.authorization.Rbac3AboutService;
 import top.egon.cola.platform.tianquan.jianshen.starter.cache.AuthorizationSnapshotCache;
 import top.egon.cola.platform.tianquan.jianshen.starter.cache.SingleFlightSnapshotLoader;
+import top.egon.cola.platform.tianquan.jianshen.starter.cache.AuthorizationSnapshotLoader;
 import top.egon.cola.platform.tianquan.jianshen.starter.client.HttpRbac3AuthorizationClient;
 import top.egon.cola.platform.tianquan.jianshen.starter.client.HttpTenantServiceTokenSupplier;
 import top.egon.cola.platform.tianquan.jianshen.starter.client.Rbac3AuthorizationClient;
@@ -129,7 +130,7 @@ public class Rbac3StarterAutoConfiguration {
     @ConditionalOnMissingBean
     public top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionExecutionGuard permissionExecutionGuard(
             top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionPolicyRegistry registry,
-            CurrentRbac3User users, SingleFlightSnapshotLoader snapshots,
+            CurrentRbac3User users, AuthorizationSnapshotLoader snapshots,
             top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionServicePolicyGuard services,
             Rbac3StarterProperties properties,
             top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionDenialAudit audit,
@@ -258,9 +259,9 @@ public class Rbac3StarterAutoConfiguration {
      * @param clock 输入参数 `clock`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
-    @Bean
+    @Bean(name = {"authorizationSnapshotLoader", "singleFlightSnapshotLoader"})
     @ConditionalOnBean(Rbac3AuthorizationClient.class)
-    @ConditionalOnMissingBean
+    @ConditionalOnMissingBean(AuthorizationSnapshotLoader.class)
     public SingleFlightSnapshotLoader singleFlightSnapshotLoader(
             Rbac3AuthorizationClient client,
             Rbac3StarterProperties properties,
@@ -341,7 +342,7 @@ public class Rbac3StarterAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public AuthorizationService.FenceVerifier rbac3FenceVerifier(
-            CurrentRbac3User currentUser, SingleFlightSnapshotLoader snapshots,
+            CurrentRbac3User currentUser, AuthorizationSnapshotLoader snapshots,
             @Qualifier("rbac3Clock") Clock clock) {
         return request -> {
             var current = currentUser.require();
@@ -494,10 +495,10 @@ public class Rbac3StarterAutoConfiguration {
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
     @Bean
-    @ConditionalOnBean({IdpJwtVerifier.class, SingleFlightSnapshotLoader.class})
+    @ConditionalOnBean({IdpJwtVerifier.class, AuthorizationSnapshotLoader.class})
     @ConditionalOnMissingBean
     public Rbac3BearerAuthenticationFilter rbac3BearerAuthenticationFilter(
-            SingleFlightSnapshotLoader snapshotLoader,
+            AuthorizationSnapshotLoader snapshotLoader,
             ObjectMapper objectMapper) {
         return new Rbac3BearerAuthenticationFilter(snapshotLoader, objectMapper);
     }
@@ -580,4 +581,32 @@ public class Rbac3StarterAutoConfiguration {
                 .filter(scope -> !scope.isBlank())
                 .collect(Collectors.toUnmodifiableSet());
     }
+    /** @deprecated compatibility factory overload for the former loader type. */
+    @Deprecated(since = "0.0.1", forRemoval = false)
+    public top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionExecutionGuard permissionExecutionGuard(
+            top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionPolicyRegistry registry,
+            CurrentRbac3User users, SingleFlightSnapshotLoader snapshots,
+            top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionServicePolicyGuard services,
+            Rbac3StarterProperties properties,
+            top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionDenialAudit audit,
+            top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionAnonymousBoundary anonymous) {
+        return permissionExecutionGuard(registry, users, (AuthorizationSnapshotLoader) snapshots, services, properties, audit, anonymous);
+    }
+
+    /** @deprecated compatibility factory overload for the former loader type. */
+    @Deprecated(since = "0.0.1", forRemoval = false)
+    public AuthorizationService.FenceVerifier rbac3FenceVerifier(
+            CurrentRbac3User currentUser, SingleFlightSnapshotLoader snapshots,
+            @Qualifier("rbac3Clock") Clock clock) {
+        return rbac3FenceVerifier(currentUser, (AuthorizationSnapshotLoader) snapshots, clock);
+    }
+
+    /** @deprecated compatibility factory overload for the former loader type. */
+    @Deprecated(since = "0.0.1", forRemoval = false)
+    public Rbac3BearerAuthenticationFilter rbac3BearerAuthenticationFilter(
+            SingleFlightSnapshotLoader snapshotLoader,
+            ObjectMapper objectMapper) {
+        return rbac3BearerAuthenticationFilter((AuthorizationSnapshotLoader) snapshotLoader, objectMapper);
+    }
+
 }

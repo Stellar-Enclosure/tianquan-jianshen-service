@@ -17,6 +17,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import top.egon.cola.platform.tianquan.shoubing.contract.IdentityPrincipal;
 import top.egon.cola.platform.tianquan.shoubing.starter.security.IdpAuthenticationToken;
 import top.egon.cola.platform.tianquan.jianshen.starter.authorization.AuthorizationService;
+import top.egon.cola.platform.tianquan.jianshen.starter.cache.AuthorizationSnapshotLoader;
 import top.egon.cola.platform.tianquan.jianshen.starter.cache.SingleFlightSnapshotLoader;
 import top.egon.cola.platform.tianquan.jianshen.starter.client.Rbac3AuthorizationClient;
 
@@ -35,8 +36,8 @@ import java.util.Objects;
 public final class Rbac3BearerAuthenticationFilter extends OncePerRequestFilter {
 
     /**
-     * 字段 `snapshotLoader` 表示 `Rbac3BearerAuthenticationFilter` 中与 `snapshot Loader` 相关的状态、依赖、配置或结果（声明类型 `SingleFlightSnapshotLoader`）；其生命周期和取值含义由声明类型及所属对象共同确定。
-     * Field `snapshotLoader` stores the `snapshot Loader`-related state, dependency, configuration, or result of `Rbac3BearerAuthenticationFilter` (declared type `SingleFlightSnapshotLoader`); its lifecycle and value semantics are defined by its declared type and owning object.
+     * 字段 `snapshotLoader` 表示 `Rbac3BearerAuthenticationFilter` 中与 `snapshot Loader` 相关的状态、依赖、配置或结果（声明类型 `AuthorizationSnapshotLoader`）；其生命周期和取值含义由声明类型及所属对象共同确定。
+     * Field `snapshotLoader` stores the `snapshot Loader`-related state, dependency, configuration, or result of `Rbac3BearerAuthenticationFilter` (declared type `AuthorizationSnapshotLoader`); its lifecycle and value semantics are defined by its declared type and owning object.
      *
      * 含义与用法：读取、传递或更新 `snapshotLoader` 时应保持 `Rbac3BearerAuthenticationFilter` 的生命周期、不可变性和线程安全约束。
      * Meaning and usage: when reading, passing, or updating `snapshotLoader`, preserve `Rbac3BearerAuthenticationFilter`'s lifecycle, immutability, and thread-safety constraints.
@@ -64,7 +65,7 @@ public final class Rbac3BearerAuthenticationFilter extends OncePerRequestFilter 
      * @param objectMapper 输入参数 `objectMapper`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      */
     public Rbac3BearerAuthenticationFilter(
-            SingleFlightSnapshotLoader snapshotLoader,
+            AuthorizationSnapshotLoader snapshotLoader,
             ObjectMapper objectMapper
     ) {
         this(new Rbac3UserDetailsLoader(Objects.requireNonNull(snapshotLoader, "snapshotLoader")),
@@ -81,6 +82,12 @@ public final class Rbac3BearerAuthenticationFilter extends OncePerRequestFilter 
      * @param request 输入参数 `request`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    /** @deprecated use the constructor accepting AuthorizationSnapshotLoader. */
+    @Deprecated(since = "0.0.1", forRemoval = false)
+    public Rbac3BearerAuthenticationFilter(SingleFlightSnapshotLoader snapshotLoader, ObjectMapper objectMapper) {
+        this((AuthorizationSnapshotLoader) snapshotLoader, objectMapper);
+    }
+
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();

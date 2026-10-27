@@ -29,6 +29,22 @@ class Rbac3StarterAutoConfigurationTest {
             Map.of("methods",List.of("GET"),"paths",List.of("/orders")),ResourceAccess.PROTECTED,all("order:read"),null,
             List.of(PermissionManifest.PrincipalType.USER),List.of("api:orders:read"),new PermissionManifest.I18nReference("shop","read"),DefinitionLifecycle.ACTIVE)));
     private final ApplicationContextRunner runner=new ApplicationContextRunner().withConfiguration(AutoConfigurations.of(Rbac3StarterAutoConfiguration.class));
+    @Test void defaultLoaderExposesBothTypeAndBeanNameCompatibility() {
+        configured(true).run(context -> {
+            assertThat(context).hasNotFailed().hasSingleBean(top.egon.cola.platform.tianquan.jianshen.starter.cache.AuthorizationSnapshotLoader.class);
+            assertThat(context.getBean("authorizationSnapshotLoader")).isSameAs(context.getBean("singleFlightSnapshotLoader"));
+            assertThat(context.getBean(top.egon.cola.platform.tianquan.jianshen.starter.cache.SingleFlightSnapshotLoader.class))
+                    .isSameAs(context.getBean(top.egon.cola.platform.tianquan.jianshen.starter.cache.AuthorizationSnapshotLoader.class));
+        });
+    }
+    @Test void aCustomLoaderWithTheNewNameSuppressesTheCompatibilityDefault() {
+        var custom=new top.egon.cola.platform.tianquan.jianshen.starter.cache.AuthorizationSnapshotLoader((system,user)->snapshot(MANIFEST,Set.of()),"shop",CLOCK);
+        configured(true).withBean("customLoader",top.egon.cola.platform.tianquan.jianshen.starter.cache.AuthorizationSnapshotLoader.class,()->custom)
+                .run(context -> {
+                    assertThat(context).hasNotFailed().hasSingleBean(top.egon.cola.platform.tianquan.jianshen.starter.cache.AuthorizationSnapshotLoader.class);
+                    assertThat(context.getBean(top.egon.cola.platform.tianquan.jianshen.starter.cache.AuthorizationSnapshotLoader.class)).isSameAs(custom);
+                });
+    }
     private ApplicationContextRunner configured(boolean client){
         var value=runner.withPropertyValues("egon.cola.platform.tianquan.jianshen.enabled=true","egon.cola.platform.tianquan.jianshen.system-code=shop")
                 .withBean(ObjectMapper.class,ObjectMapper::new).withBean("rbac3Clock",java.time.Clock.class,()->CLOCK)

@@ -5,6 +5,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
+import top.egon.cola.platform.tianquan.jianshen.starter.cache.AuthorizationSnapshotLoader;
 import top.egon.cola.platform.tianquan.jianshen.starter.cache.SingleFlightSnapshotLoader;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.CurrentRbac3User;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3AuthenticationToken;
@@ -16,41 +17,71 @@ import java.util.stream.Collectors;
 public final class PermissionExecutionGuard {
     private final PermissionPolicyRegistry registry;
     private final CurrentRbac3User users;
-    private final SingleFlightSnapshotLoader snapshots;
+    private final AuthorizationSnapshotLoader snapshots;
     private final PermissionServicePolicyGuard services;
     private final UserPermissionScopePolicy userScopes;
     private final PermissionDenialAudit audit;
     private final PermissionAnonymousBoundary anonymous;
 
-    public PermissionExecutionGuard(PermissionPolicyRegistry registry, CurrentRbac3User users, SingleFlightSnapshotLoader snapshots) {
+    public PermissionExecutionGuard(PermissionPolicyRegistry registry, CurrentRbac3User users, AuthorizationSnapshotLoader snapshots) {
         this(registry, users, snapshots, null);
     }
 
-    public PermissionExecutionGuard(PermissionPolicyRegistry registry, CurrentRbac3User users, SingleFlightSnapshotLoader snapshots,
+    public PermissionExecutionGuard(PermissionPolicyRegistry registry, CurrentRbac3User users, AuthorizationSnapshotLoader snapshots,
                                      PermissionServicePolicyGuard services) {
         this(registry, users, snapshots, services,
                 new top.egon.cola.platform.tianquan.jianshen.starter.autoconfigure.Rbac3StarterProperties.UserScopePolicyProperties());
     }
 
-    public PermissionExecutionGuard(PermissionPolicyRegistry registry, CurrentRbac3User users, SingleFlightSnapshotLoader snapshots,
+    public PermissionExecutionGuard(PermissionPolicyRegistry registry, CurrentRbac3User users, AuthorizationSnapshotLoader snapshots,
             PermissionServicePolicyGuard services,
             top.egon.cola.platform.tianquan.jianshen.starter.autoconfigure.Rbac3StarterProperties.UserScopePolicyProperties scopePolicy) {
         this(registry, users, snapshots, services, scopePolicy, PermissionDenialAudit.UNOBSERVED);
     }
 
-    public PermissionExecutionGuard(PermissionPolicyRegistry registry, CurrentRbac3User users, SingleFlightSnapshotLoader snapshots,
+    public PermissionExecutionGuard(PermissionPolicyRegistry registry, CurrentRbac3User users, AuthorizationSnapshotLoader snapshots,
             PermissionServicePolicyGuard services,
             top.egon.cola.platform.tianquan.jianshen.starter.autoconfigure.Rbac3StarterProperties.UserScopePolicyProperties scopePolicy,
             PermissionDenialAudit audit) {
         this(registry, users, snapshots, services, scopePolicy, audit, null);
     }
 
-    public PermissionExecutionGuard(PermissionPolicyRegistry registry, CurrentRbac3User users, SingleFlightSnapshotLoader snapshots,
+    public PermissionExecutionGuard(PermissionPolicyRegistry registry, CurrentRbac3User users, AuthorizationSnapshotLoader snapshots,
             PermissionServicePolicyGuard services,
             top.egon.cola.platform.tianquan.jianshen.starter.autoconfigure.Rbac3StarterProperties.UserScopePolicyProperties scopePolicy,
             PermissionDenialAudit audit, PermissionAnonymousBoundary anonymous) {
         this.registry = registry; this.users = users; this.snapshots = snapshots; this.services = services;
         this.userScopes = new UserPermissionScopePolicy(scopePolicy); this.audit = audit; this.anonymous = anonymous;
+    }
+
+    /** @deprecated accepts the former loader type for binary compatibility. */
+    @Deprecated(since = "0.0.1", forRemoval = false)
+    public PermissionExecutionGuard(PermissionPolicyRegistry registry, CurrentRbac3User users, SingleFlightSnapshotLoader snapshots) {
+        this(registry, users, (AuthorizationSnapshotLoader) snapshots);
+    }
+
+    /** @deprecated accepts the former loader type for binary compatibility. */
+    @Deprecated(since = "0.0.1", forRemoval = false)
+    public PermissionExecutionGuard(PermissionPolicyRegistry registry, CurrentRbac3User users, SingleFlightSnapshotLoader snapshots, PermissionServicePolicyGuard services) {
+        this(registry, users, (AuthorizationSnapshotLoader) snapshots, services);
+    }
+
+    /** @deprecated accepts the former loader type for binary compatibility. */
+    @Deprecated(since = "0.0.1", forRemoval = false)
+    public PermissionExecutionGuard(PermissionPolicyRegistry registry, CurrentRbac3User users, SingleFlightSnapshotLoader snapshots, PermissionServicePolicyGuard services, top.egon.cola.platform.tianquan.jianshen.starter.autoconfigure.Rbac3StarterProperties.UserScopePolicyProperties scopePolicy) {
+        this(registry, users, (AuthorizationSnapshotLoader) snapshots, services, scopePolicy);
+    }
+
+    /** @deprecated accepts the former loader type for binary compatibility. */
+    @Deprecated(since = "0.0.1", forRemoval = false)
+    public PermissionExecutionGuard(PermissionPolicyRegistry registry, CurrentRbac3User users, SingleFlightSnapshotLoader snapshots, PermissionServicePolicyGuard services, top.egon.cola.platform.tianquan.jianshen.starter.autoconfigure.Rbac3StarterProperties.UserScopePolicyProperties scopePolicy, PermissionDenialAudit audit) {
+        this(registry, users, (AuthorizationSnapshotLoader) snapshots, services, scopePolicy, audit);
+    }
+
+    /** @deprecated accepts the former loader type for binary compatibility. */
+    @Deprecated(since = "0.0.1", forRemoval = false)
+    public PermissionExecutionGuard(PermissionPolicyRegistry registry, CurrentRbac3User users, SingleFlightSnapshotLoader snapshots, PermissionServicePolicyGuard services, top.egon.cola.platform.tianquan.jianshen.starter.autoconfigure.Rbac3StarterProperties.UserScopePolicyProperties scopePolicy, PermissionDenialAudit audit, PermissionAnonymousBoundary anonymous) {
+        this(registry, users, (AuthorizationSnapshotLoader) snapshots, services, scopePolicy, audit, anonymous);
     }
 
     public boolean nativeAnonymousBoundary(String resourceKey) { return anonymous != null && anonymous.allows(resourceKey); }

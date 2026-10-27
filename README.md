@@ -76,3 +76,9 @@ Original MIT/LGPL licenses and author attribution are preserved.
 ### Permission manifest delivery
 
 The `permission-producer` profile exports and verifies each final executable independently. See [permission build and controlled delivery](docs/permission-ci.md) for the exact toolchain pin, offline CI, candidate registration and deployment-qualified activation gates. Runtime startup and administrator grants are not CI side effects.
+
+## Authorization snapshot loader compatibility
+
+New integrations use `AuthorizationSnapshotLoader`: every authorization boundary fetches the current account snapshot from the SQL authority and requires the original verified USER token. Requests from different devices share the account's selected role set; no per-device role cache or failure grace is introduced.
+
+`SingleFlightSnapshotLoader` is a deprecated compatibility adapter. Its two constructors, dependent public constructors, and the `singleFlightSnapshotLoader` Spring Bean name remain available. The default Bean is also named `authorizationSnapshotLoader`, and either loader type resolves to the same instance. A custom `AuthorizationSnapshotLoader` (including the old subtype) replaces the default.
