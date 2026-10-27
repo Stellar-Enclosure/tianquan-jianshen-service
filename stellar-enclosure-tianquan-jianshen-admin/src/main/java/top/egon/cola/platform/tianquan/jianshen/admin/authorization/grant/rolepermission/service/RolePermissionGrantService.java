@@ -7,6 +7,7 @@ import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
 
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.rolepermission.domain.vo.RolePermissionGrantViewVO;
+import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.rolepermission.domain.RolePermissionGrantCodes;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import top.egon.cola.platform.tianquan.jianshen.admin.audit.domain.dto.AuditCommandDTO;
@@ -27,37 +28,37 @@ import java.util.Map;
 
 @Service
 public class RolePermissionGrantService {
-    public static final String READ = "system:role-permission:read";
-    public static final String MANAGE = "system:role-permission:manage";
+    public static final String READ = RolePermissionGrantCodes.READ;
+    public static final String MANAGE = RolePermissionGrantCodes.MANAGE;
     public record Result(@PermissionResource(key = "tianquan-jianshen.field.authorization.grant.rolepermission.service.RolePermissionGrantService.Result.target", type = ResourceType.FIELD,
                 labelPage = "tianquan-jianshen.permissions", labelKey = "field.target")
         @FieldPermissions(valueType = PermissionManifest.JsonFieldType.OBJECT,
-                plainRead = @PermissionGroup(codes = {"system:role-permission:manage"}))
+                plainRead = @PermissionGroup(codes = {MANAGE}))
         CatalogScope target, @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.rolepermission.service.RolePermissionGrantService.Result.roleId", type = ResourceType.FIELD,
                 labelPage = "tianquan-jianshen.permissions", labelKey = "field.roleId")
         @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
-                plainRead = @PermissionGroup(codes = {"system:role-permission:manage"}))
+                plainRead = @PermissionGroup(codes = {MANAGE}))
         String roleId, @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.rolepermission.service.RolePermissionGrantService.Result.version", type = ResourceType.FIELD,
                 labelPage = "tianquan-jianshen.permissions", labelKey = "field.version")
         @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
-                plainRead = @PermissionGroup(codes = {"system:role-permission:manage"}))
+                plainRead = @PermissionGroup(codes = {MANAGE}))
         String version, @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.rolepermission.service.RolePermissionGrantService.Result.policyVersion", type = ResourceType.FIELD,
                 labelPage = "tianquan-jianshen.permissions", labelKey = "field.policyVersion")
         @FieldPermissions(valueType = PermissionManifest.JsonFieldType.STRING,
-                plainRead = @PermissionGroup(codes = {"system:role-permission:manage"}))
+                plainRead = @PermissionGroup(codes = {MANAGE}))
         String policyVersion, @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.rolepermission.service.RolePermissionGrantService.Result.permissionCodes", type = ResourceType.FIELD,
                 labelPage = "tianquan-jianshen.permissions", labelKey = "field.permissionCodes")
         @FieldPermissions(valueType = PermissionManifest.JsonFieldType.ARRAY,
-                plainRead = @PermissionGroup(codes = {"system:role-permission:manage"}))
+                plainRead = @PermissionGroup(codes = {MANAGE}))
         List<String> permissionCodes,
                          @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.rolepermission.service.RolePermissionGrantService.Result.addedCount", type = ResourceType.FIELD,
                                  labelPage = "tianquan-jianshen.permissions", labelKey = "field.addedCount")
                          @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
-                                 plainRead = @PermissionGroup(codes = {"system:role-permission:manage"}))
+                                 plainRead = @PermissionGroup(codes = {MANAGE}))
                          long addedCount, @PermissionResource(key = "tianquan-jianshen.field.authorization.grant.rolepermission.service.RolePermissionGrantService.Result.removedCount", type = ResourceType.FIELD,
                 labelPage = "tianquan-jianshen.permissions", labelKey = "field.removedCount")
         @FieldPermissions(valueType = PermissionManifest.JsonFieldType.NUMBER,
-                plainRead = @PermissionGroup(codes = {"system:role-permission:manage"}))
+                plainRead = @PermissionGroup(codes = {MANAGE}))
         long removedCount) {
         public Result { permissionCodes = List.copyOf(permissionCodes); }
     }
