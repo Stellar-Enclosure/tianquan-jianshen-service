@@ -45,12 +45,13 @@ class PermissionCatalogQueryTest {
                 "repo", "a".repeat(40), "build", "1", NOW.minusSeconds(10), null);
         when(queries.candidates(SCOPE, "api", 0, 1, NOW)).thenReturn(List.of(new PermissionCatalogQueryRepository.StoredCandidate(newest, 3),
                 new PermissionCatalogQueryRepository.StoredCandidate(oldest, 2)));
-        when(outbox.dead(SCOPE, "api", 2, 3)).thenReturn(true);
+        when(outbox.deadForRead(SCOPE, "api", 2, 3)).thenReturn(true);
         var page = service.candidates(SCOPE, "api", 0, 1, actor);
         assertEquals(1, page.candidates().size());
         assertEquals("FAILED", page.candidates().getFirst().state());
         assertEquals("2", page.nextBeforeVersion());
         verify(guard).requireRead(SCOPE, actor, PermissionCatalogActivationService.READ, NOW);
+        verify(outbox, never()).dead(any(), anyString(), anyLong(), anyLong());
         verify(scopes, never()).lockExistingOwner(any(), anyString());
         verifyNoInteractions(manifests);
     }

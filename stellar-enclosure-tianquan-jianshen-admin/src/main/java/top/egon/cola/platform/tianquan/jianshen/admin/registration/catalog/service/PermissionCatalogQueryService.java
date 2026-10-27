@@ -128,7 +128,7 @@ public class PermissionCatalogQueryService {
         var rows = queries.candidates(target, producer, beforeVersion, limit, now);
         var values = rows.stream().limit(limit).map(row -> {
             var candidate = row.value();
-            return candidate.state().equals("METADATA_PENDING") && outbox.dead(target, producer,
+            return candidate.state().equals("METADATA_PENDING") && outbox.deadForRead(target, producer,
                     Long.parseLong(candidate.producerVersion()), row.metadataRevision()) ? candidate.failedDelivery() : candidate;
         }).toList();
         return new Candidates(target, producer, Long.toString(owner.activeRevision()), Long.toString(owner.producerRevision()), values,
