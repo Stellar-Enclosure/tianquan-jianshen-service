@@ -110,9 +110,19 @@ public class JpaTenantApplicationRepository implements ApplicationResourceReposi
             long expectedVersion,
             String actorId) {
         TenantApplicationPO entitlement = requireEntitlement(
-                tenantId, applicationId, LockModeType.PESSIMISTIC_WRITE);
+                tenantId, applicationId, LockModeType.NONE);
         TenantApplicationStatusEnum next = parseStatus(status);
-        entitlement.changeStatus(next, expectedVersion, actorId, databaseClock.transactionNow());
+        if (entitlement.changeStatus(next, expectedVersion, actorId, databaseClock.transactionNow())) {
+            entityManager.flush();
+        } else {
+            // A replica may report the requested status while the primary already has a newer version.
+            int matched = entityManager.createNativeQuery("""
+                    update rbac3_tenant_application set version = version
+                     where tenant_id = :tenant and id = :id and version = :version and status = :status
+                    """).setParameter("tenant", tenantId).setParameter("id", applicationId)
+                    .setParameter("version", expectedVersion).setParameter("status", next.name()).executeUpdate();
+            if (matched != 1) { throw new IllegalStateException("tenant application version conflict"); }
+        }
         return toAuthorizationScope(entitlement);
     }
 
@@ -166,8 +176,10 @@ public class JpaTenantApplicationRepository implements ApplicationResourceReposi
             Long tenantId,
             Long entitlementId,
             LockModeType lockMode) {
-        TenantApplicationPO entitlement = entityManager.find(
-                TenantApplicationPO.class, Objects.requireNonNull(entitlementId, "applicationId"), lockMode);
+        Long id = Objects.requireNonNull(entitlementId, "applicationId");
+        TenantApplicationPO entitlement = lockMode == LockModeType.NONE
+                ? entityManager.find(TenantApplicationPO.class, id)
+                : entityManager.find(TenantApplicationPO.class, id, lockMode);
         if (entitlement == null || !requireTenant(tenantId).equals(entitlement.getTenantId())) {
             throw new IllegalStateException("tenant application not found");
         }

@@ -81,4 +81,59 @@ class TenantApplicationServiceTest {
                 TenantApplicationStatusEnum.ACTIVE, 1L, "admin", NOW.plusSeconds(2)))
                 .isInstanceOf(IllegalStateException.class);
     }
+
+    @Test
+    void statusChangeLoadsWithoutALockAndFlushesTheVersionedUpdate() throws Exception {
+        var entities = mock(EntityManager.class);
+        var entitlement = new TenantApplicationPO(1L, 7L, 9L, TenantApplicationStatusEnum.ACTIVE,
+                NOW, null, "MANUAL", "ticket-1", null, null, "admin", NOW);
+        var application = new ApplicationPO(9L, 7L, "ddc-app", "ddc-biz", "catalog-app", "Catalog", 10, "admin", NOW);
+        when(entities.find(TenantApplicationPO.class, 1L)).thenReturn(entitlement);
+        when(entities.find(ApplicationPO.class, 9L)).thenReturn(application);
+        var repository = new JpaTenantApplicationRepository(entities, () -> NOW.plusSeconds(1));
+
+        assertThat(repository.changeStatus(7L, 1L, "SUSPENDED", 0L, "admin").status()).isEqualTo("SUSPENDED");
+
+        verify(entities).find(TenantApplicationPO.class, 1L);
+        verify(entities, never()).find(eq(TenantApplicationPO.class), any(), any(jakarta.persistence.LockModeType.class));
+        verify(entities).flush();
+        assertThat(top.egon.cola.platform.tianquan.jianshen.admin.shared.domain.po.TenantScopedPO.class
+                .getDeclaredField("version").isAnnotationPresent(jakarta.persistence.Version.class)).isTrue();
+    }
+
+    @Test
+    void unchangedReplicaStatusMustStillMatchThePrimaryVersion() {
+        var entities = mock(EntityManager.class);
+        var entitlement = new TenantApplicationPO(1L, 7L, 9L, TenantApplicationStatusEnum.ACTIVE,
+                NOW, null, "MANUAL", "ticket-1", null, null, "admin", NOW);
+        var application = new ApplicationPO(9L, 7L, "ddc-app", "ddc-biz", "catalog-app", "Catalog", 10, "admin", NOW);
+        var update = mock(jakarta.persistence.Query.class, RETURNS_SELF);
+        when(entities.find(TenantApplicationPO.class, 1L)).thenReturn(entitlement);
+        when(entities.find(ApplicationPO.class, 9L)).thenReturn(application);
+        when(entities.createNativeQuery(anyString())).thenReturn(update);
+        when(update.executeUpdate()).thenReturn(1, 0);
+        var repository = new JpaTenantApplicationRepository(entities, () -> NOW.plusSeconds(1));
+
+        assertThat(repository.changeStatus(7L, 1L, "ACTIVE", 0L, "admin").status()).isEqualTo("ACTIVE");
+        assertThatThrownBy(() -> repository.changeStatus(7L, 1L, "ACTIVE", 0L, "admin"))
+                .isInstanceOf(IllegalStateException.class).hasMessage("tenant application version conflict");
+        verify(entities, times(2)).createNativeQuery(argThat(sql -> sql.toLowerCase(java.util.Locale.ROOT)
+                .contains("update rbac3_tenant_application set version = version")
+                && sql.contains("tenant_id = :tenant") && sql.contains("version = :version")
+                && sql.contains("status = :status")));
+    }
+
+    @Test
+    void optimisticConflictAtFlushFailsTheTransactionBeforeReturningAResult() {
+        var entities = mock(EntityManager.class);
+        var entitlement = new TenantApplicationPO(1L, 7L, 9L, TenantApplicationStatusEnum.ACTIVE,
+                NOW, null, "MANUAL", "ticket-1", null, null, "admin", NOW);
+        when(entities.find(TenantApplicationPO.class, 1L)).thenReturn(entitlement);
+        doThrow(new jakarta.persistence.OptimisticLockException("concurrent update")).when(entities).flush();
+        var repository = new JpaTenantApplicationRepository(entities, () -> NOW.plusSeconds(1));
+
+        assertThatThrownBy(() -> repository.changeStatus(7L, 1L, "SUSPENDED", 0L, "admin"))
+                .isInstanceOf(jakarta.persistence.OptimisticLockException.class);
+        verify(entities, never()).find(ApplicationPO.class, 9L);
+    }
 }
