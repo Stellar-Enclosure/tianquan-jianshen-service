@@ -74,6 +74,7 @@ class AuthorizationRuntimePostgresqlIT {
     private PermissionCatalogCaller authority;
     private final AuditQueryService audit = mock(AuditQueryService.class);
     private final AtomicLong ids = new AtomicLong(100);
+    private final List<String> recordedSql = new java.util.concurrent.CopyOnWriteArrayList<>();
 
     @BeforeEach
     void connectToExplicitExistingDatabase() throws Exception {
@@ -104,7 +105,9 @@ class AuthorizationRuntimePostgresqlIT {
         factory.setDataSource(dataSource);
         factory.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
         factory.setPackagesToScan("top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.state.domain.po");
-        factory.setJpaPropertyMap(Map.of("hibernate.hbm2ddl.auto", "none", "hibernate.default_schema", schema, "hibernate.show_sql", false));
+        factory.setJpaPropertyMap(Map.of("hibernate.hbm2ddl.auto", "none", "hibernate.default_schema", schema,
+                "hibernate.show_sql", false, "hibernate.session_factory.statement_inspector",
+                (org.hibernate.resource.jdbc.spi.StatementInspector) sql -> { recordedSql.add(sql); return sql; }));
         factory.afterPropertiesSet();
         entityManager = factory.getObject().createEntityManager();
         json = new PermissionCatalogJson(new ObjectMapper().registerModule(new JavaTimeModule()));
@@ -182,6 +185,58 @@ class AuthorizationRuntimePostgresqlIT {
         assertTrue(after.policyVersion() > first.policyVersion());
         assertEquals(2L, count("select count(*) from rbac3_catalog_effective_snapshot"));
         assertEquals(after.policyVersion(), count("select tenant_policy_version from rbac3_catalog_snapshot_head where catalog_scope_id=1"));
+    }
+
+    @Test
+    void policyVersionIncrementUsesOptimisticCasAndRollsBack() throws Exception {
+        long initial = count("select policy_version from rbac3_tenant_authorization_state where tenant_id=10");
+        try (var em = factory.getObject().createEntityManager()) {
+            em.getTransaction().begin();
+            new JpaTenantAuthorizationStateRepository(em, () -> NOW).increment(10L, "rollback-test");
+            em.getTransaction().rollback();
+        }
+        assertEquals(initial, count("select policy_version from rbac3_tenant_authorization_state where tenant_id=10"));
+
+        var ready = new java.util.concurrent.CountDownLatch(2);
+        var start = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.Callable<Boolean> claim = () -> {
+            try (var em = factory.getObject().createEntityManager()) {
+                em.getTransaction().begin();
+                try {
+                    new JpaTenantAuthorizationStateRepository(em, () -> NOW).increment(10L, "cas-test");
+                    ready.countDown();
+                    if (!start.await(10, java.util.concurrent.TimeUnit.SECONDS)) throw new IllegalStateException("CAS_START_TIMEOUT");
+                    em.getTransaction().commit();
+                    return true;
+                } catch (RuntimeException failure) {
+                    if (em.getTransaction().isActive()) em.getTransaction().rollback();
+                    Throwable cause = failure;
+                    while (cause != null) {
+                        if (cause instanceof jakarta.persistence.OptimisticLockException
+                                || cause instanceof org.hibernate.StaleStateException) return false;
+                        cause = cause.getCause();
+                    }
+                    throw failure;
+                }
+            }
+        };
+        try (var workers = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+            var first = workers.submit(claim);
+            var second = workers.submit(claim);
+            assertTrue(ready.await(10, java.util.concurrent.TimeUnit.SECONDS));
+            start.countDown();
+            assertNotEquals(first.get(20, java.util.concurrent.TimeUnit.SECONDS),
+                    second.get(20, java.util.concurrent.TimeUnit.SECONDS));
+        } finally {
+            start.countDown();
+        }
+        assertEquals(initial + 1, count("select policy_version from rbac3_tenant_authorization_state where tenant_id=10"));
+        var stateSql = recordedSql.stream().map(value -> value.toLowerCase(java.util.Locale.ROOT))
+                .filter(value -> value.contains("rbac3_tenant_authorization_state")).toList();
+        assertTrue(stateSql.stream().filter(value -> value.stripLeading().startsWith("select "))
+                .noneMatch(value -> value.contains("for update")));
+        assertTrue(stateSql.stream().anyMatch(value -> value.stripLeading().startsWith("update ")
+                && value.contains("where") && value.contains("version")));
     }
 
     @Test

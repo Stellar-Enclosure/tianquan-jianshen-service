@@ -83,7 +83,7 @@ public class JpaTenantAuthorizationStateRepository
     @Override
     @Transactional
     public long increment(Long tenantId, String actorId) {
-        TenantAuthorizationStatePO state = requireForUpdate(tenantId);
+        TenantAuthorizationStatePO state = require(tenantId);
         state.incrementPolicyVersion(
                 actorId,
                 databaseClock.transactionNow()

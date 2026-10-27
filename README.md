@@ -28,6 +28,8 @@ Management APIs primarily use `/api/tianquan-jianshen/v1`, with bootstrap/about 
 
 Clean-environment initialization uses the explicit [permission catalog B0 and administrator B1 commands](docs/permission-catalog-bootstrap.md). B0 provisions finite source authority before registration; B1 grants a reviewed list of active permission codes after activation. Neither runs during application startup or ordinary CI.
 
+Tenant authorization policy-version increments use the existing JPA version as an optimistic compare-and-set; a concurrent change can make the transaction fail at flush or commit. A lagging replica may expose older authorization data. Other authorization locking paths still require adaptation before this service can use strict read/write splitting.
+
 ## Build
 
 Requires Java 25 and the included Maven Wrapper. The shared parent manages Spring Boot 4.1.2. Once the 0.0.1 dependencies are published:

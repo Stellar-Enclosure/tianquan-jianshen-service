@@ -56,6 +56,12 @@ class JpaTenantAuthorizationStateRepositoryTest {
     }
 
     @Test
+    void authorizationStateHasAJpaVersionForConcurrentIncrementCas() throws Exception {
+        assertThat(TenantAuthorizationStatePO.class.getDeclaredField("version")
+                .getAnnotation(jakarta.persistence.Version.class)).isNotNull();
+    }
+
+    @Test
     void rejectsMissingStateOutsideVerifiedEnsurePath() {
         when(entityManager.find(
                 TenantAuthorizationStatePO.class,
@@ -84,15 +90,13 @@ class JpaTenantAuthorizationStateRepositoryTest {
 
         TenantAuthorizationStatePO locked =
                 new TenantAuthorizationStatePO(10001L, "migration", NOW);
-        when(entityManager.find(
-                TenantAuthorizationStatePO.class,
-                10001L,
-                LockModeType.PESSIMISTIC_WRITE
-        )).thenReturn(locked);
+        when(entityManager.find(TenantAuthorizationStatePO.class, 10001L)).thenReturn(locked);
         when(clock.transactionNow()).thenReturn(NOW.plusSeconds(1));
 
         assertThat(repository.increment(10001L, "operator"))
                 .isEqualTo(1L);
         assertThat(locked.getPolicyVersion()).isEqualTo(1L);
+        verify(entityManager, org.mockito.Mockito.never()).find(
+                TenantAuthorizationStatePO.class, 10001L, LockModeType.PESSIMISTIC_WRITE);
     }
 }
