@@ -150,7 +150,8 @@ class Rbac3MigrationContractTest {
                 TIANQUAN_JIANSHEN_ABOUT_PERMISSION_MIGRATION,
                 RESOURCE_GRANTS_MIGRATION, CURRENT_BASELINE, WORKER_CLAIM_MIGRATION,
                 "db/migration/V16__permission_catalog_and_runtime.sql",
-                "db/migration/V17__coordinate_catalog_scope_writes.sql");
+                "db/migration/V17__coordinate_catalog_scope_writes.sql",
+                "db/migration/V18__claim_authorization_mutations.sql");
         assertThat(resourceSql(STRONG_AUTH_MIGRATION))
                 .contains("add column strong_authenticated_at timestamptz")
                 .contains("ck_rbac3_session_strong_authentication_time");
@@ -195,6 +196,26 @@ class Rbac3MigrationContractTest {
             }
             assertThat(statements).hasSize(4);
             assertThat(statements.getFirst()).contains("UPDATE rbac3_catalog_scope", "RETURN NEW");
+        }
+    }
+
+    @Test
+    void mutationClaimMigrationAddsOnePairedLeaseWithoutChangingOldMigrations() throws Exception {
+        String resource = "db/migration/V18__claim_authorization_mutations.sql";
+        String sql = resourceSql(resource);
+        assertThat(sql).contains("add column claim_owner varchar(36)", "add column claim_expires_at timestamp with time zone",
+                "(claim_owner is null) = (claim_expires_at is null)");
+        try (var input = getClass().getClassLoader().getResourceAsStream(resource)) {
+            assertThat(input).isNotNull();
+            String raw = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+            var parser = new org.flywaydb.database.postgresql.PostgreSQLParser(
+                    new org.flywaydb.core.api.configuration.FluentConfiguration(),
+                    new org.flywaydb.core.internal.parser.ParsingContext());
+            var statements = new ArrayList<String>();
+            try (var iterator = parser.parse(new org.flywaydb.core.internal.resource.StringResource(raw))) {
+                while (iterator.hasNext()) statements.add(iterator.next().getSql());
+            }
+            assertThat(statements).hasSize(2);
         }
     }
 

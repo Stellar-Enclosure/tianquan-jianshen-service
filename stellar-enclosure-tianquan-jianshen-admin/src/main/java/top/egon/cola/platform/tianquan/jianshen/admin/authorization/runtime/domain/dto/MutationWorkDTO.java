@@ -59,5 +59,9 @@ import java.util.Optional;
              * 含义与用法：读取、传递或更新 `status` 时应保持 `MutationWorkDTO` 的生命周期、不可变性和线程安全约束。
              * Meaning and usage: when reading, passing, or updating `status`, preserve `MutationWorkDTO`'s lifecycle, immutability, and thread-safety constraints.
              */
-            String status) {
+            String status,
+            String claimOwner) {
+        public MutationWorkDTO(String mutationId, String tenantId, String scopeType, String scopeId, String status) {
+            this(mutationId, tenantId, scopeType, scopeId, status, null);
+        }
     }

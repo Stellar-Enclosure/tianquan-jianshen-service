@@ -196,16 +196,27 @@ class AuthorizationWorkerRecoveryIT {
                     .toList();
         }
 
-        @Override
         public void completed(String mutationId, Instant now, String actorId) {
             if (!completed.contains(mutationId)) {
                 completed.add(mutationId);
             }
         }
 
-        @Override
         public void failed(String mutationId, String reasonCode, Instant now, String actorId) {
             failureCodes.add(reasonCode);
+        }
+
+        @Override
+        public boolean runClaimed(String tenantId, String mutationId, String owner, Runnable work, Instant now, String actorId) {
+            work.run();
+            completed(mutationId, now, actorId);
+            return true;
+        }
+
+        @Override
+        public boolean failClaimed(String tenantId, String mutationId, String owner, String reasonCode, Instant now, String actorId) {
+            failed(mutationId, reasonCode, now, actorId);
+            return true;
         }
     }
 
@@ -213,6 +224,26 @@ class AuthorizationWorkerRecoveryIT {
             implements ProjectionCheckpointRepository {
 
         private final Map<String, Long> versions = new java.util.HashMap<>();
+
+        @Override
+        public Claim claimOwned(String tenantId, String eventId, String aggregateType, String aggregateId, long aggregateVersion) {
+            var outcome = claim(tenantId, eventId, aggregateType, aggregateId, aggregateVersion);
+            return new Claim(outcome, outcome == RuntimeSnapshotRebuildClaimEnum.ACQUIRED ? eventId + "-owner" : null);
+        }
+
+        @Override
+        public void completeOwned(String tenantId, String eventId, String aggregateType, String aggregateId,
+                long aggregateVersion, String leaseToken) {
+            if (!java.util.Objects.equals(eventId + "-owner", leaseToken)) throw new IllegalStateException("checkpoint owner changed");
+            complete(tenantId, eventId, aggregateType, aggregateId, aggregateVersion);
+        }
+
+        @Override
+        public void releaseOwned(String tenantId, String eventId, String aggregateType, String aggregateId,
+                long aggregateVersion, String leaseToken) {
+            if (!java.util.Objects.equals(eventId + "-owner", leaseToken)) throw new IllegalStateException("checkpoint owner changed");
+            release(tenantId, eventId, aggregateType, aggregateId, aggregateVersion);
+        }
 
         @Override
         public RuntimeSnapshotRebuildClaimEnum claim(

@@ -26,6 +26,15 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.doma
          */
         void prepare(MutationRecordVO record);
 
+        boolean claimInitial(String tenantId, String mutationId, String claimOwner);
+
+        void transitionClaimed(String tenantId, String mutationId, String claimOwner,
+                AuthorizationMutationResultStatusEnum status, Instant now);
+
+        boolean runClaimed(String tenantId, String mutationId, String claimOwner, Runnable work, Instant now, String actorId);
+
+        boolean failClaimed(String tenantId, String mutationId, String claimOwner, String reasonCode, Instant now, String actorId);
+
         /**
          * 方法 `transition` 按照 `AuthorizationMutationRepository` 的职责处理输入，完成 `transition` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。
          * Method `transition` processes its inputs according to `AuthorizationMutationRepository`'s responsibility, performs the `transition` operation, and returns a result or declared side effect; callers must follow its parameter and exception contract.
@@ -39,6 +48,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.doma
          * @param now 输入参数 `now`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
          */
         void transition(
+                String tenantId,
                 String mutationId,
                 AuthorizationMutationResultStatusEnum status,
                 String errorCode,

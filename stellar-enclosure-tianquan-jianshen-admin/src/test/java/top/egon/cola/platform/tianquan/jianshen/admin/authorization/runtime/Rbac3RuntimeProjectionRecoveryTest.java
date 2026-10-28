@@ -72,6 +72,14 @@ class Rbac3RuntimeProjectionRecoveryTest {
     }
 
     @Test
+    void missingReplicaTargetRemainsRetryable() {
+        when(targets.find("7", "9")).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> recovery.project(userMutation()))
+                .isInstanceOf(org.springframework.dao.TransientDataAccessResourceException.class);
+        verifyNoInteractions(activation, runtime);
+    }
+
+    @Test
     void eventReplayUsesCurrentFactsAndKeysetPagesNotPayloadGrants() {
         when(targets.page("7", 0L, 200)).thenReturn(List.of(user));
         recovery.rebuild(event());

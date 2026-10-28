@@ -1,7 +1,6 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.jpa;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.LockModeType;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.domain.po.AuthorizationMutationPO;
@@ -82,6 +81,106 @@ public class JpaAuthorizationMutationRepository implements
                 versions.newPolicyVersion(), scope.actorId(), record.createdAt()));
     }
 
+    @Override
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public boolean claimInitial(String tenantId, String mutationId, String claimOwner) {
+        entityManager.flush();
+        return claim(tenantId, mutationId, claimOwner, null);
+    }
+
+    @Override
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public void transitionClaimed(String tenantId, String mutationId, String claimOwner,
+            AuthorizationMutationResultStatusEnum status, Instant now) {
+        requireActor(claimOwner);
+        java.util.Objects.requireNonNull(now, "now");
+        String fields = switch (status) {
+            case FENCED -> "guard_created_at = :now";
+            case PROJECTED -> "status = 'PROJECTED', projected_at = :now";
+            default -> throw new IllegalArgumentException("unsupported claimed mutation transition");
+        };
+        entityManager.flush();
+        int changed = entityManager.createNativeQuery("update rbac3_authorization_mutation set " + fields
+                + ", updated_at = :now, version = version + 1 where tenant_id = :tenant and mutation_id = :id"
+                + " and claim_owner = :owner and status in ('COMMITTED', 'PROJECTED', 'RECOVERY_REQUIRED')")
+                .setParameter("now", now).setParameter("tenant", Long.valueOf(tenantId))
+                .setParameter("id", Long.valueOf(mutationId)).setParameter("owner", claimOwner).executeUpdate();
+        if (changed != 1) throw new IllegalStateException("authorization mutation ownership changed");
+        detachMutation(mutationId);
+    }
+
+    private boolean claim(String tenantId, String mutationId, String claimOwner, Long version) {
+        requireActor(claimOwner);
+        String expectedVersion = version == null ? "" : " and version = :version";
+        var query = entityManager.createNativeQuery("""
+                update rbac3_authorization_mutation
+                   set claim_owner = :owner, claim_expires_at = current_timestamp + interval '15 minutes',
+                       version = version + 1
+                 where tenant_id = :tenant and mutation_id = :id
+                   and status in ('COMMITTED', 'PROJECTED', 'RECOVERY_REQUIRED')
+                   and (claim_owner is null or claim_expires_at <= current_timestamp)
+                """ + expectedVersion)
+                .setParameter("owner", claimOwner).setParameter("tenant", Long.valueOf(tenantId))
+                .setParameter("id", Long.valueOf(mutationId));
+        if (version != null) query.setParameter("version", version);
+        return query.executeUpdate() == 1;
+    }
+
+    @Override
+    @Transactional
+    public boolean runClaimed(String tenantId, String mutationId, String claimOwner, Runnable work, Instant now, String actorId) {
+        requireActor(claimOwner);
+        requireActor(actorId);
+        java.util.Objects.requireNonNull(work, "work");
+        java.util.Objects.requireNonNull(now, "now");
+        entityManager.flush();
+        int owned = entityManager.createNativeQuery("""
+                update rbac3_authorization_mutation set version = version + 1
+                 where tenant_id = :tenant and mutation_id = :id and claim_owner = :owner
+                   and claim_expires_at > current_timestamp
+                   and status in ('COMMITTED', 'PROJECTED', 'RECOVERY_REQUIRED')
+                """).setParameter("tenant", Long.valueOf(tenantId)).setParameter("id", Long.valueOf(mutationId))
+                .setParameter("owner", claimOwner).executeUpdate();
+        if (owned != 1) return false;
+        // The conditional write holds the mutation row until all projection writes commit or roll back.
+        work.run();
+        entityManager.flush();
+        int completed = entityManager.createNativeQuery("""
+                update rbac3_authorization_mutation
+                   set projected_at = coalesce(projected_at, :now), status = 'COMPLETED', completed_at = :now,
+                       updated_at = :now, updated_by = :actor, version = version + 1,
+                       claim_owner = null, claim_expires_at = null
+                 where tenant_id = :tenant and mutation_id = :id and claim_owner = :owner
+                   and status in ('COMMITTED', 'PROJECTED', 'RECOVERY_REQUIRED')
+                """).setParameter("now", now).setParameter("actor", actorId.trim())
+                .setParameter("tenant", Long.valueOf(tenantId)).setParameter("id", Long.valueOf(mutationId))
+                .setParameter("owner", claimOwner).executeUpdate();
+        if (completed != 1) throw new IllegalStateException("authorization mutation ownership changed during projection");
+        detachMutation(mutationId);
+        return true;
+    }
+
+    @Override
+    @Transactional
+    public boolean failClaimed(String tenantId, String mutationId, String claimOwner, String reasonCode, Instant now, String actorId) {
+        requireActor(claimOwner);
+        requireActor(actorId);
+        java.util.Objects.requireNonNull(now, "now");
+        entityManager.flush();
+        int changed = entityManager.createNativeQuery("""
+                update rbac3_authorization_mutation
+                   set status = 'RECOVERY_REQUIRED', last_error_code = :error, attempt = attempt + 1,
+                       updated_at = :now, updated_by = :actor, version = version + 1,
+                       claim_owner = null, claim_expires_at = null
+                 where tenant_id = :tenant and mutation_id = :id and claim_owner = :owner
+                   and status in ('COMMITTED', 'PROJECTED', 'RECOVERY_REQUIRED')
+                """).setParameter("error", reasonCode).setParameter("now", now).setParameter("actor", actorId.trim())
+                .setParameter("tenant", Long.valueOf(tenantId)).setParameter("id", Long.valueOf(mutationId))
+                .setParameter("owner", claimOwner).executeUpdate();
+        if (changed == 1) detachMutation(mutationId);
+        return changed == 1;
+    }
+
     /**
      * 方法 `transition` 按照 `JpaAuthorizationMutationRepository` 的职责处理输入，完成 `transition` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。
      * Method `transition` processes its inputs according to `JpaAuthorizationMutationRepository`'s responsibility, performs the `transition` operation, and returns a result or declared side effect; callers must follow its parameter and exception contract.
@@ -97,6 +196,7 @@ public class JpaAuthorizationMutationRepository implements
     @Override
     @Transactional
     public void transition(
+            String tenantId,
             String mutationId,
             AuthorizationMutationResultStatusEnum status,
             String errorCode,
@@ -104,28 +204,18 @@ public class JpaAuthorizationMutationRepository implements
     ) {
         java.util.Objects.requireNonNull(status, "status");
         java.util.Objects.requireNonNull(now, "now");
-        String fields = switch (status) {
-            case COMMITTED -> "status = 'COMMITTED', committed_at = :now";
-            case FENCED -> "guard_created_at = :now";
-            case PROJECTED -> "status = 'PROJECTED', projected_at = :now";
-            case COMPLETED -> "status = 'COMPLETED', completed_at = :now";
-            case RECOVERY_REQUIRED -> "status = 'RECOVERY_REQUIRED', last_error_code = :error, attempt = attempt + 1";
-        };
-        String predicate = switch (status) {
-            case COMMITTED -> "status IN ('PREPARING', 'COMMITTED')";
-            case FENCED, PROJECTED -> "status IN ('COMMITTED', 'PROJECTED', 'RECOVERY_REQUIRED')";
-            case COMPLETED -> "status = 'PROJECTED'";
-            case RECOVERY_REQUIRED -> "status <> 'COMPLETED'";
-        };
+        if (status != AuthorizationMutationResultStatusEnum.COMMITTED) {
+            throw new IllegalArgumentException("authorization mutation transition requires an owner");
+        }
         entityManager.flush();
-        var query = entityManager.createNativeQuery("update rbac3_authorization_mutation set " + fields
-                + ", updated_at = :now, version = version + 1 where mutation_id = :id and " + predicate)
-                .setParameter("now", now).setParameter("id", Long.valueOf(mutationId));
-        if (status == AuthorizationMutationResultStatusEnum.RECOVERY_REQUIRED) { query.setParameter("error", errorCode); }
+        var query = entityManager.createNativeQuery("""
+                update rbac3_authorization_mutation
+                   set status = 'COMMITTED', committed_at = :now, updated_at = :now, version = version + 1
+                 where tenant_id = :tenant and mutation_id = :id and status in ('PREPARING', 'COMMITTED') and claim_owner is null
+                """)
+                .setParameter("now", now).setParameter("tenant", Long.valueOf(tenantId)).setParameter("id", Long.valueOf(mutationId));
         int changed = query.executeUpdate();
-        boolean mayAlreadyBeCompleted = status == AuthorizationMutationResultStatusEnum.COMPLETED
-                || status == AuthorizationMutationResultStatusEnum.RECOVERY_REQUIRED;
-        if (changed != 1 && (!mayAlreadyBeCompleted || !confirmCompleted(mutationId))) {
+        if (changed != 1) {
             throw new IllegalStateException("authorization mutation is missing or its state changed");
         }
         detachMutation(mutationId);
@@ -202,10 +292,19 @@ public class JpaAuthorizationMutationRepository implements
                         """, AuthorizationMutationPO.class)
                 .setParameter("tenantId", Long.valueOf(tenantId))
                 .setParameter("mutationId", Long.valueOf(mutationId))
-                .setLockMode(LockModeType.PESSIMISTIC_WRITE)
                 .setMaxResults(1)
                 .getResultList();
-        return rows.stream().findFirst().map(this::toWork);
+        if (rows.isEmpty()) return Optional.empty();
+        AuthorizationMutationPO candidate = rows.getFirst();
+        MutationWorkDTO work = toWork(candidate);
+        if ("COMPLETED".equals(work.status())) return Optional.of(work);
+        String owner = java.util.UUID.randomUUID().toString();
+        entityManager.flush();
+        if (!claim(tenantId, mutationId, owner, candidate.getVersion())) {
+            throw new org.springframework.dao.TransientDataAccessResourceException("authorization mutation is already claimed or changed");
+        }
+        entityManager.detach(candidate);
+        return Optional.of(withOwner(work, owner));
     }
 
     /**
@@ -222,90 +321,26 @@ public class JpaAuthorizationMutationRepository implements
     @Transactional
     public List<MutationWorkDTO> claimRecoverable(
             int batchSize) {
-        @SuppressWarnings("unchecked")
-        List<Number> mutationIds = entityManager.createNativeQuery("""
-                        select rbac3_claim_recoverable_mutations(:batchSize)
-                        """)
-                .setParameter("batchSize", batchSize)
+        List<AuthorizationMutationPO> candidates = entityManager.createQuery("""
+                        select m from AuthorizationMutationEntity m where m.status in :statuses
+                          and (m.claimOwner is null or m.claimExpiresAt <= current_timestamp)
+                        order by m.updatedAt, m.mutationId
+                        """, AuthorizationMutationPO.class)
+                .setParameter("statuses", List.of(AuthorizationMutationStatusEnum.COMMITTED,
+                        AuthorizationMutationStatusEnum.PROJECTED, AuthorizationMutationStatusEnum.RECOVERY_REQUIRED))
+                .setMaxResults(batchSize)
                 .getResultList();
-        return mutationIds.stream()
-                .map(Number::longValue)
-                .map(id -> entityManager.find(AuthorizationMutationPO.class, id))
-                .filter(java.util.Objects::nonNull)
-                .map(this::toWork)
-                .toList();
-    }
-
-    /**
-     * 方法 `completed` 按照 `JpaAuthorizationMutationRepository` 的职责处理输入，完成 `completed` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。
-     * Method `completed` processes its inputs according to `JpaAuthorizationMutationRepository`'s responsibility, performs the `completed` operation, and returns a result or declared side effect; callers must follow its parameter and exception contract.
-     *
-     * 用法：调用 `completed` 前准备符合契约的参数，并根据返回值、异常或副作用继续业务流程。
-     * Usage: provide contract-compliant arguments before calling `completed`, then continue the business flow using its result, exception, or side effect.
-     *
-     * @param mutationId 输入参数 `mutationId`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param now 输入参数 `now`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param actorId 输入参数 `actorId`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     */
-    @Override
-    @Transactional
-    public void completed(String mutationId, Instant now, String actorId) {
-        requireActor(actorId);
-        java.util.Objects.requireNonNull(now, "now");
+        List<MutationWorkDTO> claimed = new java.util.ArrayList<>();
         entityManager.flush();
-        int changed = entityManager.createNativeQuery("""
-                update rbac3_authorization_mutation
-                   set projected_at = coalesce(projected_at, :now), status = 'COMPLETED', completed_at = :now,
-                       updated_at = :now, updated_by = :actor, version = version + 1
-                 where mutation_id = :id and status in ('COMMITTED', 'PROJECTED', 'RECOVERY_REQUIRED')
-                """).setParameter("now", now).setParameter("actor", actorId.trim())
-                .setParameter("id", Long.valueOf(mutationId)).executeUpdate();
-        if (changed != 1 && !confirmCompleted(mutationId)) {
-            throw new IllegalStateException("authorization mutation is missing or its state changed");
+        for (AuthorizationMutationPO candidate : candidates) {
+            MutationWorkDTO work = toWork(candidate);
+            String owner = java.util.UUID.randomUUID().toString();
+            if (claim(work.tenantId(), work.mutationId(), owner, candidate.getVersion())) {
+                claimed.add(withOwner(work, owner));
+            }
+            entityManager.detach(candidate);
         }
-        detachMutation(mutationId);
-    }
-
-    /**
-     * 方法 `failed` 按照 `JpaAuthorizationMutationRepository` 的职责处理输入，完成 `failed` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。
-     * Method `failed` processes its inputs according to `JpaAuthorizationMutationRepository`'s responsibility, performs the `failed` operation, and returns a result or declared side effect; callers must follow its parameter and exception contract.
-     *
-     * 用法：调用 `failed` 前准备符合契约的参数，并根据返回值、异常或副作用继续业务流程。
-     * Usage: provide contract-compliant arguments before calling `failed`, then continue the business flow using its result, exception, or side effect.
-     *
-     * @param mutationId 输入参数 `mutationId`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param reasonCode 输入参数 `reasonCode`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param now 输入参数 `now`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param actorId 输入参数 `actorId`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     */
-    @Override
-    @Transactional
-    public void failed(
-            String mutationId,
-            String reasonCode,
-            Instant now,
-            String actorId) {
-        requireActor(actorId);
-        java.util.Objects.requireNonNull(now, "now");
-        entityManager.flush();
-        int changed = entityManager.createNativeQuery("""
-                update rbac3_authorization_mutation
-                   set status = 'RECOVERY_REQUIRED', last_error_code = :error, attempt = attempt + 1,
-                       updated_at = :now, updated_by = :actor, version = version + 1
-                 where mutation_id = :id and status <> 'COMPLETED'
-                """).setParameter("error", reasonCode).setParameter("now", now).setParameter("actor", actorId.trim())
-                .setParameter("id", Long.valueOf(mutationId)).executeUpdate();
-        if (changed != 1 && !confirmCompleted(mutationId)) {
-            throw new IllegalStateException("authorization mutation is missing");
-        }
-        detachMutation(mutationId);
-    }
-
-    private boolean confirmCompleted(String mutationId) {
-        return entityManager.createNativeQuery("""
-                update rbac3_authorization_mutation set version = version
-                 where mutation_id = :id and status = 'COMPLETED'
-                """).setParameter("id", Long.valueOf(mutationId)).executeUpdate() == 1;
+        return List.copyOf(claimed);
     }
 
     private void detachMutation(String mutationId) {
@@ -362,6 +397,10 @@ public class JpaAuthorizationMutationRepository implements
                 mutation.getScopeType().name(),
                 scopeId,
                 mutation.getStatus().name());
+    }
+
+    private static MutationWorkDTO withOwner(MutationWorkDTO work, String owner) {
+        return new MutationWorkDTO(work.mutationId(), work.tenantId(), work.scopeType(), work.scopeId(), work.status(), owner);
     }
 
 

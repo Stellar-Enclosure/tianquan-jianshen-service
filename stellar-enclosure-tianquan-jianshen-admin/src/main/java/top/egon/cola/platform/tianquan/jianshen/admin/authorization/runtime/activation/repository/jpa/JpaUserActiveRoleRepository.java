@@ -1,7 +1,6 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.activation.repository.jpa;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.LockModeType;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,7 +38,8 @@ public class JpaUserActiveRoleRepository implements ActivationTransaction, Resel
     }
 
     @Override
-    @Transactional
+    // Resolution rejects invalid roots before changing roles; recovery may then require reselection in this transaction.
+    @Transactional(noRollbackFor = top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation.class)
     public TransactionResultVO replace(
             ReplaceCommandDTO command,
             Instant now,
@@ -53,6 +53,7 @@ public class JpaUserActiveRoleRepository implements ActivationTransaction, Resel
         }
 
         List<UserActiveRolePO> existing = activeRoles(user.getTenantId(), user.getId());
+        fenceActiveRoles(user, existing);
         Map<String, Set<String>> current = roots(existing);
         UserAuthorizationStateVO state = new UserAuthorizationStateVO(
                 command.tenantId(), command.userId(), current,
@@ -118,7 +119,9 @@ public class JpaUserActiveRoleRepository implements ActivationTransaction, Resel
         if (user.getAuthVersion() != expectedAuthVersion) {
             throw new IllegalStateException("user authorization version conflict");
         }
-        activeRoles(user.getTenantId(), user.getId()).forEach(entityManager::remove);
+        List<UserActiveRolePO> existing = activeRoles(user.getTenantId(), user.getId());
+        fenceActiveRoles(user, existing);
+        existing.forEach(entityManager::remove);
         user.incrementAuthVersion(actorId, now);
     }
 
@@ -140,13 +143,46 @@ public class JpaUserActiveRoleRepository implements ActivationTransaction, Resel
     }
 
     private UserPO lockUser(String tenantId, String userId) {
-        UserPO user = entityManager.find(
-                UserPO.class, Long.valueOf(userId), LockModeType.PESSIMISTIC_WRITE);
-        return requireTenantUser(user, tenantId);
+        UserPO user = requireUser(tenantId, userId);
+        entityManager.flush();
+        int changed = entityManager.createNativeQuery("""
+                update rbac3_user set version = version
+                 where tenant_id = :tenant and id = :id and version = :version and auth_version = :auth
+                """).setParameter("tenant", user.getTenantId()).setParameter("id", user.getId())
+                .setParameter("version", user.getVersion()).setParameter("auth", user.getAuthVersion()).executeUpdate();
+        if (changed != 1) throw new org.springframework.dao.OptimisticLockingFailureException("RBAC user changed after replica read");
+        return user;
+    }
+
+    private void fenceActiveRoles(UserPO user, List<UserActiveRolePO> roles) {
+        StringBuilder sql = new StringBuilder("""
+                update rbac3_user set version = version
+                 where tenant_id = :tenant and id = :id and version = :version and auth_version = :auth
+                   and (select count(*) from rbac3_user_active_role r where r.tenant_id = :tenant and r.user_id = :id) = :total
+                """);
+        for (int index = 0; index < roles.size(); index++) {
+            sql.append(" and exists (select 1 from rbac3_user_active_role r where r.tenant_id = :tenant and r.user_id = :id")
+                    .append(" and r.application_id = :app").append(index)
+                    .append(" and r.root_role_id = :role").append(index).append(')');
+        }
+        var query = entityManager.createNativeQuery(sql.toString()).setParameter("tenant", user.getTenantId())
+                .setParameter("id", user.getId()).setParameter("version", user.getVersion())
+                .setParameter("auth", user.getAuthVersion()).setParameter("total", roles.size());
+        for (int index = 0; index < roles.size(); index++) {
+            query.setParameter("app" + index, roles.get(index).getApplicationId());
+            query.setParameter("role" + index, roles.get(index).getRootRoleId());
+        }
+        if (query.executeUpdate() != 1) {
+            throw new org.springframework.dao.OptimisticLockingFailureException("active roles changed after replica read");
+        }
     }
 
     private UserPO requireUser(String tenantId, String userId) {
-        UserPO user = entityManager.find(UserPO.class, Long.valueOf(userId));
+        UserPO user = entityManager.createQuery("""
+                        select user from UserEntity user where user.tenantId = :tenant and user.id = :id
+                        """, UserPO.class)
+                .setParameter("tenant", Long.valueOf(tenantId)).setParameter("id", Long.valueOf(userId))
+                .setMaxResults(1).getResultStream().findFirst().orElse(null);
         return requireTenantUser(user, tenantId);
     }
 

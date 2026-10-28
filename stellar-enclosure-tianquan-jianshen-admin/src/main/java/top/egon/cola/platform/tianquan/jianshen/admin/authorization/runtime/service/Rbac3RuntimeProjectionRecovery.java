@@ -68,8 +68,10 @@ public final class Rbac3RuntimeProjectionRecovery implements
     public void project(MutationWorkDTO mutation) {
         Objects.requireNonNull(mutation, "mutation");
         if ("USER".equals(mutation.scopeType())) {
-            targets.find(mutation.tenantId(), mutation.scopeId())
-                    .ifPresent(target -> projectUser(mutation.tenantId(), target, mutation.mutationId()));
+            var target = targets.find(mutation.tenantId(), mutation.scopeId())
+                    .orElseThrow(() -> new org.springframework.dao.TransientDataAccessResourceException(
+                            "authorization projection target is not yet visible"));
+            projectUser(mutation.tenantId(), target, mutation.mutationId());
         } else if ("TENANT".equals(mutation.scopeType())) {
             projectTenant(mutation.tenantId(), mutation.mutationId());
         } else {

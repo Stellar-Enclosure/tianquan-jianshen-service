@@ -65,5 +65,62 @@ class PostgresqlRuntimeProjectionRepositoryTest {
                 .hasMessage("AUTH_RUNTIME_PUBLICATION_CONFLICT");
     }
 
+    @Test
+    void fencedProjectionUsesReplicaCandidateAndKeepsTransactionLocalWrites() {
+        configureQuery();
+        when(query.getResultList()).thenReturn(List.<Object[]>of(new Object[] {10L, 1L, 2L,
+                "{}", CanonicalJson.digest(Map.of()), false}));
+        org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
+        org.springframework.transaction.support.TransactionSynchronizationManager.setActualTransactionActive(true);
+        try {
+            var observed = repository.lock("USER", "subject", "10");
+            assertThat(observed.authVersion()).isEqualTo(1L);
+            var synchronization = org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations().getFirst();
+            Object savepoint = new Object();
+            synchronization.savepoint(savepoint);
+            repository.save("USER", "subject", "10", 3L, 4L, Map.of("ready", true), true, NOW);
+            assertThat(repository.read("USER", "subject", "10")).get().extracting(
+                    PostgresqlRuntimeProjectionRepository.Projection::authVersion).isEqualTo(3L);
+            synchronization.savepointRollback(savepoint);
+            assertThat(repository.lock("USER", "subject", "10")).isEqualTo(observed);
+            synchronization.suspend();
+            assertThat(org.springframework.transaction.support.TransactionSynchronizationManager.hasResource(repository)).isFalse();
+            synchronization.resume();
+            assertThat(repository.read("USER", "subject", "10")).contains(observed);
+            // The transaction cache may have been created after an existing savepoint.
+            synchronization.savepointRollback(new Object());
+            assertThat(repository.lock("USER", "subject", "10")).isEqualTo(observed);
+            var sql = org.mockito.ArgumentCaptor.forClass(String.class);
+            verify(entityManager, atLeastOnce()).createNativeQuery(sql.capture());
+            assertThat(sql.getAllValues()).allSatisfy(value -> assertThat(value.toLowerCase())
+                    .doesNotContain("for update", "for share"));
+            assertThat(sql.getAllValues()).anySatisfy(value -> assertThat(value)
+                    .contains("auth_version = :auth", "policy_version = :policy", "checksum = :checksum"));
+            synchronization.afterCompletion(org.springframework.transaction.support.TransactionSynchronization.STATUS_COMMITTED);
+        } finally {
+            org.springframework.transaction.support.TransactionSynchronizationManager.unbindResourceIfPossible(repository);
+            org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization();
+            org.springframework.transaction.support.TransactionSynchronizationManager.setActualTransactionActive(false);
+        }
+    }
+
+    @Test
+    void staleReplicaProjectionFailsBeforeReturningAFencedRow() {
+        configureQuery();
+        when(query.getResultList()).thenReturn(List.<Object[]>of(new Object[] {10L, 1L, 2L,
+                "{}", CanonicalJson.digest(Map.of()), false}));
+        when(query.executeUpdate()).thenReturn(0);
+        org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
+        org.springframework.transaction.support.TransactionSynchronizationManager.setActualTransactionActive(true);
+        try {
+            assertThatThrownBy(() -> repository.lock("USER", "subject", "10"))
+                    .isInstanceOf(org.springframework.dao.OptimisticLockingFailureException.class);
+        } finally {
+            org.springframework.transaction.support.TransactionSynchronizationManager.unbindResourceIfPossible(repository);
+            org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization();
+            org.springframework.transaction.support.TransactionSynchronizationManager.setActualTransactionActive(false);
+        }
+    }
+
     record Payload(Instant generatedAt, long authVersion, Map<String, List<Long>> details) { }
 }

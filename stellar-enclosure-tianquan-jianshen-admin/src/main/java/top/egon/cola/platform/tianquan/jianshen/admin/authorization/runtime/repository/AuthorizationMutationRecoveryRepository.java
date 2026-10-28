@@ -41,30 +41,8 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.doma
          */
         List<MutationWorkDTO> claimRecoverable(int batchSize);
 
-        /**
-         * 方法 `completed` 按照 `AuthorizationMutationRecoveryRepository` 的职责处理输入，完成 `completed` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。
-         * Method `completed` processes its inputs according to `AuthorizationMutationRecoveryRepository`'s responsibility, performs the `completed` operation, and returns a result or declared side effect; callers must follow its parameter and exception contract.
-         *
-         * 用法：调用 `completed` 前准备符合契约的参数，并根据返回值、异常或副作用继续业务流程。
-         * Usage: provide contract-compliant arguments before calling `completed`, then continue the business flow using its result, exception, or side effect.
-         *
-         * @param mutationId 输入参数 `mutationId`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-         * @param now 输入参数 `now`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-         * @param actorId 输入参数 `actorId`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-         */
-        void completed(String mutationId, Instant now, String actorId);
+        boolean runClaimed(String tenantId, String mutationId, String claimOwner, Runnable work, Instant now, String actorId);
 
-        /**
-         * 方法 `failed` 按照 `AuthorizationMutationRecoveryRepository` 的职责处理输入，完成 `failed` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。
-         * Method `failed` processes its inputs according to `AuthorizationMutationRecoveryRepository`'s responsibility, performs the `failed` operation, and returns a result or declared side effect; callers must follow its parameter and exception contract.
-         *
-         * 用法：调用 `failed` 前准备符合契约的参数，并根据返回值、异常或副作用继续业务流程。
-         * Usage: provide contract-compliant arguments before calling `failed`, then continue the business flow using its result, exception, or side effect.
-         *
-         * @param mutationId 输入参数 `mutationId`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-         * @param reasonCode 输入参数 `reasonCode`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-         * @param now 输入参数 `now`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-         * @param actorId 输入参数 `actorId`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-         */
-        void failed(String mutationId, String reasonCode, Instant now, String actorId);
+        boolean failClaimed(String tenantId, String mutationId, String claimOwner, String reasonCode, Instant now, String actorId);
+
     }

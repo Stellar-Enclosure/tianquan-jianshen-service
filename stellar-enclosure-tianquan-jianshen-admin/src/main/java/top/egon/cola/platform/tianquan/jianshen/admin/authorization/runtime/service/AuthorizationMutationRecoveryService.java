@@ -142,12 +142,11 @@ public final class AuthorizationMutationRecoveryService
     private boolean recover(MutationWorkDTO work, String actorId) {
         Instant now = clock.instant();
         try {
-            projector.project(work);
-            store.completed(work.mutationId(), now, actorId);
-            return true;
+            return store.runClaimed(work.tenantId(), work.mutationId(), work.claimOwner(),
+                    () -> projector.project(work), now, actorId);
         } catch (RuntimeException unavailable) {
-            store.failed(
-                    work.mutationId(), "AUTH_PROPAGATION_PENDING", now, actorId);
+            store.failClaimed(work.tenantId(), work.mutationId(), work.claimOwner(),
+                    "AUTH_PROPAGATION_PENDING", now, actorId);
             return false;
         }
     }

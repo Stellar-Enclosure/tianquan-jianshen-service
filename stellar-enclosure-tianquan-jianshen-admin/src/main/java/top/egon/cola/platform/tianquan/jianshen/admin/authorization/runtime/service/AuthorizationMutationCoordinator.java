@@ -125,6 +125,7 @@ public final class AuthorizationMutationCoordinator {
         Objects.requireNonNull(versions, "versions");
         Objects.requireNonNull(databaseMutation, "databaseMutation");
         String mutationId = idGenerator.next();
+        String claimOwner = java.util.UUID.randomUUID().toString();
         MutationRecordVO record = new MutationRecordVO(
                 mutationId, scope, subjectId, versions, clock.instant());
 
@@ -133,28 +134,29 @@ public final class AuthorizationMutationCoordinator {
             mutationStore.prepare(record);
             T changed = databaseMutation.get();
             mutationStore.transition(
-                    mutationId, AuthorizationMutationResultStatusEnum.COMMITTED, null, clock.instant());
+                    scope.tenantId(), mutationId, AuthorizationMutationResultStatusEnum.COMMITTED, null, clock.instant());
+            if (!mutationStore.claimInitial(scope.tenantId(), mutationId, claimOwner)) {
+                throw new IllegalStateException("authorization mutation could not be claimed");
+            }
             return changed;
         });
 
         try {
-            fenceService.create(
-                    scope.tenantId(), scope.scopeType(), scope.scopeId(), mutationId);
-            mutationStore.transition(
-                    mutationId, AuthorizationMutationResultStatusEnum.FENCED, null, clock.instant());
-            projector.project(record);
-            mutationStore.transition(
-                    mutationId, AuthorizationMutationResultStatusEnum.PROJECTED, null, clock.instant());
-            fenceService.release(
-                    scope.tenantId(), scope.scopeType(), scope.scopeId());
-            mutationStore.transition(
-                    mutationId, AuthorizationMutationResultStatusEnum.COMPLETED, null, clock.instant());
+            boolean completed = mutationStore.runClaimed(scope.tenantId(), mutationId, claimOwner, () -> {
+                fenceService.create(scope.tenantId(), scope.scopeType(), scope.scopeId(), mutationId);
+                mutationStore.transitionClaimed(scope.tenantId(), mutationId, claimOwner,
+                        AuthorizationMutationResultStatusEnum.FENCED, clock.instant());
+                projector.project(record);
+                mutationStore.transitionClaimed(scope.tenantId(), mutationId, claimOwner,
+                        AuthorizationMutationResultStatusEnum.PROJECTED, clock.instant());
+                fenceService.release(scope.tenantId(), scope.scopeType(), scope.scopeId());
+            }, clock.instant(), scope.actorId());
+            if (!completed) return new MutationResultVO<>(mutationId, false, "AUTH_PROPAGATION_PENDING", value, versions);
             return new MutationResultVO<>(
                     mutationId, true, "ALLOW", value, versions);
         } catch (RuntimeException exception) {
-            mutationStore.transition(
-                    mutationId, AuthorizationMutationResultStatusEnum.RECOVERY_REQUIRED,
-                    "AUTH_PROPAGATION_PENDING", clock.instant());
+            mutationStore.failClaimed(scope.tenantId(), mutationId, claimOwner,
+                    "AUTH_PROPAGATION_PENDING", clock.instant(), scope.actorId());
             return new MutationResultVO<>(
                     mutationId, false, "AUTH_PROPAGATION_PENDING", value, versions);
         }

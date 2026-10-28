@@ -67,6 +67,12 @@ public class AuthorizationMutationPO extends TenantScopedPO {
     @Column(nullable = false)
     private int attempt;
 
+    @Column(name = "claim_owner", insertable = false, updatable = false, length = 36)
+    private String claimOwner;
+
+    @Column(name = "claim_expires_at", insertable = false, updatable = false)
+    private Instant claimExpiresAt;
+
     protected AuthorizationMutationPO() {
     }
 
