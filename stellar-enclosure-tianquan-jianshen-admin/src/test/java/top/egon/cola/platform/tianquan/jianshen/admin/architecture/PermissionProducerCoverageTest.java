@@ -44,6 +44,8 @@ class PermissionProducerCoverageTest {
             "top.egon.cola.platform.tianquan.jianshen.contract.auth.Rbac3AboutView",
             "top.egon.cola.platform.tianquan.jianshen.contract.authorization.AuthorizationDecision",
             "top.egon.cola.platform.tianquan.jianshen.contract.authorization.DataScopeDecision",
+            "top.egon.cola.platform.tianquan.jianshen.contract.authorization.ExecutionAuthorizationContract$Decision",
+            "top.egon.cola.platform.tianquan.jianshen.contract.authorization.ExecutionAuthorizationContract$Request",
             "top.egon.cola.platform.tianquan.jianshen.contract.authorization.FieldPolicyDecision",
             "top.egon.cola.platform.tianquan.jianshen.contract.authorization.ServicePolicySnapshot",
             "top.egon.cola.platform.tianquan.jianshen.contract.authorization.SystemAuthorizationSnapshot",
@@ -69,7 +71,7 @@ class PermissionProducerCoverageTest {
         var scanner = new ClassPathScanningCandidateComponentProvider(false);
         var environment = new org.springframework.core.env.StandardEnvironment();
         environment.getPropertySources().addFirst(new org.springframework.core.env.MapPropertySource("producer-coverage",
-                Map.of("egon.cola.platform.tianquan.jianshen.enabled", "true")));
+                Map.of("egon.cola.platform.tianquan.jianshen.enabled", "true", "egon.tianquan-jianshen.execution-grants.enabled", "true")));
         scanner.setEnvironment(environment);
         scanner.addIncludeFilter(new AnnotationTypeFilter(RestController.class));
         var mappings = new Mappings();
@@ -108,7 +110,7 @@ class PermissionProducerCoverageTest {
                 }
             }
         }
-        assertThat(apiKeys).hasSize(109);
+        assertThat(apiKeys).hasSize(110);
         assertThat(fields).hasSize(620);
         assertThat(resources.values().stream().filter(value -> value.type() == ResourceType.API)
                 .map(PermissionManifest.ResourceDefinition::key).toList()).containsExactlyInAnyOrderElementsOf(apiKeys);
@@ -118,6 +120,9 @@ class PermissionProducerCoverageTest {
     }
 
     private List<Class<?>> explicitInputs(Class<?> controller, Method method) {
+        if (controller.getSimpleName().equals("ExecutionGrantAuthorizationController") && method.getName().equals("decide")) {
+            return List.of(top.egon.cola.platform.tianquan.jianshen.contract.authorization.ExecutionAuthorizationContract.Request.class);
+        }
         if (controller.getSimpleName().equals("CatalogGovernanceController") && method.getName().equals("mutate")) {
             return List.of(top.egon.cola.platform.tianquan.jianshen.admin.authorization.catalog.domain.dto.CatalogGovernanceCommandDTO.class);
         }
