@@ -96,7 +96,7 @@ class AuthorizationRuntimePostgresqlIT {
                 .initSql("SET rbac3.bootstrap.tenant_ids = '10'; SET rbac3.bootstrap.identity_sub = '9001'").load();
         flyway.migrate();
         assertTrue(flyway.validateWithResult().validationSuccessful);
-        assertEquals("16", flyway.info().current().getVersion().getVersion());
+        assertEquals("19", flyway.info().current().getVersion().getVersion());
         var dataSource = new DriverManagerDataSource(url, user, password);
         var properties = new Properties();
         properties.setProperty("currentSchema", schema);
@@ -185,6 +185,33 @@ class AuthorizationRuntimePostgresqlIT {
         assertTrue(after.policyVersion() > first.policyVersion());
         assertEquals(2L, count("select count(*) from rbac3_catalog_effective_snapshot"));
         assertEquals(after.policyVersion(), count("select tenant_policy_version from rbac3_catalog_snapshot_head where catalog_scope_id=1"));
+    }
+
+    @Test
+    void executionViewReadsTheActivatedPolicyAndRollsBackOnMissingResource() {
+        provisionActiveCatalog();
+        var request = proof();
+        var repository = runtime(entityManager, null, null);
+        var missing = new ExecutionGrantAuthorizationService.VerifiedExecution(request.binding(), request.issuer(),
+                request.user().subject(), NOW.plusSeconds(60), "app.missing");
+        assertEquals("AUTH_RUNTIME_EXECUTION_POLICY_UNAVAILABLE", assertThrows(Rbac3RuleViolation.class,
+                () -> transaction(() -> repository.currentExecution(missing))).reasonCode());
+        assertEquals(0L, count("select count(*) from rbac3_catalog_effective_snapshot"));
+        assertEquals(0L, count("select count(*) from rbac3_catalog_snapshot_head"));
+        var valid = new ExecutionGrantAuthorizationService.VerifiedExecution(request.binding(), request.issuer(),
+                request.user().subject(), NOW.plusSeconds(60), "app.read");
+        var current = transaction(() -> repository.currentExecution(valid));
+        assertEquals("app.read", current.resource().key());
+        assertTrue(current.resource().requirement().allows(current.snapshot().permissions()));
+        assertEquals(NOW.plusSeconds(30), current.snapshot().expiresAt());
+        transaction(() -> {
+            entityManager.createNativeQuery("update rbac3_catalog_permission set governance_state='DISABLED', version=version+1, updated_at=current_timestamp, updated_by='test' where catalog_scope_id=1").executeUpdate();
+            new JpaTenantAuthorizationStateRepository(entityManager, () -> NOW).increment(10L, "test");
+            return null;
+        });
+        var revoked = transaction(() -> repository.currentExecution(valid));
+        assertFalse(revoked.resource().requirement().allows(revoked.snapshot().permissions()));
+        assertTrue(revoked.snapshot().policyVersion() > current.snapshot().policyVersion());
     }
 
     @Test

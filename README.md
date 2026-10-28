@@ -26,6 +26,29 @@ The code-level responsibility here is user authorization and IAM governance. [Sh
 
 Management APIs primarily use `/api/tianquan-jianshen/v1`, with bootstrap/about under `/api/v1/auth` and internal runtime decisions under `/internal/v1/authorization`. PostgreSQL/Redis projection health, Tianshu leases, Yuheng release consistency and actual routed requests are separate observations; see the [architecture](docs/architecture.md), [API/manifest contract](docs/api-and-manifest.md) and [security boundaries](docs/security-boundaries.md).
 
+The default-off execution-grant authorization service can independently resolve a sealed intent through Shoubing, match its attested source tuple to the verified calling SERVICE, and read the current USER roles and activated resource policy in one local transaction. Deployments must explicitly configure finite `egon.tianquan-jianshen.execution-grants.policies` containing each system/purpose, exact normal and optional session API keys and paths, minimum permission codes, and permission-to-USER-scope mappings; the existing identity authority binding for the issuer and source resource must include `tianquan-shoubing:execution-grant:resolve`. Missing bindings or policy drift fail closed. Shoubing identity checks and the local authorization transaction are separate points in time; callers must recheck before each protected execution boundary, and a concurrent revocation is not globally atomic with a subsequent model call. This is an internal service boundary; no remote execution-decision endpoint or automatic grants are provided yet.
+
+For example, a reviewed deployment policy for the Tianji start endpoints has this shape (the separate identity-authority bindings, registrations, permissions and grants must already exist):
+
+```yaml
+egon:
+  tianquan-jianshen:
+    execution-grants:
+      enabled: true
+      policies:
+        - system-code: tianji
+          purpose: TIANJI_AGENT_RUN_EXECUTION
+          resource-key: tianji.api.agent.start
+          resource-path: /api/tianji/v1/agent-runs
+          session-resource-key: tianji.api.agent.startSession
+          session-resource-path: /api/tianji/v1/agent-runs/with-session
+          required-permissions: [TIANJI_AGENT_START]
+          session-permissions: [TIANJI_AGENT_READ]
+          permission-scopes:
+            TIANJI_AGENT_START: ["tianji:agent:start"]
+            TIANJI_AGENT_READ: ["tianji:agent:read"]
+```
+
 Clean-environment initialization uses the explicit [permission catalog B0 and administrator B1 commands](docs/permission-catalog-bootstrap.md). B0 provisions finite source authority before registration; B1 grants a reviewed list of active permission codes after activation. Neither runs during application startup or ordinary CI.
 
 Tenant authorization policy-version increments use the existing JPA version as an optimistic compare-and-set; a concurrent change can make the transaction fail at flush or commit. A lagging replica may expose older authorization data. Other authorization locking paths still require adaptation before this service can use strict read/write splitting.

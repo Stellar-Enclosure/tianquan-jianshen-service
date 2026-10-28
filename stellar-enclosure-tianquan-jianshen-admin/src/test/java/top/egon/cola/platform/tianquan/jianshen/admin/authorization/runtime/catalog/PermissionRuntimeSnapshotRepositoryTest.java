@@ -140,6 +140,45 @@ class PermissionRuntimeSnapshotRepositoryTest {
         var result=fixture.repository.current(new PermissionRuntimeProofService.VerifiedRequest(binding(),ISSUER,user()));
         assertTrue(result.permissions().isEmpty()); assertTrue(result.permissionSnapshot().activeRoleContext().rootRoleIds().isEmpty());
     }
+    @Test void executionViewUsesTheActivatedProducerAndRejectsCorruptPolicyBytes() {
+        Fixture fixture = new Fixture();
+        var proof = new ExecutionGrantAuthorizationService.VerifiedExecution(binding(), ISSUER, "30", NOW.plusSeconds(60), "shop.api.read");
+        var view = fixture.repository.currentExecution(proof);
+        assertEquals("shop.api.read", view.resource().key());
+        assertEquals(Set.of("order:read"), view.snapshot().permissions());
+        assertTrue(fixture.sql.stream().anyMatch(sql -> sql.contains("ap.producer_id = :producer")
+                && sql.contains("ap.producer_version = :version") && sql.contains("rv.registration_key = :key")));
+        fixture.definitionDigest = "f".repeat(64);
+        assertEquals("AUTH_RUNTIME_CHECKSUM_MISMATCH", assertThrows(Rbac3RuleViolation.class,
+                () -> fixture.repository.currentExecution(proof)).reasonCode());
+    }
+    @Test void executionViewActuallyEntersTheSpringTransactionProxy() {
+        Fixture fixture = new Fixture();
+        try (var context = new org.springframework.context.annotation.AnnotationConfigApplicationContext()) {
+            context.register(TransactionConfiguration.class);
+            context.registerBean(PermissionRuntimeSnapshotRepository.class, () -> fixture.repository);
+            context.refresh();
+            var repository = context.getBean(PermissionRuntimeSnapshotRepository.class);
+            assertTrue(org.springframework.aop.support.AopUtils.isAopProxy(repository));
+            repository.currentExecution(new ExecutionGrantAuthorizationService.VerifiedExecution(
+                    binding(), ISSUER, "30", NOW.plusSeconds(60), "shop.api.read"));
+            assertTrue(fixture.transactionObserved);
+        }
+    }
+
+    @org.springframework.context.annotation.Configuration(proxyBeanMethods = false)
+    @org.springframework.transaction.annotation.EnableTransactionManagement(proxyTargetClass = true)
+    static class TransactionConfiguration {
+        @org.springframework.context.annotation.Bean
+        org.springframework.transaction.PlatformTransactionManager transactionManager() {
+            return new org.springframework.transaction.support.AbstractPlatformTransactionManager() {
+                @Override protected Object doGetTransaction() { return new Object(); }
+                @Override protected void doBegin(Object transaction, org.springframework.transaction.TransactionDefinition definition) { }
+                @Override protected void doCommit(org.springframework.transaction.support.DefaultTransactionStatus status) { }
+                @Override protected void doRollback(org.springframework.transaction.support.DefaultTransactionStatus status) { }
+            };
+        }
+    }
     private static class Fixture {
         final EntityManager manager=mock(EntityManager.class);
         final RoleActivationFactRepository facts=mock(RoleActivationFactRepository.class);
@@ -149,8 +188,22 @@ class PermissionRuntimeSnapshotRepositoryTest {
         final List<Map<String,Object>> writes=new ArrayList<>();
         final PermissionRuntimeSnapshotRepository repository;
         String artifact="a".repeat(64); long policy=3;
+        String definitionJson, definitionDigest;
+        boolean transactionObserved;
         java.time.Instant activatedAt=NOW.minusSeconds(5), qualifiedAt=NOW.minusSeconds(10), qualificationExpiresAt=NOW.plusSeconds(900);
         Fixture() {
+            var resource = new top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest.ResourceDefinition(
+                    "shop.api.read", top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType.API,
+                    Map.of("methods", List.of("POST"), "paths", List.of("/shop")),
+                    top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess.PROTECTED,
+                    new top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionRequirement(
+                            top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionMode.ALL, List.of("order:read")),
+                    null, List.of(top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest.PrincipalType.USER),
+                    List.of(), new top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest.I18nReference("shop", "read"),
+                    top.egon.cola.platform.tianquan.jianshen.contract.permission.DefinitionLifecycle.ACTIVE);
+            var definition = new top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifestCanonicalizer().resourceMap(resource);
+            definitionJson = top.egon.cola.platform.tianquan.jianshen.contract.permission.CanonicalJson.write(definition);
+            definitionDigest = top.egon.cola.platform.tianquan.jianshen.contract.permission.CanonicalJson.digest(definition);
             var hierarchy=new RoleHierarchy(List.of(new RoleNode("50","40","reader",true,RoleNode.RiskLevel.LOW,false,null,0)),List.of());
             var rules=new AuthorizationRuleFacts(List.of(),List.of(),List.of(),List.of(),List.of(),List.of(),
                     List.of(new AuthorizationRuleFacts.PermissionGrantBinding("10","40","50","order:read")));
@@ -171,12 +224,14 @@ class PermissionRuntimeSnapshotRepositoryTest {
                     ()->NOW,new PermissionRuntimeProperties(Duration.ofSeconds(30),List.of(binding())),()->100L);
         }
         List<?> rows(String text) {
+            transactionObserved |= org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive();
             if(text.contains("for share of s")) return List.<Object[]>of(new Object[]{10L,20L,"commerce","shop","default","test",40L});
             if(text.contains("policy_version from rbac3_tenant")) return List.of(policy);
             if(text.contains("select id, auth_version from rbac3_user")) return List.<Object[]>of(new Object[]{60L,2L});
             if(text.contains("select a.activation_version")) return List.<Object[]>of(new Object[]{1L,3L,1L,"c".repeat(64),"b".repeat(64),artifact,activatedAt,qualifiedAt,qualificationExpiresAt});
             if(text.contains("select distinct p.permission_code")) return List.of("order:read");
             if(text.contains("select rv.registration_key")) return List.of("shop.api.read");
+            if(text.contains("select cast(rv.definition_json")) return List.<Object[]>of(new Object[]{definitionJson, definitionDigest});
             return List.of();
         }
     }

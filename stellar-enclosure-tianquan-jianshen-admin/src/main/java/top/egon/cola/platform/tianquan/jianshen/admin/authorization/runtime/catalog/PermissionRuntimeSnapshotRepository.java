@@ -59,6 +59,43 @@ public class PermissionRuntimeSnapshotRepository {
         return build(request.binding(), request.issuer().toASCIIString(), request.user().subject(), request.user().expiresAt(), null);
     }
 
+    /** Reads the activated resource policy in the same transaction as the current subject snapshot. */
+    @Transactional
+    ExecutionView currentExecution(ExecutionGrantAuthorizationService.VerifiedExecution request) {
+        var snapshot = build(request.binding(), request.issuer().toASCIIString(), request.subject(), request.expiresAt(), null);
+        Object[] row = one("""
+                select cast(rv.definition_json as text), rv.definition_digest
+                  from rbac3_catalog_activation_producer ap
+                  join rbac3_catalog_producer p on p.catalog_scope_id = ap.catalog_scope_id and p.producer_id = ap.producer_id and p.enabled
+                  join rbac3_catalog_resource_version rv on rv.catalog_scope_id = ap.catalog_scope_id and rv.producer_id = ap.producer_id
+                       and rv.producer_version = ap.producer_version
+                  join rbac3_catalog_resource r on r.catalog_scope_id = rv.catalog_scope_id and r.id = rv.resource_id
+                 where ap.catalog_scope_id = :scope and ap.activation_version = :catalog and ap.producer_id = :producer
+                   and ap.producer_version = :version and rv.registration_key = :key and r.governance_state = 'ACTIVE'
+                """, Map.of("scope", Long.parseLong(request.binding().scope().catalogScopeId()),
+                "catalog", Long.parseLong(snapshot.permissionSnapshot().catalogVersion()), "producer", request.binding().producerId(),
+                "version", Long.parseLong(request.binding().producerVersion()), "key", request.resourceKey()),
+                "AUTH_RUNTIME_EXECUTION_POLICY_UNAVAILABLE");
+        try {
+            String json = text(row[0]);
+            Map<?, ?> encoded = mapper.readValue(json, Map.class);
+            if (!CanonicalJson.digest(encoded).equals(text(row[1]).trim())) {
+                throw new Rbac3RuleViolation("AUTH_RUNTIME_CHECKSUM_MISMATCH");
+            }
+            top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest.ResourceDefinition resource = mapper
+                    .readerFor(top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest.ResourceDefinition.class)
+                    .with(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,
+                            com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+                    .with(com.fasterxml.jackson.core.JsonParser.Feature.STRICT_DUPLICATE_DETECTION).readValue(json);
+            return new ExecutionView(snapshot, resource);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException | IllegalArgumentException invalid) {
+            throw new Rbac3RuleViolation("AUTH_RUNTIME_PAYLOAD_INVALID");
+        }
+    }
+
+    record ExecutionView(SystemAuthorizationSnapshot snapshot,
+                         top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest.ResourceDefinition resource) { }
+
     /** Background publication uses database subjects and the configured trusted issuer; it does not create a USER principal. */
     @Transactional
     public void rebuild(PermissionRuntimeProperties.Binding binding, long userId, PermissionSnapshotRebuildRepository.Task task) {
