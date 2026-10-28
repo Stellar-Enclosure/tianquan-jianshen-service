@@ -40,16 +40,32 @@ public class CatalogAdministrationGuard {
             throw new Rbac3RuleViolation("PERMISSION_DENIED");
         }
         var scope = lock ? scopes.lockScope(target) : scopes.readScope(target);
-        var state = lock ? policy.requireForUpdate(Long.parseLong(target.tenantId())) : policy.require(Long.parseLong(target.tenantId()));
-        if (state.getPolicyVersion() != actor.policyVersion()) {
-            throw new Rbac3RuleViolation("AUTH_SNAPSHOT_NOT_READY");
-        }
-        var rows = entityManager.createNativeQuery("""
-                select auth_version from rbac3_user where id=:user and tenant_id=:tenant and identity_sub=:subject and status='ACTIVE'
-                """ + (lock ? " for update" : "")).setParameter("user", Long.parseLong(actor.rbac3UserId())).setParameter("tenant", Long.parseLong(target.tenantId()))
-                .setParameter("subject", actor.identitySub()).getResultList();
-        if (rows.size() != 1 || ((Number) rows.getFirst()).longValue() != actor.authVersion()) {
-            throw new Rbac3RuleViolation("AUTH_SNAPSHOT_NOT_READY");
+        long tenant = Long.parseLong(target.tenantId());
+        long user = Long.parseLong(actor.rbac3UserId());
+        if (lock) {
+            int policyMatch = entityManager.createNativeQuery("""
+                    update rbac3_tenant_authorization_state set version = version
+                     where tenant_id = :tenant and policy_version = :policy
+                    """).setParameter("tenant", tenant).setParameter("policy", actor.policyVersion()).executeUpdate();
+            if (policyMatch != 1) { throw new Rbac3RuleViolation("AUTH_SNAPSHOT_NOT_READY"); }
+            int userMatch = entityManager.createNativeQuery("""
+                    update rbac3_user set version = version
+                     where id = :user and tenant_id = :tenant and identity_sub = :subject
+                       and status = 'ACTIVE' and auth_version = :version
+                    """).setParameter("user", user).setParameter("tenant", tenant)
+                    .setParameter("subject", actor.identitySub()).setParameter("version", actor.authVersion()).executeUpdate();
+            if (userMatch != 1) { throw new Rbac3RuleViolation("AUTH_SNAPSHOT_NOT_READY"); }
+        } else {
+            if (policy.require(tenant).getPolicyVersion() != actor.policyVersion()) {
+                throw new Rbac3RuleViolation("AUTH_SNAPSHOT_NOT_READY");
+            }
+            var rows = entityManager.createNativeQuery("""
+                    select auth_version from rbac3_user where id=:user and tenant_id=:tenant and identity_sub=:subject and status='ACTIVE'
+                    """).setParameter("user", user).setParameter("tenant", tenant)
+                    .setParameter("subject", actor.identitySub()).getResultList();
+            if (rows.size() != 1 || ((Number) rows.getFirst()).longValue() != actor.authVersion()) {
+                throw new Rbac3RuleViolation("AUTH_SNAPSHOT_NOT_READY");
+            }
         }
         return scope;
     }

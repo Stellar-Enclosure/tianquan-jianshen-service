@@ -26,6 +26,8 @@ class CatalogAdministrationGuardTest {
     private final TenantAuthorizationStateRepository policy = mock(TenantAuthorizationStateRepository.class);
     private final EntityManager entityManager = mock(EntityManager.class);
     private final Query query = mock(Query.class, RETURNS_SELF);
+    private final Query policyFence = mock(Query.class, RETURNS_SELF);
+    private final Query userFence = mock(Query.class, RETURNS_SELF);
     private final Rbac3UserDetails actor = mock(Rbac3UserDetails.class);
     private final IdentityPrincipal identity = mock(IdentityPrincipal.class);
     private final SystemAuthorizationSnapshot snapshot = mock(SystemAuthorizationSnapshot.class);
@@ -41,22 +43,41 @@ class CatalogAdministrationGuardTest {
         when(actor.hasPermission("manage")).thenReturn(true);
         when(identity.expiresAt()).thenReturn(NOW.plusSeconds(60));
         when(snapshot.expiresAt()).thenReturn(NOW.plusSeconds(30));
-        when(policy.requireForUpdate(10L)).thenReturn(new TenantAuthorizationStatePO(10L, "test", NOW));
         when(scopes.lockScope(SCOPE)).thenReturn(new PermissionCatalogScopeRepository.ScopeState(SCOPE, 20, 1, 0));
-        when(entityManager.createNativeQuery(anyString())).thenReturn(query);
+        when(entityManager.createNativeQuery(anyString())).thenAnswer(call -> {
+            String sql = call.getArgument(0);
+            if (sql.contains("update rbac3_tenant_authorization_state")) return policyFence;
+            if (sql.contains("update rbac3_user")) return userFence;
+            return query;
+        });
+        when(policyFence.executeUpdate()).thenReturn(1);
+        when(userFence.executeUpdate()).thenReturn(1);
         when(query.getResultList()).thenReturn(List.of(0L));
     }
 
     @Test
-    void sameLocalTransactionLocksScopeThenTenantThenBoundUser() {
+    void sameLocalTransactionFencesScopeThenTenantThenBoundUser() {
         assertEquals(20, guard.require(SCOPE, actor, "manage", NOW).applicationId());
-        var order = inOrder(scopes, policy, entityManager);
+        var order = inOrder(scopes, entityManager);
         order.verify(scopes).lockScope(SCOPE);
-        order.verify(policy).requireForUpdate(10L);
-        order.verify(entityManager).createNativeQuery(contains("identity_sub=:subject"));
-        verify(query).setParameter("subject", "9001");
-        verify(query).setParameter("tenant", 10L);
-        verify(query).setParameter("user", 90L);
+        order.verify(entityManager).createNativeQuery(contains("update rbac3_tenant_authorization_state"));
+        order.verify(entityManager).createNativeQuery(contains("update rbac3_user"));
+        verify(policyFence).setParameter("policy", 0L);
+        verify(userFence).setParameter("subject", "9001");
+        verify(userFence).setParameter("tenant", 10L);
+        verify(userFence).setParameter("user", 90L);
+        verify(userFence).setParameter("version", 0L);
+        verify(policy, never()).requireForUpdate(anyLong());
+        var sql = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(entityManager, times(2)).createNativeQuery(sql.capture());
+        assertTrue(sql.getAllValues().stream().allMatch(value -> value.toLowerCase(java.util.Locale.ROOT)
+                .startsWith("update ") && !value.toLowerCase(java.util.Locale.ROOT).contains("for update")));
+        var parser = new org.apache.shardingsphere.infra.parser.ShardingSphereSQLParserEngine(
+                org.apache.shardingsphere.infra.spi.type.typed.TypedSPILoader.getService(
+                        org.apache.shardingsphere.database.connector.core.type.DatabaseType.class, "PostgreSQL"),
+                new org.apache.shardingsphere.sql.parser.engine.api.CacheOption(16, 64),
+                new org.apache.shardingsphere.sql.parser.engine.api.CacheOption(16, 64));
+        sql.getAllValues().forEach(value -> assertNotNull(parser.parse(value.replaceAll(":\\w+", "?"), false)));
     }
 
     @Test
@@ -93,11 +114,24 @@ class CatalogAdministrationGuardTest {
 
     @Test
     void revocationFenceRejectsStalePolicyOrUserVersion() {
-        when(actor.policyVersion()).thenReturn(1L);
+        when(policyFence.executeUpdate()).thenReturn(0);
         assertEquals("AUTH_SNAPSHOT_NOT_READY", assertThrows(Rbac3RuleViolation.class, () -> guard.require(SCOPE, actor, "manage", NOW)).reasonCode());
-        verifyNoInteractions(entityManager);
-        when(actor.policyVersion()).thenReturn(0L);
-        when(query.getResultList()).thenReturn(List.of(1L));
+        verify(userFence, never()).executeUpdate();
+        when(policyFence.executeUpdate()).thenReturn(1);
+        when(userFence.executeUpdate()).thenReturn(0);
         assertEquals("AUTH_SNAPSHOT_NOT_READY", assertThrows(Rbac3RuleViolation.class, () -> guard.require(SCOPE, actor, "manage", NOW)).reasonCode());
+    }
+
+    @Test
+    void failedUserFenceRollsBackTheOwningTransaction() {
+        when(userFence.executeUpdate()).thenReturn(0);
+        var transactions = mock(org.springframework.transaction.PlatformTransactionManager.class);
+        when(transactions.getTransaction(any())).thenReturn(new org.springframework.transaction.support.SimpleTransactionStatus());
+        var transaction = new org.springframework.transaction.support.TransactionTemplate(transactions);
+
+        assertThrows(Rbac3RuleViolation.class, () -> transaction.executeWithoutResult(
+                status -> guard.require(SCOPE, actor, "manage", NOW)));
+        verify(policyFence).executeUpdate();
+        verify(transactions).rollback(any());
     }
 }
