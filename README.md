@@ -49,6 +49,8 @@ egon:
             TIANJI_AGENT_READ: ["tianji:agent:read"]
 ```
 
+`HttpExecutionAuthorizationClient` is an explicit per-issuer, per-tenant SERVICE client for this endpoint. It compares the returned issuer, tenant, subject, resource, purpose, run identifier, input fingerprint, session flag and deadline with the caller's local expectation before returning a decision. It bounds the request, response and decision exchange time, follows no redirects, and does not replay requests; SERVICE token acquisition remains governed by the existing OAuth client transport. The executing Jianshen build must also have its own matching permission manifest activated before the compiled SERVICE policy guard will accept the endpoint.
+
 Clean-environment initialization uses the explicit [permission catalog B0 and administrator B1 commands](docs/permission-catalog-bootstrap.md). B0 provisions finite source authority before registration; B1 grants a reviewed list of active permission codes after activation. Neither runs during application startup or ordinary CI.
 
 Tenant authorization policy-version increments use the existing JPA version as an optimistic compare-and-set; a concurrent change can make the transaction fail at flush or commit. A lagging replica may expose older authorization data. Other authorization locking paths still require adaptation before this service can use strict read/write splitting.

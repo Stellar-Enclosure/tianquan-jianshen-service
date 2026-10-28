@@ -106,7 +106,8 @@ public class ExecutionGrantAuthorizationController {
         return ResponseEntity.status(403).cacheControl(CacheControl.noStore()).body(Map.of("error", "insufficient_scope"));
     }
 
-    @ExceptionHandler({DataAccessException.class, IOException.class})
+    @ExceptionHandler({DataAccessException.class, IOException.class,
+            top.egon.cola.platform.tianquan.jianshen.starter.client.Rbac3AuthorizationClient.AuthorizationUnavailableException.class})
     public ResponseEntity<Map<String, String>> unavailable() { return error(503); }
 
     @ExceptionHandler(RuntimeException.class)
