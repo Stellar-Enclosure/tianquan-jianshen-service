@@ -51,7 +51,8 @@ public class ExecutionGrantAuthorizationService {
             @Qualifier("trustedIssuerRegistry") TrustedIssuerRegistry issuers,
             @Qualifier("idpServiceOAuth2Client") IdpServiceOAuth2Client oauth,
             @Qualifier("jacksonObjectMapper") ObjectMapper mapper, @Qualifier("idpClock") Clock clock) {
-        this(proofs, snapshots, issuers, clients(authority, starter, issuers, oauth, mapper), policies, clock);
+        this(proofs, snapshots, issuers, clients(authority, starter, issuers, oauth, mapper,
+                IdentityAuthorityScopes.EXECUTION_GRANT_RESOLVE), policies, clock);
     }
 
     ExecutionGrantAuthorizationService(PermissionRuntimeProofService proofs, PermissionRuntimeSnapshotRepository snapshots,
@@ -155,14 +156,14 @@ public class ExecutionGrantAuthorizationService {
                 && source.environment().equals(caller.sourceEnvironment());
     }
 
-    private static Map<AuthorityKey, HttpExecutionGrantClient> clients(IdentityAuthorityProperties authority, IdpStarterProperties starter,
-            TrustedIssuerRegistry issuers, IdpServiceOAuth2Client oauth, ObjectMapper mapper) {
+    static Map<AuthorityKey, HttpExecutionGrantClient> clients(IdentityAuthorityProperties authority, IdpStarterProperties starter,
+            TrustedIssuerRegistry issuers, IdpServiceOAuth2Client oauth, ObjectMapper mapper, String requiredScope) {
         if (authority == null || starter == null || authority.getBindings() == null || authority.getBindings().size() > 4096) {
             throw new IllegalStateException("EXECUTION_AUTHORIZATION_BINDINGS_INVALID");
         }
         Map<AuthorityKey, HttpExecutionGrantClient> result = new LinkedHashMap<>();
         authority.getBindings().forEach((name, value) -> {
-            if (value == null || value.getScopes() == null || !value.getScopes().contains(IdentityAuthorityScopes.EXECUTION_GRANT_RESOLVE)) return;
+            if (value == null || value.getScopes() == null || !value.getScopes().contains(requiredScope)) return;
             if (name == null || !name.matches("[A-Za-z0-9._-]{1,128}") || value.getIssuer() == null) {
                 throw new IllegalStateException("EXECUTION_AUTHORIZATION_BINDING_INVALID");
             }
