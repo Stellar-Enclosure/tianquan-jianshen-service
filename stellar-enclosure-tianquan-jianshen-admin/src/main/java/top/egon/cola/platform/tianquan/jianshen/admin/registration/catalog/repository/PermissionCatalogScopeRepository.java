@@ -65,7 +65,6 @@ public class PermissionCatalogScopeRepository {
                          where catalog_scope_id = :scope and producer_id = :producer
                            and principal_binding_digest = :binding and issuer = :issuer
                            and client_id = :client and resource_uri = :resource and enabled
-                         for share
                         """)
                 .setParameter("scope", Long.parseLong(target.catalogScopeId())).setParameter("producer", producerId)
                 .setParameter("binding", caller.bindingDigest()).setParameter("issuer", caller.issuer().toString())
@@ -76,6 +75,19 @@ public class PermissionCatalogScopeRepository {
         Grant grant = new Grant(number(row[0]), number(row[1]), Set.copyOf(json.strings(row[2].toString())),
                 Set.copyOf(json.strings(row[3].toString())), (Boolean) row[4]);
         grant.require(capability);
+        int granted = entityManager.createNativeQuery("""
+                update rbac3_catalog_scope s set version = version + 1
+                 where s.id = :scope and s.tenant_id = :tenant and s.status = 'ACTIVE'
+                   and exists (select 1 from rbac3_catalog_service_grant g where g.catalog_scope_id = s.id
+                       and g.id = :grant and g.version = :version and g.producer_id = :producer
+                       and g.principal_binding_digest = :binding and g.issuer = :issuer
+                       and g.client_id = :client and g.resource_uri = :resource and g.enabled)
+                """).setParameter("scope", Long.parseLong(target.catalogScopeId())).setParameter("tenant", Long.parseLong(target.tenantId()))
+                .setParameter("grant", grant.id()).setParameter("version", grant.version()).setParameter("producer", producerId)
+                .setParameter("binding", caller.bindingDigest()).setParameter("issuer", caller.issuer().toString())
+                .setParameter("client", caller.principal().clientId()).setParameter("resource", caller.principal().resourceUri().toString())
+                .executeUpdate();
+        if (granted != 1) throw new Rbac3RuleViolation("SERVICE_IDENTITY_DENIED");
         return new AuthorizedOwner(owner, grant);
     }
 
@@ -98,17 +110,43 @@ public class PermissionCatalogScopeRepository {
                          where s.id = :scope and s.status = 'ACTIVE' and a.status = 'ACTIVE'
                            and a.application_code = s.application_code and a.ddc_business_id = s.ddc_business_id
                            and a.ddc_application_id = s.ddc_application_id
-                        """ + (lock ? " for update of s" : "")).setParameter("scope", scopeId).getResultList();
+                        """).setParameter("scope", scopeId).getResultList();
         if (scopes.size() != 1) throw new Rbac3RuleViolation("APPLICATION_BINDING_DENIED");
         Object[] scope = (Object[]) scopes.getFirst();
         CatalogScope stored = new CatalogScope(scope[0].toString(), scope[1].toString(), scope[2].toString(),
                 scope[3].toString(), scope[4].toString(), scope[5].toString());
         if (!target.equals(stored)) throw new Rbac3RuleViolation("APPLICATION_BINDING_DENIED");
+        if (lock) {
+            int fenced = entityManager.createNativeQuery("""
+                    update rbac3_catalog_scope set version = version + 1
+                     where id = :scope and tenant_id = :tenant and status = 'ACTIVE'
+                    """).setParameter("scope", scopeId).setParameter("tenant", Long.parseLong(target.tenantId())).executeUpdate();
+            if (fenced != 1) throw new Rbac3RuleViolation("APPLICATION_BINDING_DENIED");
+            // Check after acquiring the scope row: waiting for a concurrent writer can outlive the first SQL snapshot.
+            int bound = entityManager.createNativeQuery("""
+                    update rbac3_catalog_scope s set version = version + 1
+                     where s.id = :scope and s.tenant_id = :tenant and s.status = 'ACTIVE'
+                       and exists (select 1 from rbac3_application a where a.id = s.application_id
+                           and a.status = 'ACTIVE' and a.application_code = s.application_code
+                           and a.ddc_business_id = s.ddc_business_id and a.ddc_application_id = s.ddc_application_id)
+                    """).setParameter("scope", scopeId).setParameter("tenant", Long.parseLong(target.tenantId())).executeUpdate();
+            if (bound != 1) throw new Rbac3RuleViolation("APPLICATION_BINDING_DENIED");
+        }
         List<?> pointers = entityManager.createNativeQuery("""
                         select revision, policy_version from rbac3_catalog_active_pointer where catalog_scope_id = :scope
-                        """ + (lock ? " for update" : "")).setParameter("scope", scopeId).getResultList();
+                        """).setParameter("scope", scopeId).getResultList();
         if (pointers.size() != 1) throw new Rbac3RuleViolation("AUTH_SNAPSHOT_NOT_READY");
         Object[] pointer = (Object[]) pointers.getFirst();
+        if (lock) {
+            int matched = entityManager.createNativeQuery("""
+                    update rbac3_catalog_scope s set version = version + 1
+                     where s.id = :scope and s.tenant_id = :tenant and s.status = 'ACTIVE'
+                       and exists (select 1 from rbac3_catalog_active_pointer p where p.catalog_scope_id = s.id
+                           and p.revision = :revision and p.policy_version = :policy)
+                    """).setParameter("scope", scopeId).setParameter("tenant", Long.parseLong(target.tenantId()))
+                    .setParameter("revision", number(pointer[0])).setParameter("policy", number(pointer[1])).executeUpdate();
+            if (matched != 1) throw new Rbac3RuleViolation("AUTH_SNAPSHOT_NOT_READY");
+        }
         return new ScopeState(target, number(scope[6]), number(pointer[0]), number(pointer[1]));
     }
 
@@ -133,10 +171,21 @@ public class PermissionCatalogScopeRepository {
                         select kind, owned_key_prefixes::text, owned_permission_prefixes::text,
                                owned_message_prefixes::text, expected_modules::text, current_revision, version
                           from rbac3_catalog_producer where catalog_scope_id = :scope and producer_id = :producer and (not :enabledOnly or enabled)
-                        """ + (lock ? " for update" : "")).setParameter("scope", Long.parseLong(target.catalogScopeId())).setParameter("producer", producerId)
+                        """).setParameter("scope", Long.parseLong(target.catalogScopeId())).setParameter("producer", producerId)
                 .setParameter("enabledOnly", enabledOnly).getResultList();
         if (owners.size() != 1) throw new Rbac3RuleViolation("SERVICE_IDENTITY_DENIED");
         Object[] owner = (Object[]) owners.getFirst();
+        if (lock) {
+            int matched = entityManager.createNativeQuery("""
+                    update rbac3_catalog_scope s set version = version + 1
+                     where s.id = :scope and s.tenant_id = :tenant and s.status = 'ACTIVE'
+                       and exists (select 1 from rbac3_catalog_producer p where p.catalog_scope_id = s.id
+                           and p.producer_id = :producer and p.version = :version and (not :enabledOnly or p.enabled))
+                    """).setParameter("scope", Long.parseLong(target.catalogScopeId())).setParameter("tenant", Long.parseLong(target.tenantId()))
+                    .setParameter("producer", producerId).setParameter("version", number(owner[6]))
+                    .setParameter("enabledOnly", enabledOnly).executeUpdate();
+            if (matched != 1) throw new Rbac3RuleViolation("SERVICE_IDENTITY_DENIED");
+        }
         return new Owner(target, scope.applicationId(), producerId, PermissionManifest.ProducerKind.valueOf(owner[0].toString()),
                 json.strings(owner[1].toString()), json.strings(owner[2].toString()), json.strings(owner[3].toString()),
                 json.strings(owner[4].toString()), number(owner[5]), number(owner[6]), scope.activeRevision(), scope.policyVersion());

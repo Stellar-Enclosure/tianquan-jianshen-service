@@ -7,6 +7,7 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -148,7 +149,8 @@ class Rbac3MigrationContractTest {
                 BUILTIN_BUSINESS_ACCESS_MIGRATION,
                 TIANQUAN_JIANSHEN_ABOUT_PERMISSION_MIGRATION,
                 RESOURCE_GRANTS_MIGRATION, CURRENT_BASELINE, WORKER_CLAIM_MIGRATION,
-                "db/migration/V16__permission_catalog_and_runtime.sql");
+                "db/migration/V16__permission_catalog_and_runtime.sql",
+                "db/migration/V17__coordinate_catalog_scope_writes.sql");
         assertThat(resourceSql(STRONG_AUTH_MIGRATION))
                 .contains("add column strong_authenticated_at timestamptz")
                 .contains("ck_rbac3_session_strong_authentication_time");
@@ -171,6 +173,29 @@ class Rbac3MigrationContractTest {
                 .contains("create table rbac3_user_business_access")
                 .contains("create table rbac3_user_org_assignment")
                 .contains("create table rbac3_user_position_assignment");
+    }
+
+    @Test
+    void catalogScopeFenceMigrationCoversPointerProducerAndServiceGrantWriters() throws Exception {
+        String resource = "db/migration/V17__coordinate_catalog_scope_writes.sql";
+        String sql = resourceSql(resource);
+        assertThat(sql).contains("set search_path from current", "update rbac3_catalog_scope set version = version + 1",
+                "before insert or update or delete on rbac3_catalog_active_pointer",
+                "before insert or update or delete on rbac3_catalog_producer",
+                "before insert or update or delete on rbac3_catalog_service_grant");
+        try (var input = getClass().getClassLoader().getResourceAsStream(resource)) {
+            assertThat(input).isNotNull();
+            String raw = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+            var parser = new org.flywaydb.database.postgresql.PostgreSQLParser(
+                    new org.flywaydb.core.api.configuration.FluentConfiguration(),
+                    new org.flywaydb.core.internal.parser.ParsingContext());
+            var statements = new ArrayList<String>();
+            try (var iterator = parser.parse(new org.flywaydb.core.internal.resource.StringResource(raw))) {
+                while (iterator.hasNext()) statements.add(iterator.next().getSql());
+            }
+            assertThat(statements).hasSize(4);
+            assertThat(statements.getFirst()).contains("UPDATE rbac3_catalog_scope", "RETURN NEW");
+        }
     }
 
     @Test
