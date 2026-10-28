@@ -10,6 +10,12 @@ public interface RuntimeProjectionTargetRepository {
 
     Optional<ProjectionTarget> find(String tenantId, String userId);
 
+    void beginTenantProjection(String tenantId);
+
+    void requirePage(String tenantId, long afterUserId, List<ProjectionTarget> page);
+
+    void requireExhausted(String tenantId, long afterUserId);
+
     record ProjectionTarget(String userId, String identitySub, long authVersion, boolean active) {
     }
 }

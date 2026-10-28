@@ -24,7 +24,7 @@ import java.util.Set;
  * is only a repair trigger, never a source of granted roles or permissions.
  */
 @Component
-public final class Rbac3RuntimeProjectionRecovery implements
+public class Rbac3RuntimeProjectionRecovery implements
         RuntimeProjectionExecutor,
         RuntimeSnapshotRebuildService {
 
@@ -65,6 +65,7 @@ public final class Rbac3RuntimeProjectionRecovery implements
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public void project(MutationWorkDTO mutation) {
         Objects.requireNonNull(mutation, "mutation");
         if ("USER".equals(mutation.scopeType())) {
@@ -80,6 +81,7 @@ public final class Rbac3RuntimeProjectionRecovery implements
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public void rebuild(EventEnvelopeVO event) {
         Objects.requireNonNull(event, "event");
         // Policy versions are tenant-wide; unaffected users also need a snapshot
@@ -90,13 +92,16 @@ public final class Rbac3RuntimeProjectionRecovery implements
     }
 
     private void projectTenant(String tenantId, String repairId) {
+        targets.beginTenantProjection(tenantId);
         long afterUserId = 0L;
         RuntimeException failure = null;
         while (true) {
             List<ProjectionTarget> page = targets.page(tenantId, afterUserId, PAGE_SIZE);
             if (page.isEmpty()) {
+                targets.requireExhausted(tenantId, afterUserId);
                 break;
             }
+            targets.requirePage(tenantId, afterUserId, page);
             for (ProjectionTarget target : page) {
                 try {
                     projectUser(tenantId, target, repairId);

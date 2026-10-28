@@ -151,7 +151,8 @@ class Rbac3MigrationContractTest {
                 RESOURCE_GRANTS_MIGRATION, CURRENT_BASELINE, WORKER_CLAIM_MIGRATION,
                 "db/migration/V16__permission_catalog_and_runtime.sql",
                 "db/migration/V17__coordinate_catalog_scope_writes.sql",
-                "db/migration/V18__claim_authorization_mutations.sql");
+                "db/migration/V18__claim_authorization_mutations.sql",
+                "db/migration/V19__coordinate_tenant_projection_membership.sql");
         assertThat(resourceSql(STRONG_AUTH_MIGRATION))
                 .contains("add column strong_authenticated_at timestamptz")
                 .contains("ck_rbac3_session_strong_authentication_time");
@@ -213,6 +214,26 @@ class Rbac3MigrationContractTest {
                     new org.flywaydb.core.internal.parser.ParsingContext());
             var statements = new ArrayList<String>();
             try (var iterator = parser.parse(new org.flywaydb.core.internal.resource.StringResource(raw))) {
+                while (iterator.hasNext()) statements.add(iterator.next().getSql());
+            }
+            assertThat(statements).hasSize(2);
+        }
+    }
+
+    @Test
+    void tenantProjectionMembershipMigrationUsesOneTransactionalParentFence() throws Exception {
+        String resource = "db/migration/V19__coordinate_tenant_projection_membership.sql";
+        String sql = resourceSql(resource);
+        assertThat(sql).contains("before insert or delete or update of tenant_id, id on rbac3_user",
+                "update rbac3_tenant_authorization_state set version = version", "set search_path from current");
+        try (var input = getClass().getClassLoader().getResourceAsStream(resource)) {
+            assertThat(input).isNotNull();
+            var parser = new org.flywaydb.database.postgresql.PostgreSQLParser(
+                    new org.flywaydb.core.api.configuration.FluentConfiguration(),
+                    new org.flywaydb.core.internal.parser.ParsingContext());
+            var statements = new ArrayList<String>();
+            try (var iterator = parser.parse(new org.flywaydb.core.internal.resource.StringResource(
+                    new String(input.readAllBytes(), StandardCharsets.UTF_8)))) {
                 while (iterator.hasNext()) statements.add(iterator.next().getSql());
             }
             assertThat(statements).hasSize(2);

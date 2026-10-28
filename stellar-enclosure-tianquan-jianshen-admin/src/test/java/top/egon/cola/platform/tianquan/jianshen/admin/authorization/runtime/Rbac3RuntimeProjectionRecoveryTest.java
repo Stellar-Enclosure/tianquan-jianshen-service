@@ -28,6 +28,10 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -87,7 +91,28 @@ class Rbac3RuntimeProjectionRecoveryTest {
         verify(activation, times(2)).refresh(any());
         verify(rebuilds, times(2)).enqueue(event());
         verify(targets, times(2)).page("7", 9L, 200);
+        verify(targets, times(2)).beginTenantProjection("7");
+        verify(targets, times(2)).requirePage("7", 0L, List.of(user));
+        verify(targets, times(2)).requireExhausted("7", 9L);
         verifyNoInteractions(reselection);
+    }
+
+    @Test
+    void incompleteReplicaPagePreventsProjectionCompletion() {
+        when(targets.page("7", 0L, 200)).thenReturn(List.of(user));
+        doThrow(new org.springframework.dao.OptimisticLockingFailureException("replica page incomplete"))
+                .when(targets).requirePage("7", 0L, List.of(user));
+        assertThatThrownBy(() -> recovery.rebuild(event())).hasMessage("replica page incomplete");
+        verifyNoInteractions(activation, runtime);
+        verify(targets, never()).requireExhausted(anyString(), anyLong());
+    }
+
+    @Test
+    void replicaTailMissCannotCompleteTenantProjection() {
+        doThrow(new org.springframework.dao.OptimisticLockingFailureException("replica tail incomplete"))
+                .when(targets).requireExhausted("7", 0L);
+        assertThatThrownBy(() -> recovery.rebuild(event())).hasMessage("replica tail incomplete");
+        verifyNoInteractions(activation, runtime);
     }
 
     @Test
