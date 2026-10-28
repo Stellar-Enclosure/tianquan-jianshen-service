@@ -102,6 +102,38 @@ public final class HttpRbac3AuthorizationClient implements Rbac3AuthorizationCli
         catch (IOException | RuntimeException failed) { throw new AuthorizationUnavailableException("SERVICE_POLICY_RUNTIME_UNAVAILABLE", failed); }
     }
 
+    @Override
+    public SystemAuthorizationSnapshot fetchDelegated(String systemCode, String verifiedServiceTenant, String userAccessToken)
+            throws InterruptedException {
+        if (verifiedServiceTenant == null || !verifiedServiceTenant.matches("[1-9][0-9]{0,18}")) {
+            throw new AuthorizationDeniedException("DELEGATED_TENANT_INVALID");
+        }
+        try { Long.parseLong(verifiedServiceTenant); }
+        catch (NumberFormatException invalid) { throw new AuthorizationDeniedException("DELEGATED_TENANT_INVALID"); }
+        String userToken = requiredUserToken(userAccessToken);
+        String serviceToken = serviceTokens.apply(verifiedServiceTenant);
+        URI uri = endpoint.resolve("/internal/v1/authorization/snapshots/current?systemCode=" + encode(systemCode));
+        try {
+            HttpResponse response = transport.get(uri, serviceToken, userToken, timeout);
+            if (response.statusCode() == 401 || response.statusCode() == 403 || response.statusCode() == 404) {
+                throw new AuthorizationDeniedException("TIANQUAN_JIANSHEN_AUTHORIZATION_DENIED");
+            }
+            if (response.statusCode() != 200) throw new AuthorizationUnavailableException("TIANQUAN_JIANSHEN_AUTHORIZATION_UNAVAILABLE");
+            JsonNode data = objectMapper.readTree(response.body()).get("data");
+            if (data == null || data.isNull()) throw new AuthorizationUnavailableException("TIANQUAN_JIANSHEN_AUTHORIZATION_RESPONSE_INVALID");
+            var snapshot = objectMapper.treeToValue(data, SystemAuthorizationSnapshot.class);
+            var view = snapshot.permissionSnapshot();
+            if (view == null || snapshot.policyBinding() == null || !systemCode.equals(snapshot.systemCode())
+                    || !verifiedServiceTenant.equals(snapshot.tenantId()) || !view.catalogScope().tenantId().equals(verifiedServiceTenant)
+                    || !view.catalogScope().applicationCode().equals(systemCode) || !view.subject().equals(snapshot.identitySub())
+                    || !snapshot.expiresAt().isAfter(java.time.Instant.now())) {
+                throw new AuthorizationDeniedException("DELEGATED_USER_VIEW_BINDING_MISMATCH");
+            }
+            return snapshot;
+        } catch (AuthorizationDeniedException | AuthorizationUnavailableException known) { throw known; }
+        catch (IOException | RuntimeException failed) { throw new AuthorizationUnavailableException("TIANQUAN_JIANSHEN_AUTHORIZATION_UNAVAILABLE", failed); }
+    }
+
     private static String requiredUserToken(String value) {
         if (value == null || value.isBlank() || value.length() > 16_384) {
             throw new AuthorizationUnavailableException(

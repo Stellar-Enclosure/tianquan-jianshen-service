@@ -46,6 +46,12 @@ public interface Rbac3AuthorizationClient {
         return fetch(systemCode, principal);
     }
 
+    /** Resolves a verified USER token through the authority for a SERVICE-delegated operation. */
+    default SystemAuthorizationSnapshot fetchDelegated(String systemCode, String verifiedServiceTenant,
+                                                        String userAccessToken) throws InterruptedException {
+        throw new AuthorizationUnavailableException("DELEGATED_USER_VIEW_UNAVAILABLE");
+    }
+
     /**
      * 类型 `AuthorizationUnavailableException` 位于 `Rbac3AuthorizationClient` 内，是类型，用于承载 `Authorization Unavailable Exception` 相关的职责、状态或契约；调用方通常通过其公开 API、Spring 装配或实现关系使用。
      * Type `AuthorizationUnavailableException` is a type inside `Rbac3AuthorizationClient` and carries the responsibility, state, or contract for `Authorization Unavailable Exception`; callers normally use it through its public API, Spring assembly, or implementation relationship.

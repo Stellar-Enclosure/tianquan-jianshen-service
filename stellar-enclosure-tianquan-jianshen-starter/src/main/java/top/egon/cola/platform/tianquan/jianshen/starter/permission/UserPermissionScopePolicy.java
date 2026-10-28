@@ -29,6 +29,11 @@ public final class UserPermissionScopePolicy {
         return mixed(resource) || scopes.containsAll(resource.oauthScopes());
     }
 
+    public boolean enabled() { return enabled; }
+
+    /** Immutable configuration captured by the runtime guard. */
+    public Map<String, Set<String>> permissionScopes() { return mappings; }
+
     boolean hasScopeMapping(String permission) { return enabled && mappings.containsKey(permission); }
 
     Set<String> missingScopes(String permission, Set<String> scopes) {

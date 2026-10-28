@@ -16,6 +16,8 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Set;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -133,6 +135,35 @@ class HttpRbac3AuthorizationClientTest {
                     assertThat(value).startsWith("00-" + trace.traceId() + "-"));
             assertThat(request.headers().firstValue("X-Egon-Subject-Token")).hasValue("user");
         }
+    }
+
+    @Test
+    void delegatedFetchUsesTheVerifiedServiceTenantAndRejectsAnotherCatalog() throws Exception {
+        var now = Instant.now();
+        var scope = new top.egon.cola.platform.tianquan.jianshen.contract.permission.CatalogScope("10", "20", "trade", "shop", "default", "test");
+        var view = new top.egon.cola.platform.tianquan.jianshen.contract.permission.EffectivePermissionSnapshot(
+                "https://idp.example/tenants/20", "alice", scope, "1", "2", "3",
+                new top.egon.cola.platform.tianquan.jianshen.contract.permission.EffectivePermissionSnapshot.ActiveRoleContext("shop", List.of("7"), List.of("7")),
+                List.of("shop:read"), now.plusSeconds(60));
+        var binding = new top.egon.cola.platform.tianquan.jianshen.contract.authorization.RuntimePolicyBinding(
+                "shop-java", "1", "a".repeat(64), "b".repeat(64), "c".repeat(64));
+        var snapshot = new top.egon.cola.platform.tianquan.jianshen.contract.authorization.SystemAuthorizationSnapshot(
+                "20", "alice", "30", "shop", 2, 3, List.of("7"), null, null, Set.of("shop:read"), Set.of(),
+                Map.of(), Map.of(), "checksum", now, view.snapshotExpiresAt(), view, binding);
+        String body = objectMapper().writeValueAsString(Map.of("data", snapshot));
+        AtomicReference<String> sent = new AtomicReference<>();
+        HttpRbac3AuthorizationClient client = client((uri, service, user, timeout) -> {
+            sent.set(user); return new HttpRbac3AuthorizationClient.HttpResponse(200, body);
+        });
+        assertThatThrownBy(() -> client.fetchDelegated("shop", "9999999999999999999", "user-proof"))
+                .isInstanceOf(Rbac3AuthorizationClient.AuthorizationDeniedException.class)
+                .hasMessage("DELEGATED_TENANT_INVALID");
+        assertThat(sent).hasValue(null);
+        assertThat(client.fetchDelegated("shop", "20", "user-proof").identitySub()).isEqualTo("alice");
+        assertThat(sent).hasValue("user-proof");
+        assertThatThrownBy(() -> client.fetchDelegated("shop", "21", "user-proof"))
+                .isInstanceOf(Rbac3AuthorizationClient.AuthorizationDeniedException.class)
+                .hasMessage("DELEGATED_USER_VIEW_BINDING_MISMATCH");
     }
 
     private HttpRbac3AuthorizationClient client(

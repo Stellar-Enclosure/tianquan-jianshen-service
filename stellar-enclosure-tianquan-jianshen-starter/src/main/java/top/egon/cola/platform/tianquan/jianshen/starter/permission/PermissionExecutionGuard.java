@@ -86,6 +86,8 @@ public final class PermissionExecutionGuard {
 
     public boolean nativeAnonymousBoundary(String resourceKey) { return anonymous != null && anonymous.allows(resourceKey); }
 
+    public UserPermissionScopePolicy userScopePolicy() { return userScopes; }
+
     public void requireExecution(String key) {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.isAuthenticated()

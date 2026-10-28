@@ -51,6 +51,9 @@ public final class PermissionFieldBindingGuard {
         return anonymous != null && anonymous.readOnlyField(field, readOnly);
     }
 
+    /** The immutable USER scope mapping used by the field binder and output projector. */
+    public UserPermissionScopePolicy userScopePolicy() { return userScopes; }
+
     RuntimeException denyInput(String reason) {
         top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3UserDetails user;
         String apiKey;
