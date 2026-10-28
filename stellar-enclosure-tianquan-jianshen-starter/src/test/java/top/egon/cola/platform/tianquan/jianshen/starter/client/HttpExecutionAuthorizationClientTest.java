@@ -61,7 +61,7 @@ class HttpExecutionAuthorizationClientTest {
             return new ServiceAuthorizationKey(ISSUER.toASCIIString(), value.registrationId(), "agent", 1, value.appId(),
                     value.audience(), value.context(), value.tenantId(), value.scopes());
         });
-        when(oauth.authorize(any())).thenReturn(new OAuth2AccessToken(OAuth2AccessToken.TokenType.BEARER,
+        when(oauth.authorizeBounded(any(), anyString(), any())).thenReturn(new OAuth2AccessToken(OAuth2AccessToken.TokenType.BEARER,
                 "service-proof-sentinel", NOW, NOW.plusSeconds(300)));
         when(http.<byte[]>sendAsync(any(), any())).thenAnswer(invocation -> {
             HttpRequest outbound = invocation.getArgument(0);
@@ -89,7 +89,7 @@ class HttpExecutionAuthorizationClientTest {
         assertEquals("Bearer service-proof-sentinel", sent.request().headers().firstValue("Authorization").orElseThrow());
         assertEquals("no-store", sent.request().headers().firstValue("Cache-Control").orElseThrow());
         assertEquals(SECRET, mapper.readTree(sent.body()).get("ciphertext").asText());
-        verify(oauth).authorize(argThat(value -> value.scopes().equals(Set.of(ExecutionAuthorizationContract.SERVICE_SCOPE))));
+        verify(oauth).authorizeBounded(argThat(value -> value.scopes().equals(Set.of(ExecutionAuthorizationContract.SERVICE_SCOPE))), eq(ISSUER.toString()), any());
         assertFalse(expected.toString().contains("alice")); assertFalse(request.toString().contains(SECRET));
     }
 
@@ -128,7 +128,7 @@ class HttpExecutionAuthorizationClientTest {
         assertThrows(HttpExecutionAuthorizationClient.ExecutionAuthorizationUnavailableException.class, () -> client.decide(request, expected));
         add(401, "{}".getBytes(StandardCharsets.UTF_8));
         assertThrows(HttpExecutionAuthorizationClient.ExecutionAuthorizationUnavailableException.class, () -> client.decide(request, expected));
-        verify(oauth).invalidate(argThat(value -> value.scopes().equals(Set.of(ExecutionAuthorizationContract.SERVICE_SCOPE))));
+        verify(oauth).invalidateBounded(argThat(value -> value.scopes().equals(Set.of(ExecutionAuthorizationContract.SERVICE_SCOPE))), eq(ISSUER.toString()), any());
         add(302, new byte[0]);
         assertThrows(HttpExecutionAuthorizationClient.ExecutionAuthorizationUnavailableException.class, () -> client.decide(request, expected));
         assertEquals(4, requests.size());
@@ -157,6 +157,16 @@ class HttpExecutionAuthorizationClientTest {
         assertTrue(pending.isCancelled()); verify(http, times(1)).sendAsync(any(), any());
     }
 
+    @Test void token_acquisition_and_http_share_one_deadline() throws Exception {
+        var token = new OAuth2AccessToken(OAuth2AccessToken.TokenType.BEARER, "service-proof-sentinel", NOW, NOW.plusSeconds(300));
+        when(oauth.authorizeBounded(any(), anyString(), any())).thenAnswer(inv -> { Thread.sleep(150); return token; });
+        add(200, mapper.writeValueAsBytes(decision(ID, ISSUER.toString(), "101", "alice", RESOURCE.toString(), "TEST_RUN",
+                INTENT, "c".repeat(64), true, NOW.plusSeconds(600), NOW.plusSeconds(30))));
+        var limited = create(service, ISSUER, http, Duration.ofSeconds(2));
+        limited.decide(request, expected);
+        assertTrue(requests.getFirst().request().timeout().orElseThrow().compareTo(Duration.ofMillis(1900)) < 0);
+    }
+
     @Test void unsafe_configuration_or_token_errors_fail_closed_without_credentials() {
         assertThrows(IllegalArgumentException.class, () -> new HttpExecutionAuthorizationClient(URI.create("http://rbac.example"), ISSUER,
                 service, oauth, mapper, Duration.ofSeconds(1), http, Clock.fixed(NOW, ZoneOffset.UTC)));
@@ -168,7 +178,7 @@ class HttpExecutionAuthorizationClientTest {
         var noScope = new IdpServiceTokenRequest(service.registrationId(), service.appId(), service.audience(), service.context(),
                 service.tenantId(), Set.of("other:scope"));
         assertThrows(IllegalArgumentException.class, () -> create(noScope, ISSUER, http, Duration.ofSeconds(1)));
-        when(oauth.authorize(any())).thenThrow(new IllegalStateException(SECRET));
+        when(oauth.authorizeBounded(any(), anyString(), any())).thenThrow(new IllegalStateException(SECRET));
         var failure = assertThrows(HttpExecutionAuthorizationClient.ExecutionAuthorizationUnavailableException.class, () -> client.decide(request, expected));
         assertFalse(failure.toString().contains(SECRET)); assertNull(failure.getCause());
     }

@@ -72,7 +72,7 @@ class ExecutionAuthorizationClientServerContractTest {
             return new ServiceAuthorizationKey(issuer.toString(), value.registrationId(), "agent", 1, value.appId(),
                     value.audience(), value.context(), value.tenantId(), value.scopes());
         });
-        when(oauth.authorize(any())).thenReturn(new OAuth2AccessToken(OAuth2AccessToken.TokenType.BEARER, "service-proof", now, now.plusSeconds(300)));
+        when(oauth.authorizeBounded(any(), anyString(), any())).thenReturn(new OAuth2AccessToken(OAuth2AccessToken.TokenType.BEARER, "service-proof", now, now.plusSeconds(300)));
         var http = mock(HttpClient.class); when(http.followRedirects()).thenReturn(HttpClient.Redirect.NEVER);
         when(http.<byte[]>sendAsync(any(), any())).thenAnswer(inv -> {
             HttpRequest outbound = inv.getArgument(0); HttpResponse.BodyHandler<byte[]> handler = inv.getArgument(1);
