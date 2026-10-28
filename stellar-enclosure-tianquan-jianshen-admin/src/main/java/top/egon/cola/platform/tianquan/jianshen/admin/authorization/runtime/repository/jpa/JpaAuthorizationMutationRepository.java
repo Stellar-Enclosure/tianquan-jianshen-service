@@ -102,21 +102,33 @@ public class JpaAuthorizationMutationRepository implements
             String errorCode,
             Instant now
     ) {
-        AuthorizationMutationPO mutation = entityManager.find(
-                AuthorizationMutationPO.class, Long.valueOf(mutationId),
-                LockModeType.PESSIMISTIC_WRITE);
-        if (mutation == null) {
-            throw new IllegalStateException("authorization mutation is missing");
+        java.util.Objects.requireNonNull(status, "status");
+        java.util.Objects.requireNonNull(now, "now");
+        String fields = switch (status) {
+            case COMMITTED -> "status = 'COMMITTED', committed_at = :now";
+            case FENCED -> "guard_created_at = :now";
+            case PROJECTED -> "status = 'PROJECTED', projected_at = :now";
+            case COMPLETED -> "status = 'COMPLETED', completed_at = :now";
+            case RECOVERY_REQUIRED -> "status = 'RECOVERY_REQUIRED', last_error_code = :error, attempt = attempt + 1";
+        };
+        String predicate = switch (status) {
+            case COMMITTED -> "status IN ('PREPARING', 'COMMITTED')";
+            case FENCED, PROJECTED -> "status IN ('COMMITTED', 'PROJECTED', 'RECOVERY_REQUIRED')";
+            case COMPLETED -> "status = 'PROJECTED'";
+            case RECOVERY_REQUIRED -> "status <> 'COMPLETED'";
+        };
+        entityManager.flush();
+        var query = entityManager.createNativeQuery("update rbac3_authorization_mutation set " + fields
+                + ", updated_at = :now, version = version + 1 where mutation_id = :id and " + predicate)
+                .setParameter("now", now).setParameter("id", Long.valueOf(mutationId));
+        if (status == AuthorizationMutationResultStatusEnum.RECOVERY_REQUIRED) { query.setParameter("error", errorCode); }
+        int changed = query.executeUpdate();
+        boolean mayAlreadyBeCompleted = status == AuthorizationMutationResultStatusEnum.COMPLETED
+                || status == AuthorizationMutationResultStatusEnum.RECOVERY_REQUIRED;
+        if (changed != 1 && (!mayAlreadyBeCompleted || !confirmCompleted(mutationId))) {
+            throw new IllegalStateException("authorization mutation is missing or its state changed");
         }
-        String actorId = mutation.getUpdatedBy();
-        switch (status) {
-            case COMMITTED -> mutation.committed(now, actorId);
-            case FENCED -> mutation.fenced(now, actorId);
-            case PROJECTED -> mutation.projected(now, actorId);
-            case COMPLETED -> mutation.completed(now, actorId);
-            case RECOVERY_REQUIRED -> mutation.recoveryRequired(
-                    errorCode, now, actorId);
-        }
+        detachMutation(mutationId);
     }
 
     /**
@@ -238,14 +250,20 @@ public class JpaAuthorizationMutationRepository implements
     @Override
     @Transactional
     public void completed(String mutationId, Instant now, String actorId) {
-        AuthorizationMutationPO mutation = locked(mutationId);
-        if (mutation.getStatus() == AuthorizationMutationStatusEnum.COMPLETED) {
-            return;
+        requireActor(actorId);
+        java.util.Objects.requireNonNull(now, "now");
+        entityManager.flush();
+        int changed = entityManager.createNativeQuery("""
+                update rbac3_authorization_mutation
+                   set projected_at = coalesce(projected_at, :now), status = 'COMPLETED', completed_at = :now,
+                       updated_at = :now, updated_by = :actor, version = version + 1
+                 where mutation_id = :id and status in ('COMMITTED', 'PROJECTED', 'RECOVERY_REQUIRED')
+                """).setParameter("now", now).setParameter("actor", actorId.trim())
+                .setParameter("id", Long.valueOf(mutationId)).executeUpdate();
+        if (changed != 1 && !confirmCompleted(mutationId)) {
+            throw new IllegalStateException("authorization mutation is missing or its state changed");
         }
-        if (mutation.getStatus() != AuthorizationMutationStatusEnum.PROJECTED) {
-            mutation.projected(now, actorId);
-        }
-        mutation.completed(now, actorId);
+        detachMutation(mutationId);
     }
 
     /**
@@ -267,10 +285,35 @@ public class JpaAuthorizationMutationRepository implements
             String reasonCode,
             Instant now,
             String actorId) {
-        AuthorizationMutationPO mutation = locked(mutationId);
-        if (mutation.getStatus() != AuthorizationMutationStatusEnum.COMPLETED) {
-            mutation.recoveryRequired(reasonCode, now, actorId);
+        requireActor(actorId);
+        java.util.Objects.requireNonNull(now, "now");
+        entityManager.flush();
+        int changed = entityManager.createNativeQuery("""
+                update rbac3_authorization_mutation
+                   set status = 'RECOVERY_REQUIRED', last_error_code = :error, attempt = attempt + 1,
+                       updated_at = :now, updated_by = :actor, version = version + 1
+                 where mutation_id = :id and status <> 'COMPLETED'
+                """).setParameter("error", reasonCode).setParameter("now", now).setParameter("actor", actorId.trim())
+                .setParameter("id", Long.valueOf(mutationId)).executeUpdate();
+        if (changed != 1 && !confirmCompleted(mutationId)) {
+            throw new IllegalStateException("authorization mutation is missing");
         }
+        detachMutation(mutationId);
+    }
+
+    private boolean confirmCompleted(String mutationId) {
+        return entityManager.createNativeQuery("""
+                update rbac3_authorization_mutation set version = version
+                 where mutation_id = :id and status = 'COMPLETED'
+                """).setParameter("id", Long.valueOf(mutationId)).executeUpdate() == 1;
+    }
+
+    private void detachMutation(String mutationId) {
+        entityManager.detach(entityManager.getReference(AuthorizationMutationPO.class, Long.valueOf(mutationId)));
+    }
+
+    private static void requireActor(String actorId) {
+        if (actorId == null || actorId.isBlank()) { throw new IllegalArgumentException("actorId is required"); }
     }
 
     /**
@@ -321,25 +364,6 @@ public class JpaAuthorizationMutationRepository implements
                 mutation.getStatus().name());
     }
 
-    /**
-     * 方法 `locked` 按照 `JpaAuthorizationMutationRepository` 的职责处理输入，完成 `locked` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。
-     * Method `locked` processes its inputs according to `JpaAuthorizationMutationRepository`'s responsibility, performs the `locked` operation, and returns a result or declared side effect; callers must follow its parameter and exception contract.
-     *
-     * 用法：调用 `locked` 前准备符合契约的参数，并根据返回值、异常或副作用继续业务流程。
-     * Usage: provide contract-compliant arguments before calling `locked`, then continue the business flow using its result, exception, or side effect.
-     *
-     * @param mutationId 输入参数 `mutationId`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
-     */
-    private AuthorizationMutationPO locked(String mutationId) {
-        AuthorizationMutationPO mutation = entityManager.find(
-                AuthorizationMutationPO.class, Long.valueOf(mutationId),
-                LockModeType.PESSIMISTIC_WRITE);
-        if (mutation == null) {
-            throw new IllegalStateException("authorization mutation is missing");
-        }
-        return mutation;
-    }
 
     /**
      * 方法 `parseCursor` 按照 `JpaAuthorizationMutationRepository` 的职责处理输入，完成 `parse Cursor` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。
