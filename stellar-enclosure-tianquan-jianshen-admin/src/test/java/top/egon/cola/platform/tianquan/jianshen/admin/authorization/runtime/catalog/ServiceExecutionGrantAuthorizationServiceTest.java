@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.context.SecurityContextHolder;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.RuntimePolicyBinding;
+import top.egon.cola.platform.tianquan.jianshen.contract.authorization.ServiceExecutionAuthorizationContract;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.ServicePolicySnapshot;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.DefinitionLifecycle;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
@@ -44,7 +45,7 @@ class ServiceExecutionGrantAuthorizationServiceTest {
     private final TrustedIssuerRegistry issuers = mock(TrustedIssuerRegistry.class);
     private final HttpExecutionGrantClient client = mock(HttpExecutionGrantClient.class);
     private final ServiceIdentityPrincipal caller = new ServiceIdentityPrincipal("shop-runtime", "20", "shop-runtime", "45", RECEIVER,
-            0, Set.of(ServiceExecutionGrantAuthorizationService.SERVICE_SCOPE), "commerce", "shop", "test", "credential",
+            0, Set.of(ServiceExecutionAuthorizationContract.SERVICE_SCOPE), "commerce", "shop", "test", "credential",
             NOW.minusSeconds(10), NOW.plusSeconds(100), "shop-client", ServiceTokenContext.TENANT);
     private final ServiceExecutionGrantAuthorizationService.Request request = new ServiceExecutionGrantAuthorizationService.Request(
             "shop", new ServiceExecutionGrantContract.Ticket(ID, "ENC:v1:key:nonce:fixture"));
@@ -56,7 +57,7 @@ class ServiceExecutionGrantAuthorizationServiceTest {
     @BeforeEach void setUp() {
         SecurityContextHolder.getContext().setAuthentication(new IdpAuthenticationToken(caller, List.of(), ISSUER));
         when(issuers.findByIssuer(ISSUER.toASCIIString())).thenReturn(Optional.of(trust));
-        when(proofs.policyBinding(caller, ISSUER, "shop", ServiceExecutionGrantAuthorizationService.SERVICE_SCOPE)).thenReturn(binding());
+        when(proofs.policyBinding(caller, ISSUER, "shop", ServiceExecutionAuthorizationContract.SERVICE_SCOPE)).thenReturn(binding());
         when(client.resolveService(any())).thenReturn(grant(true, Set.of(SUBMIT, SESSION)));
         when(snapshots.currentServiceExecution(any(), any(), anyString())).thenAnswer(inv -> {
             String key = inv.getArgument(2);
@@ -82,6 +83,18 @@ class ServiceExecutionGrantAuthorizationServiceTest {
         assertEquals(3, decision.policyVersion());
         verify(snapshots).currentServiceExecution(binding(), NOW.plusSeconds(60), SESSION_KEY);
         verify(snapshots, never()).currentExecution(any());
+        assertFalse(decision.toString().contains("worker"));
+    }
+
+    @Test void transport_adapter_returns_the_exact_service_tuple_and_versions() {
+        var body = new ServiceExecutionAuthorizationContract.Request("shop", ID, "ENC:v1:key:nonce:fixture");
+        var decision = service.decide(caller, ISSUER, body);
+        assertEquals("worker", decision.subject());
+        assertEquals("worker", decision.subjectSource().clientId());
+        assertEquals("https://api.example/process", decision.subjectSource().resourceUri());
+        assertEquals(INTENT, decision.intentId());
+        assertEquals(1, decision.catalogVersion());
+        assertEquals(3, decision.policyVersion());
         assertFalse(decision.toString().contains("worker"));
     }
 

@@ -21,7 +21,10 @@ import org.springframework.web.context.support.AnnotationConfigWebApplicationCon
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.catalog.ExecutionGrantAuthorizationController;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.catalog.ExecutionGrantAuthorizationService;
+import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.catalog.ServiceExecutionGrantAuthorizationController;
+import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.catalog.ServiceExecutionGrantAuthorizationService;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.ExecutionAuthorizationContract;
+import top.egon.cola.platform.tianquan.jianshen.contract.authorization.ServiceExecutionAuthorizationContract;
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
 import top.egon.cola.platform.tianquan.jianshen.starter.cache.SingleFlightSnapshotLoader;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3BearerAuthenticationFilter;
@@ -49,10 +52,92 @@ class ExecutionGrantAuthorizationSecurityTest {
     private static final ExecutionAuthorizationContract.Decision DECISION = new ExecutionAuthorizationContract.Decision(ID,
             ISSUER.toString(), "20", "alice", "https://api.example/tianji", "TIANJI_AGENT_RUN_EXECUTION",
             "00000000-0000-0000-0000-000000000123", "c".repeat(64), true, NOW.plusSeconds(600), NOW.plusSeconds(30), 2, 3);
+    private static final String SERVICE_ID = "8" + "1".repeat(62);
+    private static final ServiceExecutionAuthorizationContract.Request SERVICE_REQUEST =
+            new ServiceExecutionAuthorizationContract.Request("tianji", SERVICE_ID, SECRET);
+    private static final ServiceExecutionAuthorizationContract.Decision SERVICE_DECISION = new ServiceExecutionAuthorizationContract.Decision(
+            SERVICE_ID, ISSUER.toString(), "20", "worker", new ServiceExecutionAuthorizationContract.Subject("worker", "process",
+                    "platform", "process", "test", "https://api.example/process"), "https://api.example/tianji", "TIANJI_AGENT_RUN_EXECUTION",
+            "00000000-0000-0000-0000-000000000123", "c".repeat(64), true, NOW.plusSeconds(600), NOW.plusSeconds(30), 1, 3);
 
     @Test void endpoint_is_disabled_without_explicit_configuration() {
         new ApplicationContextRunner().withUserConfiguration(ExecutionGrantAuthorizationController.class)
                 .run(context -> assertTrue(context.getBeansOfType(ExecutionGrantAuthorizationController.class).isEmpty()));
+        new ApplicationContextRunner().withUserConfiguration(ServiceExecutionGrantAuthorizationController.class)
+                .run(context -> assertTrue(context.getBeansOfType(ServiceExecutionGrantAuthorizationController.class).isEmpty()));
+    }
+
+    @Test void service_execution_endpoint_requires_the_distinct_verified_service_scope() throws Exception {
+        try (var context = context()) {
+            var verifier = context.getBean(ServiceAccessTokenVerifier.class);
+            var owner = context.getBean(ServiceExecutionGrantAuthorizationService.class);
+            var good = principal(Set.of(ServiceExecutionAuthorizationContract.SERVICE_SCOPE));
+            var oldScope = principal(Set.of(ExecutionAuthorizationContract.SERVICE_SCOPE));
+            when(verifier.verify("good-service")).thenReturn(new AccessTokenVerification.Valid<>(good, good.scopes(), null, ISSUER));
+            when(verifier.verify("old-scope")).thenReturn(new AccessTokenVerification.Valid<>(oldScope, oldScope.scopes(), null, ISSUER));
+            when(verifier.verify("user-proof")).thenReturn(new AccessTokenVerification.Invalid<>("SERVICE_REQUIRED"));
+            when(owner.decide(good, ISSUER, SERVICE_REQUEST)).thenReturn(SERVICE_DECISION);
+            var mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
+            String json = new ObjectMapper().writeValueAsString(SERVICE_REQUEST);
+            mvc.perform(post(ServiceExecutionAuthorizationContract.PATH).contentType(MediaType.APPLICATION_JSON).content(json))
+                    .andExpect(status().isUnauthorized());
+            mvc.perform(post(ServiceExecutionAuthorizationContract.PATH).header("Authorization", "Bearer user-proof")
+                    .contentType(MediaType.APPLICATION_JSON).content(json)).andExpect(status().isUnauthorized());
+            mvc.perform(post(ServiceExecutionAuthorizationContract.PATH).header("Authorization", "Bearer old-scope")
+                    .contentType(MediaType.APPLICATION_JSON).content(json)).andExpect(status().isForbidden());
+            mvc.perform(post(ServiceExecutionAuthorizationContract.PATH).header("Authorization", "Bearer good-service")
+                    .contentType(MediaType.APPLICATION_JSON).content(json)).andExpect(status().isOk())
+                    .andExpect(header().string("Cache-Control", "no-store"))
+                    .andExpect(jsonPath("$.subjectSource.clientId").value("worker"));
+            verify(context.getBean(UserAccessTokenVerifier.class), never()).verify(anyString());
+            verify(owner).decide(good, ISSUER, SERVICE_REQUEST);
+            verify(context.getBean(top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionExecutionGuard.class))
+                    .requireServiceApi("tianquan-jianshen.api.runtime.serviceExecutionGrant", good);
+            assertNull(org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication());
+        }
+    }
+
+    @Test void service_execution_rejects_malformed_or_cross_type_tickets_without_leaking_them() throws Exception {
+        try (var context = context()) {
+            var verifier = context.getBean(ServiceAccessTokenVerifier.class);
+            var owner = context.getBean(ServiceExecutionGrantAuthorizationService.class);
+            var good = principal(Set.of(ServiceExecutionAuthorizationContract.SERVICE_SCOPE));
+            when(verifier.verify("good-service")).thenReturn(new AccessTokenVerification.Valid<>(good, good.scopes(), null, ISSUER));
+            var mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
+            String valid = new ObjectMapper().writeValueAsString(SERVICE_REQUEST);
+            for (String bad : List.of(valid + "{}", valid.replace("\"ciphertext\":", "\"ciphertext\":\"" + SECRET + "\",\"ciphertext\":"),
+                    valid.replace("\"grantId\":\"" + SERVICE_ID + "\"", "\"grantId\":" + SERVICE_ID),
+                    valid.replace(SERVICE_ID, ID), valid.substring(0, valid.length() - 1) + ",\"subject\":\"worker\"}", "null")) {
+                var response = mvc.perform(post(ServiceExecutionAuthorizationContract.PATH).header("Authorization", "Bearer good-service")
+                        .contentType(MediaType.APPLICATION_JSON).content(bad)).andExpect(status().isBadRequest()).andReturn().getResponse();
+                assertFalse(response.getContentAsString().contains(SECRET)); assertEquals("no-store", response.getHeader("Cache-Control"));
+            }
+            mvc.perform(post(ServiceExecutionAuthorizationContract.PATH).header("Authorization", "Bearer good-service")
+                    .contentType(MediaType.APPLICATION_JSON).content(new byte[ServiceExecutionAuthorizationContract.MAX_REQUEST_BYTES + 1]))
+                    .andExpect(status().isPayloadTooLarge());
+            mvc.perform(post(ServiceExecutionAuthorizationContract.PATH).header("Authorization", "Bearer good-service")
+                    .contentType(MediaType.TEXT_PLAIN).content("{}")).andExpect(status().isUnsupportedMediaType());
+            verifyNoInteractions(owner);
+        }
+    }
+
+    @Test void service_execution_distinguishes_rejection_and_unavailability_without_error_secrets() throws Exception {
+        try (var context = context()) {
+            var verifier = context.getBean(ServiceAccessTokenVerifier.class);
+            var owner = context.getBean(ServiceExecutionGrantAuthorizationService.class);
+            var good = principal(Set.of(ServiceExecutionAuthorizationContract.SERVICE_SCOPE));
+            when(verifier.verify("good-service")).thenReturn(new AccessTokenVerification.Valid<>(good, good.scopes(), null, ISSUER));
+            when(owner.decide(good, ISSUER, SERVICE_REQUEST)).thenThrow(new Rbac3RuleViolation("EXECUTION_GRANT_DENIED"),
+                    new Rbac3RuleViolation("AUTH_RUNTIME_EXECUTION_UNAVAILABLE"), new org.springframework.dao.DataAccessResourceFailureException(SECRET));
+            var mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
+            String json = new ObjectMapper().writeValueAsString(SERVICE_REQUEST);
+            for (int expected : new int[]{403, 503, 503}) {
+                var response = mvc.perform(post(ServiceExecutionAuthorizationContract.PATH).header("Authorization", "Bearer good-service")
+                        .contentType(MediaType.APPLICATION_JSON).content(json)).andReturn().getResponse();
+                assertEquals(expected, response.getStatus()); assertFalse(response.getContentAsString().contains(SECRET));
+                assertEquals("no-store", response.getHeader("Cache-Control"));
+            }
+        }
     }
 
     @Test void actual_internal_security_chain_requires_a_verified_scoped_service() throws Exception {
@@ -146,7 +231,8 @@ class ExecutionGrantAuthorizationSecurityTest {
 
     private static AnnotationConfigWebApplicationContext context() {
         var context = new AnnotationConfigWebApplicationContext(); context.setServletContext(new MockServletContext());
-        TestPropertySourceUtils.addInlinedPropertiesToEnvironment(context, "egon.tianquan-jianshen.execution-grants.enabled=true");
+        TestPropertySourceUtils.addInlinedPropertiesToEnvironment(context, "egon.tianquan-jianshen.execution-grants.enabled=true",
+                "egon.tianquan-jianshen.service-execution-grants.enabled=true");
         context.register(Rbac3AdminSecurityConfiguration.class, Fixture.class); context.refresh(); return context;
     }
 
@@ -159,10 +245,11 @@ class ExecutionGrantAuthorizationSecurityTest {
     @Configuration(proxyBeanMethods = false)
     @EnableWebSecurity
     @EnableWebMvc
-    @Import(ExecutionGrantAuthorizationController.class)
+    @Import({ExecutionGrantAuthorizationController.class, ServiceExecutionGrantAuthorizationController.class})
     static class Fixture {
         @Bean("jacksonObjectMapper") ObjectMapper mapper() { return new ObjectMapper().findAndRegisterModules(); }
         @Bean ExecutionGrantAuthorizationService executionService() { return mock(ExecutionGrantAuthorizationService.class); }
+        @Bean ServiceExecutionGrantAuthorizationService serviceExecutionService() { return mock(ServiceExecutionGrantAuthorizationService.class); }
         @Bean("serviceScopeAuthorization") ServiceScopeAuthorization scope() { return new ServiceScopeAuthorization(); }
         @Bean top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionExecutionGuard compiledGuard() {
             var guard = mock(top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionExecutionGuard.class);
@@ -176,6 +263,16 @@ class ExecutionGrantAuthorizationSecurityTest {
                     top.egon.cola.platform.tianquan.jianshen.contract.permission.DefinitionLifecycle.ACTIVE);
             when(guard.resource("tianquan-jianshen.api.runtime.executionGrant",
                     top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType.API)).thenReturn(resource);
+            var serviceResource = new top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest.ResourceDefinition(
+                    "tianquan-jianshen.api.runtime.serviceExecutionGrant", top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType.API,
+                    Map.of("methods", List.of("POST"), "paths", List.of(ServiceExecutionAuthorizationContract.PATH)),
+                    top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess.PROTECTED, null, null,
+                    List.of(top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest.PrincipalType.SERVICE),
+                    List.of(ServiceExecutionAuthorizationContract.SERVICE_SCOPE),
+                    new top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest.I18nReference("permission.runtime", "serviceExecutionGrant"),
+                    top.egon.cola.platform.tianquan.jianshen.contract.permission.DefinitionLifecycle.ACTIVE);
+            when(guard.resource("tianquan-jianshen.api.runtime.serviceExecutionGrant",
+                    top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType.API)).thenReturn(serviceResource);
             return guard;
         }
         @Bean

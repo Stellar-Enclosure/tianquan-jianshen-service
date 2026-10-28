@@ -14,6 +14,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.RuntimePolicyBinding;
+import top.egon.cola.platform.tianquan.jianshen.contract.authorization.ServiceExecutionAuthorizationContract;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
@@ -32,7 +33,6 @@ import top.egon.cola.platform.tianquan.shoubing.starter.state.IdentityAuthorityP
 @Service
 @ConditionalOnProperty(prefix = "egon.tianquan-jianshen.service-execution-grants", name = "enabled", havingValue = "true")
 public class ServiceExecutionGrantAuthorizationService {
-    static final String SERVICE_SCOPE = "service:authorization:service-execution";
     private final PermissionRuntimeProofService proofs;
     private final PermissionRuntimeSnapshotRepository snapshots;
     private final TrustedIssuerRegistry issuers;
@@ -70,6 +70,19 @@ public class ServiceExecutionGrantAuthorizationService {
         this.policies = Map.copyOf(configured);
     }
 
+    public ServiceExecutionAuthorizationContract.Decision decide(ServiceIdentityPrincipal caller, URI issuer,
+                                                                 ServiceExecutionAuthorizationContract.Request request) {
+        Objects.requireNonNull(request, "request");
+        var value = decide(caller, issuer, new Request(request.systemCode(),
+                new ServiceExecutionGrantContract.Ticket(request.grantId(), request.ciphertext())));
+        var source = value.subjectSource();
+        return new ServiceExecutionAuthorizationContract.Decision(value.grantId(), value.issuer(), value.tenantId(), value.subject(),
+                new ServiceExecutionAuthorizationContract.Subject(source.clientId(), source.appId(), source.businessCode(),
+                        source.applicationCode(), source.environment(), source.resourceUri()), value.resource(), value.purpose(),
+                value.intentId(), value.bindingSha256(), value.sessionRequired(), value.deadlineAt(), value.expiresAt(),
+                value.catalogVersion(), value.policyVersion());
+    }
+
     Decision decide(ServiceIdentityPrincipal caller, URI issuer, Request request) {
         Objects.requireNonNull(request, "request");
         var authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -81,7 +94,7 @@ public class ServiceExecutionGrantAuthorizationService {
         if (!issuer.toASCIIString().equals(verifiedIssuer)) throw denied();
         var trusted = issuers.findByIssuer(issuer.toASCIIString()).orElseThrow(ServiceExecutionGrantAuthorizationService::denied);
         if (trusted.realmType() != TrustedIssuerRegistry.RealmType.TENANT || !Objects.equals(trusted.tenantId(), caller.tenantId())) throw denied();
-        var binding = proofs.policyBinding(caller, issuer, request.systemCode(), SERVICE_SCOPE);
+        var binding = proofs.policyBinding(caller, issuer, request.systemCode(), ServiceExecutionAuthorizationContract.SERVICE_SCOPE);
         var client = clients.get(new ExecutionGrantAuthorizationService.AuthorityKey(issuer, binding.expectedResource()));
         if (client == null) throw unavailable();
         ServiceExecutionGrantContract.Resolution grant;

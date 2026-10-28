@@ -25,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.ExecutionAuthorizationContract;
+import top.egon.cola.platform.tianquan.jianshen.contract.authorization.ServiceExecutionAuthorizationContract;
 import top.egon.cola.platform.tianquan.shoubing.contract.ServiceTokenContext;
 import top.egon.cola.platform.tianquan.shoubing.starter.client.IdpServiceOAuth2Client;
 import top.egon.cola.platform.tianquan.shoubing.starter.client.IdpServiceTokenRequest;
@@ -40,6 +41,7 @@ class HttpExecutionAuthorizationClientTest {
     private static final URI RESOURCE = URI.create("https://api.example/tianji");
     private static final URI BASE = URI.create("https://rbac.example/prefix");
     private static final String ID = "9" + "1".repeat(62);
+    private static final String SERVICE_ID = "8" + "1".repeat(62);
     private static final String SECRET = "ENC:v1:key:nonce:secret-sentinel";
     private static final String INTENT = "00000000-0000-0000-0000-000000000123";
     private final ExecutionAuthorizationContract.Request request = new ExecutionAuthorizationContract.Request("tianji", ID, SECRET);
@@ -101,6 +103,70 @@ class HttpExecutionAuthorizationClientTest {
                 "c".repeat(64), true, deadline, NOW.plusSeconds(30).plusNanos(654_321_000));
         add(200, mapper.writeValueAsBytes(result));
         assertEquals(result, client.decide(request, preciseExpected));
+    }
+
+    @Test void service_decision_checks_the_full_local_subject_tuple_and_uses_its_own_scope() throws Exception {
+        var context = serviceContext();
+        var serviceClient = create(context, ISSUER, http, Duration.ofSeconds(1));
+        var request = new ServiceExecutionAuthorizationContract.Request("tianji", SERVICE_ID, SECRET);
+        var subject = subject("process", "test", "https://api.example/process");
+        Instant deadline = NOW.plusSeconds(600).plusNanos(123_456_000);
+        var expectation = new HttpExecutionAuthorizationClient.ServiceExpectation(new HttpExecutionAuthorizationClient.Expectation(
+                ISSUER, "101", "worker", RESOURCE, "TEST_RUN", INTENT, "c".repeat(64), true, deadline), subject);
+        var decision = serviceDecision(subject, deadline, NOW.plusSeconds(30).plusNanos(654_321_000));
+        add(200, mapper.writeValueAsBytes(decision));
+        assertEquals(decision, serviceClient.decideService(request, expectation));
+        assertEquals("https://rbac.example/prefix" + ServiceExecutionAuthorizationContract.PATH, requests.getFirst().request().uri().toString());
+        assertTrue(mapper.readTree(mapper.writeValueAsBytes(decision)).path("deadlineAt").isTextual());
+        verify(oauth).authorizeBounded(argThat(value -> value.scopes().equals(Set.of(ServiceExecutionAuthorizationContract.SERVICE_SCOPE))),
+                eq(ISSUER.toString()), any());
+        assertFalse(request.toString().contains(SECRET)); assertFalse(expectation.toString().contains("worker"));
+        assertThrows(HttpExecutionAuthorizationClient.ExecutionAuthorizationUnavailableException.class, () -> client.decideService(request, expectation));
+        assertThrows(HttpExecutionAuthorizationClient.ExecutionAuthorizationUnavailableException.class, () -> serviceClient.decide(this.request, expected));
+    }
+
+    @Test void service_decision_rejects_changed_subject_metadata_or_malformed_json() throws Exception {
+        var serviceClient = create(serviceContext(), ISSUER, http, Duration.ofSeconds(1));
+        var request = new ServiceExecutionAuthorizationContract.Request("tianji", SERVICE_ID, SECRET);
+        var subject = subject("process", "test", "https://api.example/process");
+        var expectation = new HttpExecutionAuthorizationClient.ServiceExpectation(new HttpExecutionAuthorizationClient.Expectation(
+                ISSUER, "101", "worker", RESOURCE, "TEST_RUN", INTENT, "c".repeat(64), true, NOW.plusSeconds(600)), subject);
+        for (var wrong : List.of(subject("other", "test", subject.resourceUri()), subject("process", "prod", subject.resourceUri()),
+                subject("process", "test", "https://foreign.example/process"))) {
+            add(200, mapper.writeValueAsBytes(serviceDecision(wrong, NOW.plusSeconds(600), NOW.plusSeconds(30))));
+            assertThrows(HttpExecutionAuthorizationClient.ExecutionAuthorizationUnavailableException.class,
+                    () -> serviceClient.decideService(request, expectation));
+        }
+        String valid = mapper.writeValueAsString(serviceDecision(subject, NOW.plusSeconds(600), NOW.plusSeconds(30)));
+        for (String bad : List.of(valid + "{}", valid.replace("\"clientId\":", "\"clientId\":\"worker\",\"clientId\":"),
+                valid.replace("\"catalogVersion\":1", "\"catalogVersion\":\"1\""),
+                valid.replace(SERVICE_ID, ID), valid.replace("\"environment\":\"test\"", "\"environment\":123"),
+                valid.replace("c".repeat(64), "d".repeat(64)), valid.replace(RESOURCE.toString(), "https://foreign.example/tianji"),
+                valid.replace(INTENT, "00000000-0000-0000-0000-000000000124"),
+                valid.replace("\"sessionRequired\":true", "\"sessionRequired\":false"))) {
+            add(200, bad.getBytes(StandardCharsets.UTF_8));
+            var failure = assertThrows(HttpExecutionAuthorizationClient.ExecutionAuthorizationUnavailableException.class,
+                    () -> serviceClient.decideService(request, expectation));
+            assertFalse(failure.toString().contains(SECRET)); assertNull(failure.getCause());
+        }
+        assertThrows(IllegalArgumentException.class, () -> new HttpExecutionAuthorizationClient.ServiceExpectation(expected, subject));
+    }
+
+    @Test void service_authorization_keeps_denial_and_unknown_outcome_distinct() {
+        var serviceClient = create(serviceContext(), ISSUER, http, Duration.ofSeconds(1));
+        var request = new ServiceExecutionAuthorizationContract.Request("tianji", SERVICE_ID, SECRET);
+        var expectation = new HttpExecutionAuthorizationClient.ServiceExpectation(new HttpExecutionAuthorizationClient.Expectation(
+                ISSUER, "101", "worker", RESOURCE, "TEST_RUN", INTENT, "c".repeat(64), true, NOW.plusSeconds(600)),
+                subject("process", "test", "https://api.example/process"));
+        add(403, "{\"error\":\"access_denied\"}".getBytes(StandardCharsets.UTF_8));
+        assertThrows(HttpExecutionAuthorizationClient.ExecutionAuthorizationDeniedException.class,
+                () -> serviceClient.decideService(request, expectation));
+        add(401, "{}".getBytes(StandardCharsets.UTF_8));
+        assertThrows(HttpExecutionAuthorizationClient.ExecutionAuthorizationUnavailableException.class,
+                () -> serviceClient.decideService(request, expectation));
+        verify(oauth).invalidateBounded(argThat(value -> value.scopes().equals(Set.of(ServiceExecutionAuthorizationContract.SERVICE_SCOPE))),
+                eq(ISSUER.toString()), any());
+        assertEquals(2, requests.size());
     }
 
     @Test void rejects_any_mismatched_or_expired_attested_identity_and_intent() throws Exception {
@@ -205,6 +271,18 @@ class HttpExecutionAuthorizationClientTest {
 
     private HttpExecutionAuthorizationClient create(IdpServiceTokenRequest value, URI issuer, HttpClient transport, Duration timeout) {
         return new HttpExecutionAuthorizationClient(BASE, issuer, value, oauth, mapper, timeout, transport, Clock.fixed(NOW, ZoneOffset.UTC));
+    }
+    private IdpServiceTokenRequest serviceContext() {
+        return new IdpServiceTokenRequest(service.registrationId(), service.appId(), service.audience(), service.context(),
+                service.tenantId(), Set.of(ServiceExecutionAuthorizationContract.SERVICE_SCOPE));
+    }
+    private static ServiceExecutionAuthorizationContract.Subject subject(String app, String environment, String resource) {
+        return new ServiceExecutionAuthorizationContract.Subject("worker", app, "platform", "process", environment, resource);
+    }
+    private static ServiceExecutionAuthorizationContract.Decision serviceDecision(ServiceExecutionAuthorizationContract.Subject subject,
+            Instant deadline, Instant expiry) {
+        return new ServiceExecutionAuthorizationContract.Decision(SERVICE_ID, ISSUER.toString(), "101", subject.clientId(), subject,
+                RESOURCE.toString(), "TEST_RUN", INTENT, "c".repeat(64), true, deadline, expiry, 1, 3);
     }
     private void add(int status, byte[] body) { replies.add(new Reply(status, body, "application/json")); }
     private static ExecutionAuthorizationContract.Decision decision(String id, String issuer, String tenant, String subject,

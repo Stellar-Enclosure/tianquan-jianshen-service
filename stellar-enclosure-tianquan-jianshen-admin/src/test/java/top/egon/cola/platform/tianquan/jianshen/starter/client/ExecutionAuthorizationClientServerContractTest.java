@@ -24,9 +24,13 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.test.web.servlet.MockMvc;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.catalog.ExecutionGrantAuthorizationController;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.catalog.ExecutionGrantAuthorizationService;
+import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.catalog.ServiceExecutionGrantAuthorizationController;
+import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.catalog.ServiceExecutionGrantAuthorizationService;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.ExecutionAuthorizationContract;
+import top.egon.cola.platform.tianquan.jianshen.contract.authorization.ServiceExecutionAuthorizationContract;
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
 import top.egon.cola.platform.tianquan.shoubing.contract.ServiceIdentityPrincipal;
 import top.egon.cola.platform.tianquan.shoubing.contract.ServiceTokenContext;
@@ -73,6 +77,53 @@ class ExecutionAuthorizationClientServerContractTest {
                     value.audience(), value.context(), value.tenantId(), value.scopes());
         });
         when(oauth.authorizeBounded(any(), anyString(), any())).thenReturn(new OAuth2AccessToken(OAuth2AccessToken.TokenType.BEARER, "service-proof", now, now.plusSeconds(300)));
+        var http = transport(mvc);
+        var client = new HttpExecutionAuthorizationClient(URI.create("https://rbac.example"), issuer, context, oauth, mapper,
+                Duration.ofSeconds(1), http, Clock.fixed(now, ZoneOffset.UTC));
+        assertEquals(decision, client.decide(request, expected));
+        assertThrows(HttpExecutionAuthorizationClient.ExecutionAuthorizationDeniedException.class, () -> client.decide(request, expected));
+        assertThrows(HttpExecutionAuthorizationClient.ExecutionAuthorizationUnavailableException.class, () -> client.decide(request, expected));
+        verify(service, times(3)).decide(principal, issuer, request);
+    }
+
+    @Test void client_consumes_service_decision_with_exact_tuple_and_deadline() throws Exception {
+        Instant now = Instant.parse("2026-10-29T00:00:00Z"); URI issuer = URI.create("https://idp.example/tenants/101");
+        URI resource = URI.create("https://api.example/tianji"); String id = "8" + "1".repeat(62);
+        String intent = "00000000-0000-0000-0000-000000000123";
+        Instant deadline = now.plusSeconds(600).plusNanos(123_456_000);
+        var subject = new ServiceExecutionAuthorizationContract.Subject("worker", "process", "platform", "process", "test", "https://api.example/process");
+        var request = new ServiceExecutionAuthorizationContract.Request("tianji", id, "ENC:v1:key:nonce:fixture");
+        var decision = new ServiceExecutionAuthorizationContract.Decision(id, issuer.toString(), "101", "worker", subject,
+                resource.toString(), "TEST_RUN", intent, "c".repeat(64), true, deadline, now.plusSeconds(30), 1, 3);
+        var expected = new HttpExecutionAuthorizationClient.ServiceExpectation(new HttpExecutionAuthorizationClient.Expectation(
+                issuer, "101", "worker", resource, "TEST_RUN", intent, "c".repeat(64), true, deadline), subject);
+        var principal = new ServiceIdentityPrincipal("agent", "101", "agent", "123", URI.create("https://api.example/rbac"), 1,
+                Set.of(ServiceExecutionAuthorizationContract.SERVICE_SCOPE), "platform", "tianji", "test", "credential",
+                now.minusSeconds(1), now.plusSeconds(300), "agent", ServiceTokenContext.TENANT);
+        SecurityContextHolder.getContext().setAuthentication(new IdpAuthenticationToken(principal, List.of(), issuer));
+        var service = mock(ServiceExecutionGrantAuthorizationService.class);
+        when(service.decide(principal, issuer, request)).thenReturn(decision).thenThrow(new Rbac3RuleViolation("EXECUTION_GRANT_DENIED"));
+        var mapper = new ObjectMapper().findAndRegisterModules();
+        var mvc = MockMvcBuilders.standaloneSetup(new ServiceExecutionGrantAuthorizationController(service, mapper))
+                .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver()).build();
+        var oauth = mock(IdpServiceOAuth2Client.class);
+        var context = new IdpServiceTokenRequest("registration", "agent", URI.create("https://api.example/rbac"), ServiceTokenContext.TENANT,
+                "101", Set.of(ServiceExecutionAuthorizationContract.SERVICE_SCOPE));
+        when(oauth.authorizationKey(any())).thenAnswer(inv -> {
+            IdpServiceTokenRequest value = inv.getArgument(0);
+            return new ServiceAuthorizationKey(issuer.toString(), value.registrationId(), "agent", 1, value.appId(),
+                    value.audience(), value.context(), value.tenantId(), value.scopes());
+        });
+        when(oauth.authorizeBounded(any(), anyString(), any())).thenReturn(new OAuth2AccessToken(OAuth2AccessToken.TokenType.BEARER,
+                "service-proof", now, now.plusSeconds(300)));
+        var client = new HttpExecutionAuthorizationClient(URI.create("https://rbac.example"), issuer, context, oauth, mapper,
+                Duration.ofSeconds(1), transport(mvc), Clock.fixed(now, ZoneOffset.UTC));
+        assertEquals(decision, client.decideService(request, expected));
+        assertThrows(HttpExecutionAuthorizationClient.ExecutionAuthorizationDeniedException.class, () -> client.decideService(request, expected));
+        verify(service, times(2)).decide(principal, issuer, request);
+    }
+
+    private static HttpClient transport(MockMvc mvc) {
         var http = mock(HttpClient.class); when(http.followRedirects()).thenReturn(HttpClient.Redirect.NEVER);
         when(http.<byte[]>sendAsync(any(), any())).thenAnswer(inv -> {
             HttpRequest outbound = inv.getArgument(0); HttpResponse.BodyHandler<byte[]> handler = inv.getArgument(1);
@@ -89,12 +140,7 @@ class ExecutionAuthorizationClientServerContractTest {
             subscriber.onNext(List.of(ByteBuffer.wrap(actual.getContentAsByteArray()))); subscriber.onComplete();
             return subscriber.getBody().thenApply(bytes -> { when(response.body()).thenReturn(bytes); return response; }).toCompletableFuture();
         });
-        var client = new HttpExecutionAuthorizationClient(URI.create("https://rbac.example"), issuer, context, oauth, mapper,
-                Duration.ofSeconds(1), http, Clock.fixed(now, ZoneOffset.UTC));
-        assertEquals(decision, client.decide(request, expected));
-        assertThrows(HttpExecutionAuthorizationClient.ExecutionAuthorizationDeniedException.class, () -> client.decide(request, expected));
-        assertThrows(HttpExecutionAuthorizationClient.ExecutionAuthorizationUnavailableException.class, () -> client.decide(request, expected));
-        verify(service, times(3)).decide(principal, issuer, request);
+        return http;
     }
 
     private static byte[] readBody(HttpRequest request) {

@@ -23,8 +23,10 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Flow;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
 import org.springframework.http.MediaType;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.ExecutionAuthorizationContract;
+import top.egon.cola.platform.tianquan.jianshen.contract.authorization.ServiceExecutionAuthorizationContract;
 import top.egon.cola.platform.tianquan.shoubing.contract.ServiceTokenContext;
 import top.egon.cola.platform.tianquan.shoubing.starter.client.IdpServiceOAuth2Client;
 import top.egon.cola.platform.tianquan.shoubing.starter.client.IdpServiceTokenRequest;
@@ -64,7 +66,8 @@ public final class HttpExecutionAuthorizationClient {
         this.http = Objects.requireNonNull(http, "http"); this.clock = Objects.requireNonNull(clock, "clock");
         if (http.followRedirects() != HttpClient.Redirect.NEVER || service.context() != ServiceTokenContext.TENANT
                 || service.tenantId() == null || !service.tenantId().matches("[1-9][0-9]{0,18}")
-                || !service.scopes().contains(ExecutionAuthorizationContract.SERVICE_SCOPE)) {
+                || (!service.scopes().contains(ExecutionAuthorizationContract.SERVICE_SCOPE)
+                && !service.scopes().contains(ServiceExecutionAuthorizationContract.SERVICE_SCOPE))) {
             throw new IllegalArgumentException("EXECUTION_AUTHORIZATION_CLIENT_BINDING_INVALID");
         }
         try { Long.parseLong(service.tenantId()); }
@@ -77,37 +80,7 @@ public final class HttpExecutionAuthorizationClient {
     public ExecutionAuthorizationContract.Decision decide(ExecutionAuthorizationContract.Request request, Expectation expected) {
         Objects.requireNonNull(request, "request"); Objects.requireNonNull(expected, "expected");
         if (!issuer.equals(expected.issuer()) || !tenantId.equals(expected.tenantId())) throw unavailable();
-        var context = new IdpServiceTokenRequest(service.registrationId(), service.appId(), service.audience(),
-                service.context(), service.tenantId(), Set.of(ExecutionAuthorizationContract.SERVICE_SCOPE));
-        long started = System.nanoTime();
-        String token;
-        try { token = oauth.authorizeBounded(context, issuer.toASCIIString(), timeout).getTokenValue(); }
-        catch (RuntimeException failed) { throw unavailable(); }
-        if (token == null || token.length() > 16_384 || !token.matches("[A-Za-z0-9._~+/-]+=*")) throw unavailable();
-        byte[] payload;
-        try { payload = mapper.writeValueAsBytes(request); }
-        catch (com.fasterxml.jackson.core.JsonProcessingException | RuntimeException invalid) { throw unavailable(); }
-        if (payload.length > ExecutionAuthorizationContract.MAX_REQUEST_BYTES) {
-            Arrays.fill(payload, (byte) 0); throw unavailable();
-        }
-        CompletableFuture<HttpResponse<byte[]>> pending = null;
-        byte[] body = null;
-        try {
-            var builder = HttpRequest.newBuilder(baseUri.resolve(ExecutionAuthorizationContract.PATH.substring(1))).timeout(Duration.ofNanos(remaining(started)))
-                    .header("Authorization", "Bearer " + token).header("Content-Type", "application/json")
-                    .header("Accept", "application/json").header("Cache-Control", "no-store");
-            var trace = top.egon.cola.component.common.trace.TraceContext.capture();
-            if (trace.traceId() != null) trace.child().inject(builder::header);
-            var httpRequest = builder.POST(HttpRequest.BodyPublishers.ofByteArray(payload)).build();
-            pending = http.sendAsync(httpRequest, info -> new BoundedBody(MAX_RESPONSE));
-            var response = pending.get(remaining(started), TimeUnit.NANOSECONDS);
-            body = response.body(); if (body == null) throw unavailable();
-            if (response.statusCode() == 401) {
-                oauth.invalidateBounded(context, issuer.toASCIIString(), Duration.ofNanos(remaining(started)));
-                throw unavailable();
-            }
-            if (response.statusCode() == 403 && json(response) && denied(body)) throw new ExecutionAuthorizationDeniedException();
-            if (response.statusCode() != 200 || !json(response) || body.length == 0) throw unavailable();
+        return post(ExecutionAuthorizationContract.PATH, ExecutionAuthorizationContract.SERVICE_SCOPE, request, body -> {
             ExecutionAuthorizationContract.Decision decision;
             try {
                 var node = mapper.readTree(body);
@@ -124,6 +97,72 @@ public final class HttpExecutionAuthorizationClient {
                     || !expected.deadlineAt().equals(decision.deadlineAt()) || !decision.expiresAt().isAfter(clock.instant())
                     || decision.expiresAt().isAfter(expected.deadlineAt())) throw unavailable();
             return decision;
+        });
+    }
+
+    /** Checks the SERVICE tuple and immutable local execution intent against the attested decision. */
+    public ServiceExecutionAuthorizationContract.Decision decideService(ServiceExecutionAuthorizationContract.Request request,
+                                                                          ServiceExpectation expected) {
+        Objects.requireNonNull(request, "request"); Objects.requireNonNull(expected, "expected");
+        var intent = expected.intent();
+        if (!issuer.equals(intent.issuer()) || !tenantId.equals(intent.tenantId())) throw unavailable();
+        return post(ServiceExecutionAuthorizationContract.PATH, ServiceExecutionAuthorizationContract.SERVICE_SCOPE, request, body -> {
+            ServiceExecutionAuthorizationContract.Decision decision;
+            try {
+                var node = mapper.readTree(body);
+                var subject = node == null ? null : node.path("subjectSource");
+                if (node == null || !node.isObject() || !textual(node, "grantId", "issuer", "tenantId", "subject", "resource", "purpose", "intentId", "bindingSha256")
+                        || subject == null || !subject.isObject() || subject.size() != 6
+                        || !textual(subject, "clientId", "appId", "businessCode", "applicationCode", "environment", "resourceUri")
+                        || !node.path("sessionRequired").isBoolean() || !node.path("catalogVersion").isIntegralNumber()
+                        || !node.path("policyVersion").isIntegralNumber() || !instant(node.path("deadlineAt")) || !instant(node.path("expiresAt"))) throw unavailable();
+                decision = mapper.treeToValue(node, ServiceExecutionAuthorizationContract.Decision.class);
+            } catch (java.io.IOException | IllegalArgumentException invalid) { throw unavailable(); }
+            if (decision == null || !request.grantId().equals(decision.grantId())
+                    || !intent.issuer().toASCIIString().equals(decision.issuer()) || !intent.tenantId().equals(decision.tenantId())
+                    || !intent.subject().equals(decision.subject()) || !expected.subjectSource().equals(decision.subjectSource())
+                    || !intent.resource().toASCIIString().equals(decision.resource()) || !intent.purpose().equals(decision.purpose())
+                    || !intent.intentId().equals(decision.intentId()) || !intent.bindingSha256().equals(decision.bindingSha256())
+                    || intent.sessionRequired() != decision.sessionRequired() || !intent.deadlineAt().equals(decision.deadlineAt())
+                    || !decision.expiresAt().isAfter(clock.instant()) || decision.expiresAt().isAfter(intent.deadlineAt())) throw unavailable();
+            return decision;
+        });
+    }
+
+    private <T> T post(String path, String scope, Object request, Function<byte[], T> decode) {
+        if (!service.scopes().contains(scope)) throw unavailable();
+        var context = new IdpServiceTokenRequest(service.registrationId(), service.appId(), service.audience(),
+                service.context(), service.tenantId(), Set.of(scope));
+        long started = System.nanoTime();
+        String token;
+        try { token = oauth.authorizeBounded(context, issuer.toASCIIString(), timeout).getTokenValue(); }
+        catch (RuntimeException failed) { throw unavailable(); }
+        if (token == null || token.length() > 16_384 || !token.matches("[A-Za-z0-9._~+/-]+=*")) throw unavailable();
+        byte[] payload;
+        try { payload = mapper.writeValueAsBytes(request); }
+        catch (com.fasterxml.jackson.core.JsonProcessingException | RuntimeException invalid) { throw unavailable(); }
+        if (payload.length > ExecutionAuthorizationContract.MAX_REQUEST_BYTES) {
+            Arrays.fill(payload, (byte) 0); throw unavailable();
+        }
+        CompletableFuture<HttpResponse<byte[]>> pending = null;
+        byte[] body = null;
+        try {
+            var builder = HttpRequest.newBuilder(baseUri.resolve(path.substring(1))).timeout(Duration.ofNanos(remaining(started)))
+                    .header("Authorization", "Bearer " + token).header("Content-Type", "application/json")
+                    .header("Accept", "application/json").header("Cache-Control", "no-store");
+            var trace = top.egon.cola.component.common.trace.TraceContext.capture();
+            if (trace.traceId() != null) trace.child().inject(builder::header);
+            var httpRequest = builder.POST(HttpRequest.BodyPublishers.ofByteArray(payload)).build();
+            pending = http.sendAsync(httpRequest, info -> new BoundedBody(MAX_RESPONSE));
+            var response = pending.get(remaining(started), TimeUnit.NANOSECONDS);
+            body = response.body(); if (body == null) throw unavailable();
+            if (response.statusCode() == 401) {
+                oauth.invalidateBounded(context, issuer.toASCIIString(), Duration.ofNanos(remaining(started)));
+                throw unavailable();
+            }
+            if (response.statusCode() == 403 && json(response) && denied(body)) throw new ExecutionAuthorizationDeniedException();
+            if (response.statusCode() != 200 || !json(response) || body.length == 0) throw unavailable();
+            return decode.apply(body);
         } catch (ExecutionAuthorizationDeniedException | ExecutionAuthorizationUnavailableException failure) {
             throw failure;
         } catch (InterruptedException interrupted) {
@@ -205,6 +244,15 @@ public final class HttpExecutionAuthorizationClient {
             } catch (IllegalArgumentException invalid) { throw new IllegalArgumentException("EXECUTION_AUTHORIZATION_EXPECTATION_INVALID"); }
         }
         @Override public String toString() { return "ExecutionAuthorizationExpectation[redacted]"; }
+    }
+
+    public record ServiceExpectation(Expectation intent, ServiceExecutionAuthorizationContract.Subject subjectSource) {
+        public ServiceExpectation {
+            if (intent == null || subjectSource == null || !intent.subject().equals(subjectSource.clientId())) {
+                throw new IllegalArgumentException("SERVICE_EXECUTION_AUTHORIZATION_EXPECTATION_INVALID");
+            }
+        }
+        @Override public String toString() { return "ServiceExecutionAuthorizationExpectation[redacted]"; }
     }
 
     private static ExecutionAuthorizationUnavailableException unavailable() { return new ExecutionAuthorizationUnavailableException(); }
