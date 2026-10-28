@@ -63,6 +63,18 @@ public class PermissionRuntimeSnapshotRepository {
     @Transactional
     ExecutionView currentExecution(ExecutionGrantAuthorizationService.VerifiedExecution request) {
         var snapshot = build(request.binding(), request.issuer().toASCIIString(), request.subject(), request.expiresAt(), null);
+        return new ExecutionView(snapshot, executionResource(request.binding(), snapshot.permissionSnapshot().catalogVersion(), request.resourceKey()));
+    }
+
+    /** Reads a SERVICE policy and its activated resource without creating a USER snapshot. */
+    @Transactional
+    ServiceExecutionView currentServiceExecution(PermissionRuntimeProperties.Binding binding, Instant expiresAt, String resourceKey) {
+        var snapshot = policy(binding, expiresAt);
+        return new ServiceExecutionView(snapshot, executionResource(binding, snapshot.catalogVersion(), resourceKey));
+    }
+
+    private top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest.ResourceDefinition executionResource(
+            PermissionRuntimeProperties.Binding binding, String catalogVersion, String resourceKey) {
         Object[] row = one("""
                 select cast(rv.definition_json as text), rv.definition_digest
                   from rbac3_catalog_activation_producer ap
@@ -72,9 +84,9 @@ public class PermissionRuntimeSnapshotRepository {
                   join rbac3_catalog_resource r on r.catalog_scope_id = rv.catalog_scope_id and r.id = rv.resource_id
                  where ap.catalog_scope_id = :scope and ap.activation_version = :catalog and ap.producer_id = :producer
                    and ap.producer_version = :version and rv.registration_key = :key and r.governance_state = 'ACTIVE'
-                """, Map.of("scope", Long.parseLong(request.binding().scope().catalogScopeId()),
-                "catalog", Long.parseLong(snapshot.permissionSnapshot().catalogVersion()), "producer", request.binding().producerId(),
-                "version", Long.parseLong(request.binding().producerVersion()), "key", request.resourceKey()),
+                """, Map.of("scope", Long.parseLong(binding.scope().catalogScopeId()),
+                "catalog", Long.parseLong(catalogVersion), "producer", binding.producerId(),
+                "version", Long.parseLong(binding.producerVersion()), "key", resourceKey),
                 "AUTH_RUNTIME_EXECUTION_POLICY_UNAVAILABLE");
         try {
             String json = text(row[0]);
@@ -87,7 +99,7 @@ public class PermissionRuntimeSnapshotRepository {
                     .with(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,
                             com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
                     .with(com.fasterxml.jackson.core.JsonParser.Feature.STRICT_DUPLICATE_DETECTION).readValue(json);
-            return new ExecutionView(snapshot, resource);
+            return resource;
         } catch (com.fasterxml.jackson.core.JsonProcessingException | IllegalArgumentException invalid) {
             throw new Rbac3RuleViolation("AUTH_RUNTIME_PAYLOAD_INVALID");
         }
@@ -95,6 +107,8 @@ public class PermissionRuntimeSnapshotRepository {
 
     record ExecutionView(SystemAuthorizationSnapshot snapshot,
                          top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest.ResourceDefinition resource) { }
+    record ServiceExecutionView(top.egon.cola.platform.tianquan.jianshen.contract.authorization.ServicePolicySnapshot snapshot,
+                                top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest.ResourceDefinition resource) { }
 
     /** Background publication uses database subjects and the configured trusted issuer; it does not create a USER principal. */
     @Transactional

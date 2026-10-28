@@ -152,6 +152,19 @@ class PermissionRuntimeSnapshotRepositoryTest {
         assertEquals("AUTH_RUNTIME_CHECKSUM_MISMATCH", assertThrows(Rbac3RuleViolation.class,
                 () -> fixture.repository.currentExecution(proof)).reasonCode());
     }
+    @Test void serviceExecutionViewReadsCurrentPolicyAndResourceWithoutCreatingAUserSnapshot() {
+        Fixture fixture = new Fixture();
+        var view = fixture.repository.currentServiceExecution(binding(), NOW.plusSeconds(60), "shop.api.read");
+        assertEquals("shop.api.read", view.resource().key());
+        assertEquals(SCOPE, view.snapshot().catalogScope());
+        assertEquals(Set.of("shop.api.read"), view.snapshot().resourceKeys());
+        assertEquals(NOW.plusSeconds(30), view.snapshot().expiresAt());
+        assertTrue(fixture.writes.isEmpty());
+        assertTrue(fixture.sql.stream().noneMatch(sql -> sql.contains("select id, auth_version from rbac3_user")));
+        fixture.definitionDigest = "f".repeat(64);
+        assertEquals("AUTH_RUNTIME_CHECKSUM_MISMATCH", assertThrows(Rbac3RuleViolation.class,
+                () -> fixture.repository.currentServiceExecution(binding(), NOW.plusSeconds(60), "shop.api.read")).reasonCode());
+    }
     @Test void executionViewActuallyEntersTheSpringTransactionProxy() {
         Fixture fixture = new Fixture();
         try (var context = new org.springframework.context.annotation.AnnotationConfigApplicationContext()) {
@@ -162,6 +175,9 @@ class PermissionRuntimeSnapshotRepositoryTest {
             assertTrue(org.springframework.aop.support.AopUtils.isAopProxy(repository));
             repository.currentExecution(new ExecutionGrantAuthorizationService.VerifiedExecution(
                     binding(), ISSUER, "30", NOW.plusSeconds(60), "shop.api.read"));
+            assertTrue(fixture.transactionObserved);
+            fixture.transactionObserved = false;
+            repository.currentServiceExecution(binding(), NOW.plusSeconds(60), "shop.api.read");
             assertTrue(fixture.transactionObserved);
         }
     }
