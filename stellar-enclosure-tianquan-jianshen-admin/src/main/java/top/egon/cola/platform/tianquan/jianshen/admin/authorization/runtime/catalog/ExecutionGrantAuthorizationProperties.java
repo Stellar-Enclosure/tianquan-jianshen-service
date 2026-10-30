@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.ConstructorBinding;
 
 /** Finite deployment-owned rules, selected only after the requester and owner-issued intent are verified. */
 @ConfigurationProperties("egon.tianquan-jianshen.execution-grants")
@@ -20,7 +21,13 @@ public record ExecutionGrantAuthorizationProperties(boolean enabled, List<Policy
 
     public record Policy(String systemCode, String purpose, String resourceKey, String resourcePath,
                          String sessionResourceKey, String sessionResourcePath, Set<String> requiredPermissions,
-                         Set<String> sessionPermissions, Map<String, Set<String>> permissionScopes) {
+                         Set<String> sessionPermissions, Map<String, Set<String>> permissionScopes, boolean scopedDecisions) {
+        public Policy(String systemCode, String purpose, String resourceKey, String resourcePath,
+                      String sessionResourceKey, String sessionResourcePath, Set<String> requiredPermissions,
+                      Set<String> sessionPermissions, Map<String, Set<String>> permissionScopes) {
+            this(systemCode, purpose, resourceKey, resourcePath, sessionResourceKey, sessionResourcePath, requiredPermissions, sessionPermissions, permissionScopes, false);
+        }
+        @ConstructorBinding
         public Policy {
             if (!identifier(systemCode, 128) || purpose == null || !purpose.matches("[A-Z][A-Z0-9_]{0,95}")
                     || !identifier(resourceKey, 200) || !path(resourcePath)

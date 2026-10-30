@@ -25,6 +25,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.ExecutionAuthorizationContract;
+import top.egon.cola.platform.tianquan.jianshen.contract.authorization.ExecutionScopeAuthorizationContract;
+import top.egon.cola.platform.tianquan.jianshen.contract.authorization.DataScopeDecision;
+import top.egon.cola.platform.tianquan.jianshen.contract.authorization.Decision;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.ServiceExecutionAuthorizationContract;
 import top.egon.cola.platform.tianquan.shoubing.contract.ServiceTokenContext;
 import top.egon.cola.platform.tianquan.shoubing.starter.client.IdpServiceOAuth2Client;
@@ -93,6 +96,45 @@ class HttpExecutionAuthorizationClientTest {
         assertEquals(SECRET, mapper.readTree(sent.body()).get("ciphertext").asText());
         verify(oauth).authorizeBounded(argThat(value -> value.scopes().equals(Set.of(ExecutionAuthorizationContract.SERVICE_SCOPE))), eq(ISSUER.toString()), any());
         assertFalse(expected.toString().contains("alice")); assertFalse(request.toString().contains(SECRET));
+    }
+
+    @Test void independent_scope_projection_keeps_the_original_decoder_and_uses_its_own_transport_scope() throws Exception {
+        var scoped = create(scopeContext(), ISSUER, http, Duration.ofSeconds(1)); var response = scopeDecision();
+        add(200, mapper.writeValueAsBytes(response)); assertEquals(response, scoped.decideScopes(request, expected));
+        assertEquals(BASE + ExecutionScopeAuthorizationContract.PATH, requests.getFirst().request().uri().toString());
+        verify(oauth).authorizeBounded(argThat(value -> value.scopes().equals(Set.of(ExecutionScopeAuthorizationContract.SERVICE_SCOPE))), eq(ISSUER.toString()), any());
+        assertEquals("60", response.rbac3UserId()); assertEquals("alice", response.execution().subject());
+        assertThrows(HttpExecutionAuthorizationClient.ExecutionAuthorizationUnavailableException.class, () -> client.decideScopes(request, expected));
+        assertThrows(HttpExecutionAuthorizationClient.ExecutionAuthorizationUnavailableException.class, () -> scoped.decide(request, expected));
+    }
+
+    @Test void scope_projection_rejects_foreign_subject_versions_missing_flags_and_scalar_aliases() throws Exception {
+        var scoped = create(scopeContext(), ISSUER, http, Duration.ofSeconds(1));
+        var valid = mapper.valueToTree(scopeDecision());
+        for (String change : List.of("tenant", "identity-subject", "version", "missing-flag", "coerced-flag", "numeric-org", "unknown")) {
+            var tree = valid.deepCopy(); var scope = (com.fasterxml.jackson.databind.node.ObjectNode) tree.path("dataScopes").path("MEMORY_READ");
+            switch (change) {
+                case "tenant" -> scope.put("tenantId", "102");
+                case "identity-subject" -> scope.put("subjectId", "alice");
+                case "version" -> scope.put("authVersion", 3);
+                case "missing-flag" -> scope.remove("includeSelf");
+                case "coerced-flag" -> scope.put("allInTenant", "true");
+                case "numeric-org" -> scope.putArray("allowedOrgIds").add(17);
+                default -> scope.put("trusted", true);
+            }
+            add(200, mapper.writeValueAsBytes(tree));
+            var failure = assertThrows(HttpExecutionAuthorizationClient.ExecutionAuthorizationUnavailableException.class, () -> scoped.decideScopes(request, expected));
+            assertFalse(failure.toString().contains(SECRET)); assertNull(failure.getCause());
+        }
+        var omittedNull = valid.deepCopy(); ((com.fasterxml.jackson.databind.node.ObjectNode) omittedNull.path("dataScopes").path("MEMORY_READ")).remove("selfUserId");
+        add(200, mapper.writeValueAsBytes(omittedNull)); assertEquals(scopeDecision(), scoped.decideScopes(request, expected));
+    }
+
+    private IdpServiceTokenRequest scopeContext() { return new IdpServiceTokenRequest(service.registrationId(), service.appId(), service.audience(), service.context(), service.tenantId(), Set.of(ExecutionScopeAuthorizationContract.SERVICE_SCOPE)); }
+    private ExecutionScopeAuthorizationContract.Decision scopeDecision() {
+        var execution = decision(ID, ISSUER.toString(), "101", "alice", RESOURCE.toString(), "TEST_RUN", INTENT, "c".repeat(64), true, NOW.plusSeconds(600), NOW.plusSeconds(30));
+        var scope = new DataScopeDecision(Decision.ALLOW, "ALLOW", "101", "60", "MEMORY_READ", "CUSTOM", false, Set.of("17"), false, Set.of(), false, Set.of(), false, null, "1", 3, 2, 3, List.of(), NOW);
+        return new ExecutionScopeAuthorizationContract.Decision(execution, "60", NOW, Map.of("MEMORY_READ", scope));
     }
 
     @Test void numeric_timestamps_preserve_postgres_microseconds() throws Exception {

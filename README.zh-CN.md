@@ -19,6 +19,8 @@ React 管理台与 SDK 分别由 `tianquan-jianshen-web`、`web-sdk` 维护。
 
 主要管理 API 位于 `/api/tianquan-jianshen/v1`，授权上下文入口位于 `/api/v1/auth`，内部运行时决策位于 `/internal/v1/authorization`。Jianshen 负责 USER 授权；登录、Token 签发和 SERVICE Scope 属于 Shoubing 的职责。
 
+延后执行的数据范围证明使用独立 POST `/internal/v1/authorization/execution-grants:decide-scopes` 与 SDK `HttpExecutionAuthorizationClient.decideScopes`。除显式启用 execution-grants 外，对应 system/purpose policy 必须设置 `scoped-decisions: true`（默认关闭），调用 SERVICE 需要独立的 `service:authorization:execution-scopes` 及当前已激活资源策略。响应封装原有十三字段执行决策、内部 `rbac3UserId`、快照时间和该策略必需权限的当前 DataScopeDecision；数据范围的 subjectId 是 RBAC 用户 ID，不能与外部身份 sub 混用。合同与 SDK 核对 tenant/用户/权限键/版本/时间，拒绝不明字段、类型强转、缺少布尔标志和错误 ID 数组，并保持原执行接口解码与响应不变。Memory 等消费者仍需独立 purpose 和精确 owner/scope 绑定；不得从普通执行许可、组织子树标志或任意 team 字符串推导额外权限。该能力不会注册、激活或授予权限，真实目录与 IAM 仍需部署验收。
+
 ## 一、不可变业务语义
 
 1. **不需要审批。** 权限变更是受身份、授权、幂等、并发和审计约束的直接命令，
@@ -196,6 +198,8 @@ DIRECT Assignment、字符授权、authVersion/policyVersion、审计和 Outbox�
 ## 九、构建与验证
 
 后端要求 Java 25 与 Maven Wrapper。先按[仓库构建说明](README.md#build)准备跨仓库依赖，再在 `tianquan-jianshen-service` 根目录执行：
+
+当前源码的 Outbox 分片上下文与迁移适配使用已选定的 `0.0.2-SNAPSHOT` API，父 POM 已明确仲裁该版本；应使用对应源码 reactor 或先完成发布，不依赖本地旧 `0.0.1` 缓存碰巧可用。其余平台合同仍为 `0.0.1`。
 
 ```bash
 ./mvnw -B -ntp \

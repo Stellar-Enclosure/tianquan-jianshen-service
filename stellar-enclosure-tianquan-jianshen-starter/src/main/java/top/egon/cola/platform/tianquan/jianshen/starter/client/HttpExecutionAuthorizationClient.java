@@ -26,6 +26,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import org.springframework.http.MediaType;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.ExecutionAuthorizationContract;
+import top.egon.cola.platform.tianquan.jianshen.contract.authorization.ExecutionScopeAuthorizationContract;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.ServiceExecutionAuthorizationContract;
 import top.egon.cola.platform.tianquan.shoubing.contract.ServiceTokenContext;
 import top.egon.cola.platform.tianquan.shoubing.starter.client.IdpServiceOAuth2Client;
@@ -41,6 +42,7 @@ public final class HttpExecutionAuthorizationClient {
     private final IdpServiceOAuth2Client oauth;
     private final HttpClient http;
     private final ObjectMapper mapper;
+    private final ObjectMapper scopedMapper;
     private final Duration timeout;
     private final Clock clock;
 
@@ -62,12 +64,14 @@ public final class HttpExecutionAuthorizationClient {
                         DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES, DeserializationFeature.FAIL_ON_NULL_CREATOR_PROPERTIES,
                         DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
                 .disable(MapperFeature.ALLOW_COERCION_OF_SCALARS);
+        scopedMapper = this.mapper.copy().disable(DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES, DeserializationFeature.FAIL_ON_NULL_CREATOR_PROPERTIES);
         this.timeout = requireTimeout(timeout);
         this.http = Objects.requireNonNull(http, "http"); this.clock = Objects.requireNonNull(clock, "clock");
         if (http.followRedirects() != HttpClient.Redirect.NEVER || service.context() != ServiceTokenContext.TENANT
                 || service.tenantId() == null || !service.tenantId().matches("[1-9][0-9]{0,18}")
                 || (!service.scopes().contains(ExecutionAuthorizationContract.SERVICE_SCOPE)
-                && !service.scopes().contains(ServiceExecutionAuthorizationContract.SERVICE_SCOPE))) {
+                && !service.scopes().contains(ServiceExecutionAuthorizationContract.SERVICE_SCOPE)
+                && !service.scopes().contains(ExecutionScopeAuthorizationContract.SERVICE_SCOPE))) {
             throw new IllegalArgumentException("EXECUTION_AUTHORIZATION_CLIENT_BINDING_INVALID");
         }
         try { Long.parseLong(service.tenantId()); }
@@ -89,15 +93,57 @@ public final class HttpExecutionAuthorizationClient {
                         || !node.path("policyVersion").isIntegralNumber() || !instant(node.path("deadlineAt")) || !instant(node.path("expiresAt"))) throw unavailable();
                 decision = mapper.treeToValue(node, ExecutionAuthorizationContract.Decision.class);
             } catch (java.io.IOException | IllegalArgumentException invalid) { throw unavailable(); }
-            if (decision == null || !request.grantId().equals(decision.grantId())
-                    || !expected.issuer().toASCIIString().equals(decision.issuer()) || !expected.tenantId().equals(decision.tenantId())
-                    || !expected.subject().equals(decision.subject()) || !expected.resource().toASCIIString().equals(decision.resource())
-                    || !expected.purpose().equals(decision.purpose()) || !expected.intentId().equals(decision.intentId())
-                    || !expected.bindingSha256().equals(decision.bindingSha256()) || expected.sessionRequired() != decision.sessionRequired()
-                    || !expected.deadlineAt().equals(decision.deadlineAt()) || !decision.expiresAt().isAfter(clock.instant())
-                    || decision.expiresAt().isAfter(expected.deadlineAt())) throw unavailable();
+            requireDecision(request, expected, decision);
             return decision;
         });
+    }
+
+    /** Opt-in data-scope evidence has a separate route/decoder and leaves the original strict response contract unchanged. */
+    public ExecutionScopeAuthorizationContract.Decision decideScopes(ExecutionAuthorizationContract.Request request, Expectation expected) {
+        Objects.requireNonNull(request, "request"); Objects.requireNonNull(expected, "expected");
+        if (!issuer.equals(expected.issuer()) || !tenantId.equals(expected.tenantId())) throw unavailable();
+        return post(ExecutionScopeAuthorizationContract.PATH, ExecutionScopeAuthorizationContract.SERVICE_SCOPE, request, body -> {
+            try {
+                var root = mapper.readTree(body);
+                if (!keys(root, Set.of("execution", "rbac3UserId", "generatedAt", "dataScopes")) || !root.path("rbac3UserId").isTextual()
+                        || !instant(root.path("generatedAt")) || !root.path("dataScopes").isObject() || root.path("dataScopes").size() > 64) throw unavailable();
+                var execution = root.path("execution");
+                if (!keys(execution, Set.of("grantId", "issuer", "tenantId", "subject", "resource", "purpose", "intentId", "bindingSha256", "sessionRequired", "deadlineAt", "expiresAt", "authVersion", "policyVersion"))
+                        || !textual(execution, "grantId", "issuer", "tenantId", "subject", "resource", "purpose", "intentId", "bindingSha256")
+                        || !execution.path("sessionRequired").isBoolean() || !execution.path("authVersion").isIntegralNumber() || !execution.path("policyVersion").isIntegralNumber()
+                        || !instant(execution.path("deadlineAt")) || !instant(execution.path("expiresAt"))) throw unavailable();
+                for (var entry : root.path("dataScopes").properties()) if (!scopeShape(entry.getValue())) throw unavailable();
+                var decision = scopedMapper.treeToValue(root, ExecutionScopeAuthorizationContract.Decision.class);
+                requireDecision(request, expected, decision.execution()); return decision;
+            } catch (java.io.IOException | IllegalArgumentException malformed) { throw unavailable(); }
+        });
+    }
+
+    private void requireDecision(ExecutionAuthorizationContract.Request request, Expectation expected, ExecutionAuthorizationContract.Decision decision) {
+        if (decision == null || !request.grantId().equals(decision.grantId())
+                || !expected.issuer().toASCIIString().equals(decision.issuer()) || !expected.tenantId().equals(decision.tenantId())
+                || !expected.subject().equals(decision.subject()) || !expected.resource().toASCIIString().equals(decision.resource())
+                || !expected.purpose().equals(decision.purpose()) || !expected.intentId().equals(decision.intentId())
+                || !expected.bindingSha256().equals(decision.bindingSha256()) || expected.sessionRequired() != decision.sessionRequired()
+                || !expected.deadlineAt().equals(decision.deadlineAt()) || !decision.expiresAt().isAfter(clock.instant()) || decision.expiresAt().isAfter(expected.deadlineAt())) throw unavailable();
+    }
+    private static boolean keys(com.fasterxml.jackson.databind.JsonNode node, Set<String> expected) {
+        if (node == null || !node.isObject()) return false; var names = new java.util.HashSet<String>(); node.fieldNames().forEachRemaining(names::add); return names.equals(expected);
+    }
+    private static boolean scopeShape(com.fasterxml.jackson.databind.JsonNode scope) {
+        var fields = Set.of("decision", "reasonCode", "tenantId", "subjectId", "permissionCode", "scopeType", "allInTenant", "allowedOrgIds", "includeOrgDescendants",
+                "allowedDeptIds", "includeDeptDescendants", "allowedUserIds", "includeSelf", "selfUserId", "directorySnapshotVersion", "decisionVersion", "authVersion", "policyVersion", "evidenceIds", "decidedAt");
+        var withoutSelf = new java.util.HashSet<>(fields); withoutSelf.remove("selfUserId");
+        if (!keys(scope, fields) && !keys(scope, withoutSelf) || !textual(scope, "decision", "reasonCode", "tenantId", "subjectId", "permissionCode", "scopeType", "directorySnapshotVersion") || !instant(scope.path("decidedAt"))) return false;
+        for (var name : List.of("allInTenant", "includeOrgDescendants", "includeDeptDescendants", "includeSelf")) if (!scope.path(name).isBoolean()) return false;
+        for (var name : List.of("decisionVersion", "authVersion", "policyVersion")) if (!scope.path(name).isIntegralNumber() || !scope.path(name).canConvertToLong()) return false;
+        var self = scope.path("selfUserId"); if (!self.isMissingNode() && !self.isNull() && !self.isTextual()) return false;
+        if (scope.path("includeSelf").booleanValue() && !self.isTextual()) return false;
+        for (var name : List.of("allowedOrgIds", "allowedDeptIds", "allowedUserIds", "evidenceIds")) {
+            var values = scope.path(name); if (!values.isArray() || values.size() > 4096) return false;
+            for (var value : values) if (!value.isTextual() || value.textValue().isBlank() || value.textValue().length() > 256) return false;
+        }
+        return true;
     }
 
     /** Checks the SERVICE tuple and immutable local execution intent against the attested decision. */

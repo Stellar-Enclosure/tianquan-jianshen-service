@@ -24,6 +24,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.cata
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.catalog.ServiceExecutionGrantAuthorizationController;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.catalog.ServiceExecutionGrantAuthorizationService;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.ExecutionAuthorizationContract;
+import top.egon.cola.platform.tianquan.jianshen.contract.authorization.ExecutionScopeAuthorizationContract;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.ServiceExecutionAuthorizationContract;
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
 import top.egon.cola.platform.tianquan.jianshen.starter.cache.SingleFlightSnapshotLoader;
@@ -65,6 +66,29 @@ class ExecutionGrantAuthorizationSecurityTest {
                 .run(context -> assertTrue(context.getBeansOfType(ExecutionGrantAuthorizationController.class).isEmpty()));
         new ApplicationContextRunner().withUserConfiguration(ServiceExecutionGrantAuthorizationController.class)
                 .run(context -> assertTrue(context.getBeansOfType(ServiceExecutionGrantAuthorizationController.class).isEmpty()));
+    }
+
+    @Test void scoped_decisions_use_the_actual_identity_chain_and_their_independent_compiled_resource_guard() throws Exception {
+        try (var context = context()) {
+            var verifier = context.getBean(ServiceAccessTokenVerifier.class); var owner = context.getBean(ExecutionGrantAuthorizationService.class);
+            var guard = context.getBean(top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionExecutionGuard.class);
+            var good = principal(Set.of(ExecutionScopeAuthorizationContract.SERVICE_SCOPE)); var old = principal(Set.of(ExecutionAuthorizationContract.SERVICE_SCOPE));
+            when(verifier.verify("scoped-service")).thenReturn(new AccessTokenVerification.Valid<>(good, good.scopes(), null, ISSUER));
+            when(verifier.verify("old-scope")).thenReturn(new AccessTokenVerification.Valid<>(old, old.scopes(), null, ISSUER));
+            when(owner.decideScopes(good, ISSUER, REQUEST)).thenReturn(new ExecutionScopeAuthorizationContract.Decision(DECISION, "60", NOW, Map.of()));
+            var mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build(); String body = new ObjectMapper().writeValueAsString(REQUEST);
+            mvc.perform(post(ExecutionScopeAuthorizationContract.PATH).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isUnauthorized());
+            mvc.perform(post(ExecutionScopeAuthorizationContract.PATH).header("Authorization", "Bearer old-scope").contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isForbidden());
+            mvc.perform(post(ExecutionScopeAuthorizationContract.PATH).header("Authorization", "Bearer scoped-service").contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andExpect(status().isOk()).andExpect(header().string("Cache-Control", "no-store")).andExpect(jsonPath("$.rbac3UserId").value("60"))
+                    .andExpect(jsonPath("$.execution.subject").value("alice"));
+            verify(guard).requireServiceApi("tianquan-jianshen.api.runtime.executionGrantScopes", good);
+            doThrow(new top.egon.cola.platform.tianquan.jianshen.starter.client.Rbac3AuthorizationClient.AuthorizationUnavailableException("unavailable"))
+                    .when(guard).requireServiceApi("tianquan-jianshen.api.runtime.executionGrantScopes", good);
+            mvc.perform(post(ExecutionScopeAuthorizationContract.PATH).header("Authorization", "Bearer scoped-service").contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isServiceUnavailable());
+            verify(owner, times(1)).decideScopes(good, ISSUER, REQUEST); verify(context.getBean(UserAccessTokenVerifier.class), never()).verify(anyString());
+            assertNull(org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication());
+        }
     }
 
     @Test void service_execution_endpoint_requires_the_distinct_verified_service_scope() throws Exception {
@@ -263,6 +287,16 @@ class ExecutionGrantAuthorizationSecurityTest {
                     top.egon.cola.platform.tianquan.jianshen.contract.permission.DefinitionLifecycle.ACTIVE);
             when(guard.resource("tianquan-jianshen.api.runtime.executionGrant",
                     top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType.API)).thenReturn(resource);
+            var scopedResource = new top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest.ResourceDefinition(
+                    "tianquan-jianshen.api.runtime.executionGrantScopes", top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType.API,
+                    Map.of("methods", List.of("POST"), "paths", List.of(ExecutionScopeAuthorizationContract.PATH)),
+                    top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess.PROTECTED, null, null,
+                    List.of(top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest.PrincipalType.SERVICE),
+                    List.of(ExecutionScopeAuthorizationContract.SERVICE_SCOPE),
+                    new top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest.I18nReference("permission.runtime", "executionGrantScopes"),
+                    top.egon.cola.platform.tianquan.jianshen.contract.permission.DefinitionLifecycle.ACTIVE);
+            when(guard.resource("tianquan-jianshen.api.runtime.executionGrantScopes",
+                    top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType.API)).thenReturn(scopedResource);
             var serviceResource = new top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest.ResourceDefinition(
                     "tianquan-jianshen.api.runtime.serviceExecutionGrant", top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType.API,
                     Map.of("methods", List.of("POST"), "paths", List.of(ServiceExecutionAuthorizationContract.PATH)),

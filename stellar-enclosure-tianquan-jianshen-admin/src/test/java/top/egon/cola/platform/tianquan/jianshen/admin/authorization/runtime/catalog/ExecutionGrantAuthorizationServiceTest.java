@@ -13,6 +13,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.context.SecurityContextHolder;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.ExecutionAuthorizationContract;
+import top.egon.cola.platform.tianquan.jianshen.contract.authorization.ExecutionScopeAuthorizationContract;
+import top.egon.cola.platform.tianquan.jianshen.contract.authorization.DataScopeDecision;
+import top.egon.cola.platform.tianquan.jianshen.contract.authorization.Decision;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.RuntimePolicyBinding;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.SystemAuthorizationSnapshot;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.DefinitionLifecycle;
@@ -81,6 +84,39 @@ class ExecutionGrantAuthorizationServiceTest {
         assertEquals(binding(), captured.getValue().binding()); assertEquals("30", captured.getValue().subject());
         assertEquals("tianji.api.agent.startSession", captured.getValue().resourceKey());
         assertEquals(NOW.plusSeconds(60), captured.getValue().expiresAt());
+    }
+
+    @Test void scoped_projection_requires_its_own_service_scope_and_explicit_policy_opt_in() {
+        assertDenied(() -> service.decideScopes(caller, ISSUER, request)); verifyNoInteractions(client, snapshots);
+        var scoped = scopedCaller();
+        SecurityContextHolder.getContext().setAuthentication(new IdpAuthenticationToken(scoped, List.of(), ISSUER));
+        when(proofs.policyBinding(scoped, ISSUER, "shop", ExecutionScopeAuthorizationContract.SERVICE_SCOPE)).thenReturn(binding());
+        assertUnavailable(() -> service.decideScopes(scoped, ISSUER, request)); verifyNoInteractions(snapshots);
+    }
+
+    @Test void scoped_projection_contains_only_required_current_permission_scopes_with_the_rbac_identity_binding() {
+        var caller = scopedCaller();
+        SecurityContextHolder.getContext().setAuthentication(new IdpAuthenticationToken(caller, List.of(), ISSUER));
+        when(proofs.policyBinding(caller, ISSUER, "shop", ExecutionScopeAuthorizationContract.SERVICE_SCOPE)).thenReturn(binding());
+        var policy = policies().policies().getFirst();
+        var opted = new ExecutionGrantAuthorizationProperties.Policy(policy.systemCode(), policy.purpose(), policy.resourceKey(), policy.resourcePath(),
+                policy.sessionResourceKey(), policy.sessionResourcePath(), policy.requiredPermissions(), policy.sessionPermissions(), policy.permissionScopes(), true);
+        service = new ExecutionGrantAuthorizationService(proofs, snapshots, issuers, Map.of(new ExecutionGrantAuthorizationService.AuthorityKey(ISSUER, RESOURCE), client),
+                new ExecutionGrantAuthorizationProperties(true, List.of(opted)), Clock.fixed(NOW, ZoneOffset.UTC));
+        when(client.resolve(any())).thenReturn(grant(false, Set.of("tianji:agent:start")));
+        doReturn(view("tianji.api.agent.start", Set.of(START, READ), false, NOW.plusSeconds(30), Map.of(START, scope(START), READ, scope(READ)))).when(snapshots).currentExecution(any());
+        var decision = service.decideScopes(caller, ISSUER, request);
+        assertEquals("60", decision.rbac3UserId()); assertEquals("30", decision.execution().subject());
+        assertEquals(Set.of(START), decision.dataScopes().keySet()); assertEquals(Set.of("17"), decision.dataScopes().get(START).allowedOrgIds());
+    }
+
+    private static ServiceIdentityPrincipal scopedCaller() {
+        return new ServiceIdentityPrincipal("shop-runtime", "20", "shop-runtime", "45", RECEIVER, 0, Set.of(ExecutionScopeAuthorizationContract.SERVICE_SCOPE),
+                "commerce", "shop", "test", "credential", NOW.minusSeconds(10), NOW.plusSeconds(100), "shop-client", ServiceTokenContext.TENANT);
+    }
+    private static DataScopeDecision scope(String permission) {
+        return new DataScopeDecision(Decision.ALLOW, "ALLOW", "20", "60", permission, "CUSTOM", false, Set.of("17"), false, Set.of(), false,
+                Set.of(), false, null, "1", 3, 2, 3, List.of(), NOW);
     }
 
     @Test void session_access_requires_both_current_permission_and_scope() {
@@ -245,11 +281,14 @@ class ExecutionGrantAuthorizationServiceTest {
     }
 
     private static PermissionRuntimeSnapshotRepository.ExecutionView view(String key, Set<String> permissions, boolean session, Instant expiry) {
+        return view(key, permissions, session, expiry, Map.of());
+    }
+    private static PermissionRuntimeSnapshotRepository.ExecutionView view(String key, Set<String> permissions, boolean session, Instant expiry, Map<String, DataScopeDecision> scopes) {
         var codes = permissions.stream().sorted().toList();
         var effective = new EffectivePermissionSnapshot(ISSUER.toString(), "30", SCOPE, "1", "2", "3",
                 new EffectivePermissionSnapshot.ActiveRoleContext("shop", List.of("50"), List.of("50")), codes, expiry);
         var snapshot = new SystemAuthorizationSnapshot("20", "30", "60", "shop", 2, 3, List.of("50"), null, null,
-                permissions, Set.of(key), Map.of(), Map.of(), "checksum", NOW, expiry, effective,
+                permissions, Set.of(key), scopes, Map.of(), "checksum", NOW, expiry, effective,
                 new RuntimePolicyBinding("shop-java", "1", "a".repeat(64), "b".repeat(64), "c".repeat(64)));
         var resource = new PermissionManifest.ResourceDefinition(key, ResourceType.API,
                 Map.of("methods", List.of("POST"), "paths", List.of(session ? "/api/tianji/v1/agent-runs/with-session" : "/api/tianji/v1/agent-runs")),

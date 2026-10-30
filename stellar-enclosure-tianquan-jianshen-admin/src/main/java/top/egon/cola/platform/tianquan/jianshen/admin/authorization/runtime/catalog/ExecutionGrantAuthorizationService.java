@@ -14,6 +14,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.ExecutionAuthorizationContract;
+import top.egon.cola.platform.tianquan.jianshen.contract.authorization.ExecutionScopeAuthorizationContract;
+import top.egon.cola.platform.tianquan.jianshen.contract.authorization.SystemAuthorizationSnapshot;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
@@ -77,13 +79,29 @@ public class ExecutionGrantAuthorizationService {
 
     public ExecutionAuthorizationContract.Decision decide(ServiceIdentityPrincipal caller, URI issuer,
                                                             ExecutionAuthorizationContract.Request request) {
+        return evaluate(caller, issuer, request, ExecutionAuthorizationContract.SERVICE_SCOPE, false).decision();
+    }
+
+    public ExecutionScopeAuthorizationContract.Decision decideScopes(ServiceIdentityPrincipal caller, URI issuer,
+                                                                     ExecutionAuthorizationContract.Request request) {
+        var evaluated = evaluate(caller, issuer, request, ExecutionScopeAuthorizationContract.SERVICE_SCOPE, true);
+        var projected = new LinkedHashMap<String, top.egon.cola.platform.tianquan.jianshen.contract.authorization.DataScopeDecision>();
+        var required = new java.util.HashSet<>(evaluated.policy().requiredPermissions());
+        if (evaluated.decision().sessionRequired()) required.addAll(evaluated.policy().sessionPermissions());
+        for (var permission : required) {
+            var scope = evaluated.snapshot().dataScopes().get(permission); if (scope != null) projected.put(permission, scope);
+        }
+        return new ExecutionScopeAuthorizationContract.Decision(evaluated.decision(), evaluated.snapshot().rbac3UserId(), evaluated.snapshot().generatedAt(), projected);
+    }
+
+    private Evaluated evaluate(ServiceIdentityPrincipal caller, URI issuer, ExecutionAuthorizationContract.Request request, String serviceScope, boolean scoped) {
         Objects.requireNonNull(request, "request");
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (!(authentication instanceof IdpAuthenticationToken verified) || !verified.isAuthenticated()
-                || verified.getPrincipal() != caller || issuer == null || !issuer.equals(verified.verifiedIssuer())) throw denied();
+                || verified.getPrincipal() != caller || issuer == null || !issuer.equals(verified.verifiedIssuer()) || !caller.scopes().contains(serviceScope)) throw denied();
         var trusted = issuers.findByIssuer(issuer.toASCIIString()).orElseThrow(ExecutionGrantAuthorizationService::denied);
         if (trusted.realmType() != TrustedIssuerRegistry.RealmType.TENANT || !Objects.equals(trusted.tenantId(), caller.tenantId())) throw denied();
-        var binding = proofs.policyBinding(caller, issuer, request.systemCode(), ExecutionAuthorizationContract.SERVICE_SCOPE);
+        var binding = proofs.policyBinding(caller, issuer, request.systemCode(), serviceScope);
         var client = clients.get(new AuthorityKey(issuer, binding.expectedResource()));
         if (client == null) throw unavailable();
         ExecutionGrantContract.Resolution grant;
@@ -97,7 +115,7 @@ public class ExecutionGrantAuthorizationService {
                 || !grant.expiresAt().isAfter(now) || grant.expiresAt().isAfter(grant.intentDeadlineAt())
                 || !caller.expiresAt().isAfter(now)) throw denied();
         var policy = policies.get(new PolicyKey(binding.scope().applicationCode(), grant.purpose()));
-        if (policy == null || grant.sessionRequired() && policy.definition().sessionResourceKey() == null) throw unavailable();
+        if (policy == null || scoped && !policy.definition().scopedDecisions() || grant.sessionRequired() && policy.definition().sessionResourceKey() == null) throw unavailable();
         var minimum = new java.util.HashSet<>(policy.definition().requiredPermissions());
         if (grant.sessionRequired()) minimum.addAll(policy.definition().sessionPermissions());
         if (minimum.stream().anyMatch(code -> !grant.scopes().containsAll(policy.definition().permissionScopes().get(code)))) throw denied();
@@ -116,9 +134,10 @@ public class ExecutionGrantAuthorizationService {
         now = clock.instant();
         if (!snapshot.expiresAt().isAfter(now) || !grant.expiresAt().isAfter(now) || !caller.expiresAt().isAfter(now)) throw denied();
         if (!issuers.findByIssuer(issuer.toASCIIString()).filter(trusted::equals).isPresent()) throw unavailable();
-        return new ExecutionAuthorizationContract.Decision(grant.grantId(), grant.issuer(), Long.toString(grant.tenantId()),
+        var decision = new ExecutionAuthorizationContract.Decision(grant.grantId(), grant.issuer(), Long.toString(grant.tenantId()),
                 grant.subject(), grant.resource(), grant.purpose(), grant.intentId(), grant.bindingSha256(), grant.sessionRequired(),
                 grant.intentDeadlineAt(), snapshot.expiresAt(), snapshot.authVersion(), snapshot.policyVersion());
+        return new Evaluated(decision, snapshot, policy.definition());
     }
 
     private static void requirePolicy(PermissionRuntimeSnapshotRepository.ExecutionView view, PermissionRuntimeProperties.Binding binding,
@@ -192,5 +211,6 @@ public class ExecutionGrantAuthorizationService {
     record AuthorityKey(URI issuer, URI resource) { }
     private record PolicyKey(String systemCode, String purpose) { }
     private record ConfiguredPolicy(ExecutionGrantAuthorizationProperties.Policy definition, UserPermissionScopePolicy scopes) { }
+    private record Evaluated(ExecutionAuthorizationContract.Decision decision, SystemAuthorizationSnapshot snapshot, ExecutionGrantAuthorizationProperties.Policy policy) { }
     record VerifiedExecution(PermissionRuntimeProperties.Binding binding, URI issuer, String subject, Instant expiresAt, String resourceKey) { }
 }

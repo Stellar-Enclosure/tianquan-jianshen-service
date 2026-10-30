@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 import top.egon.cola.component.yuheng.openapi.annotation.EgonGatewayPolicy;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.ExecutionAuthorizationContract;
+import top.egon.cola.platform.tianquan.jianshen.contract.authorization.ExecutionScopeAuthorizationContract;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.LocalizedText;
@@ -39,6 +40,8 @@ import top.egon.cola.platform.tianquan.shoubing.starter.security.RequiresService
 @ConditionalOnProperty(prefix = "egon.tianquan-jianshen.execution-grants", name = "enabled", havingValue = "true")
 @PermissionMessage(pageCode = "permission.runtime", key = "executionGrant", defaultLocale = "en",
         defaults = @LocalizedText(locale = "en", text = "Evaluate a deferred execution intent"))
+@PermissionMessage(pageCode = "permission.runtime", key = "executionGrantScopes", defaultLocale = "en",
+        defaults = @LocalizedText(locale = "en", text = "Evaluate deferred execution data scopes"))
 @Slf4j
 public class ExecutionGrantAuthorizationController {
     private final ExecutionGrantAuthorizationService service;
@@ -61,10 +64,26 @@ public class ExecutionGrantAuthorizationController {
     @EgonGatewayPolicy(exposure = EgonGatewayPolicy.Exposure.INTERNAL)
     public ResponseEntity<ExecutionAuthorizationContract.Decision> decide(HttpServletRequest request,
             @AuthenticationPrincipal ServiceIdentityPrincipal caller) throws IOException {
+        return read(request, caller, ExecutionAuthorizationContract.SERVICE_SCOPE, (issuer, body) -> service.decide(caller, issuer, body));
+    }
+
+    @PostMapping(ExecutionScopeAuthorizationContract.PATH)
+    @PermissionResource(key = "tianquan-jianshen.api.runtime.executionGrantScopes", type = ResourceType.API,
+            labelPage = "permission.runtime", labelKey = "executionGrantScopes", allowedPrincipals = PermissionManifest.PrincipalType.SERVICE,
+            oauthScopes = ExecutionScopeAuthorizationContract.SERVICE_SCOPE)
+    @RequiresServiceScope(ExecutionScopeAuthorizationContract.SERVICE_SCOPE)
+    @EgonGatewayPolicy(exposure = EgonGatewayPolicy.Exposure.INTERNAL)
+    public ResponseEntity<ExecutionScopeAuthorizationContract.Decision> decideScopes(HttpServletRequest request,
+            @AuthenticationPrincipal ServiceIdentityPrincipal caller) throws IOException {
+        return read(request, caller, ExecutionScopeAuthorizationContract.SERVICE_SCOPE, (issuer, body) -> service.decideScopes(caller, issuer, body));
+    }
+
+    private <T> ResponseEntity<T> read(HttpServletRequest request, ServiceIdentityPrincipal caller, String requiredScope,
+            java.util.function.BiFunction<java.net.URI, ExecutionAuthorizationContract.Request, T> evaluate) throws IOException {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (!(authentication instanceof IdpAuthenticationToken verified) || !verified.isAuthenticated()
                 || caller == null || verified.getPrincipal() != caller
-                || !caller.scopes().contains(ExecutionAuthorizationContract.SERVICE_SCOPE)) {
+                || !caller.scopes().contains(requiredScope)) {
             throw new Rbac3RuleViolation("SERVICE_IDENTITY_DENIED");
         }
         try {
@@ -85,7 +104,7 @@ public class ExecutionGrantAuthorizationController {
             }
             catch (IOException | RuntimeException invalid) { throw new InvalidBody(400); }
             if (body == null) throw new InvalidBody(400);
-            return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.decide(caller, verified.verifiedIssuer(), body));
+            return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(evaluate.apply(verified.verifiedIssuer(), body));
         } finally { Arrays.fill(bytes, (byte) 0); }
     }
 

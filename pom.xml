@@ -27,8 +27,17 @@
         <module>stellar-enclosure-tianquan-jianshen-admin</module>
     </modules>
 
+    <properties>
+        <transactional-outbox.version>0.0.2-SNAPSHOT</transactional-outbox.version>
+    </properties>
+
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>top.egon</groupId>
+                <artifactId>stellar-enclosure-component-transactional-outbox-starter</artifactId>
+                <version>${transactional-outbox.version}</version>
+            </dependency>
             <dependency>
                 <groupId>top.egon</groupId>
                 <artifactId>stellar-enclosure-tianquan-jianshen-processor</artifactId>
