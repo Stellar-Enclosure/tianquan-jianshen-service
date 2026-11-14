@@ -145,7 +145,8 @@ public class Rbac3StarterAutoConfiguration {
             top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionDenialAudit audit,
             top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionAnonymousBoundary anonymous) {
         return new top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionExecutionGuard(
-                registry, users, snapshots, services, properties.getUserScopePolicy(), audit, anonymous);
+                registry, users, snapshots, services, properties.getUserScopePolicy(), audit, anonymous,
+                properties.getServiceAnyScopeResources());
     }
 
     @Bean

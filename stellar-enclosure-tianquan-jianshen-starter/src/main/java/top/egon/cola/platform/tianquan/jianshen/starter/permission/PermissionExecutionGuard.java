@@ -3,6 +3,7 @@ package top.egon.cola.platform.tianquan.jianshen.starter.permission;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionMode;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceAccess;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType;
 import top.egon.cola.platform.tianquan.jianshen.starter.cache.AuthorizationSnapshotLoader;
@@ -10,6 +11,7 @@ import top.egon.cola.platform.tianquan.jianshen.starter.cache.SingleFlightSnapsh
 import top.egon.cola.platform.tianquan.jianshen.starter.security.CurrentRbac3User;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3AuthenticationToken;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3UserDetails;
+import java.util.Collections;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -22,6 +24,7 @@ public final class PermissionExecutionGuard {
     private final UserPermissionScopePolicy userScopes;
     private final PermissionDenialAudit audit;
     private final PermissionAnonymousBoundary anonymous;
+    private final Set<String> serviceAnyScopeResources;
 
     public PermissionExecutionGuard(PermissionPolicyRegistry registry, CurrentRbac3User users, AuthorizationSnapshotLoader snapshots) {
         this(registry, users, snapshots, null);
@@ -50,8 +53,25 @@ public final class PermissionExecutionGuard {
             PermissionServicePolicyGuard services,
             top.egon.cola.platform.tianquan.jianshen.starter.autoconfigure.Rbac3StarterProperties.UserScopePolicyProperties scopePolicy,
             PermissionDenialAudit audit, PermissionAnonymousBoundary anonymous) {
+        this(registry, users, snapshots, services, scopePolicy, audit, anonymous, Set.of());
+    }
+
+    public PermissionExecutionGuard(PermissionPolicyRegistry registry, CurrentRbac3User users, AuthorizationSnapshotLoader snapshots,
+            PermissionServicePolicyGuard services,
+            top.egon.cola.platform.tianquan.jianshen.starter.autoconfigure.Rbac3StarterProperties.UserScopePolicyProperties scopePolicy,
+            PermissionDenialAudit audit, PermissionAnonymousBoundary anonymous, Set<String> serviceAnyScopeResources) {
         this.registry = registry; this.users = users; this.snapshots = snapshots; this.services = services;
         this.userScopes = new UserPermissionScopePolicy(scopePolicy); this.audit = audit; this.anonymous = anonymous;
+        this.serviceAnyScopeResources = Set.copyOf(serviceAnyScopeResources);
+        for (String key : this.serviceAnyScopeResources) {
+            var resource = registry.require(key, ResourceType.API);
+            if (resource.access() != ResourceAccess.PROTECTED || !UserPermissionScopePolicy.mixed(resource)
+                    || resource.requirement() == null || resource.requirement().mode() != PermissionMode.ANY
+                    || resource.requirement().codes().size() < 2 || resource.oauthScopes().size() < 2
+                    || registry.bootstrapServiceResource(key)) {
+                throw new IllegalArgumentException("SERVICE scope alternatives require a protected shared API with ANY permissions and multiple scopes");
+            }
+        }
     }
 
     /** @deprecated accepts the former loader type for binary compatibility. */
@@ -104,7 +124,7 @@ public final class PermissionExecutionGuard {
     public void requireServiceApi(String key, top.egon.cola.platform.tianquan.shoubing.contract.ServiceIdentityPrincipal service) {
         var resource = registry.require(key, ResourceType.API);
         if (!resource.allowedPrincipals().contains(PermissionManifest.PrincipalType.SERVICE)
-                || resource.oauthScopes().isEmpty() || !service.scopes().containsAll(resource.oauthScopes())) {
+                || resource.oauthScopes().isEmpty() || !serviceScopesAllow(resource, service.scopes())) {
             throw audit.denied("SERVICE_SCOPE_DENIED");
         }
         if (registry.bootstrapServiceResource(key)) {
@@ -118,6 +138,12 @@ public final class PermissionExecutionGuard {
                 throw audit.denied(denied.getMessage());
             }
         }
+    }
+
+    private boolean serviceScopesAllow(PermissionManifest.ResourceDefinition resource, Set<String> granted) {
+        return serviceAnyScopeResources.contains(resource.key())
+                ? !Collections.disjoint(granted, resource.oauthScopes())
+                : granted.containsAll(resource.oauthScopes());
     }
 
     public Rbac3UserDetails require(String resourceKey) {

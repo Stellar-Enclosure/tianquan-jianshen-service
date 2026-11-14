@@ -62,6 +62,14 @@ public class Rbac3StarterProperties {
 
     public UserScopePolicyProperties getUserScopePolicy() { return userScopePolicy; }
 
+    /** Exact compiled API keys that accept any one of their declared SERVICE scopes. */
+    @NotNull
+    @Size(max = 128)
+    private Set<@NotNull @Pattern(regexp = "[A-Za-z][A-Za-z0-9_.:-]{0,199}") String> serviceAnyScopeResources = Set.of();
+
+    public Set<String> getServiceAnyScopeResources() { return serviceAnyScopeResources; }
+    public void setServiceAnyScopeResources(Set<String> value) { serviceAnyScopeResources = Set.copyOf(value); }
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor

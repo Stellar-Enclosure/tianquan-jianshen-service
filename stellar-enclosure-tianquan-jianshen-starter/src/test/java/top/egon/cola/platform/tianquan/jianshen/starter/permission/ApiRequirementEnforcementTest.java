@@ -3,24 +3,42 @@ package top.egon.cola.platform.tianquan.jianshen.starter.permission;
 import org.aopalliance.intercept.MethodInvocation;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.context.properties.bind.Bindable;
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import top.egon.cola.platform.tianquan.jianshen.contract.authorization.RuntimePolicyBinding;
+import top.egon.cola.platform.tianquan.jianshen.contract.authorization.ServicePolicySnapshot;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.*;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.*;
 import top.egon.cola.platform.tianquan.jianshen.starter.authorization.AuthorizationService;
+import top.egon.cola.platform.tianquan.jianshen.starter.autoconfigure.Rbac3StarterAutoConfiguration;
+import top.egon.cola.platform.tianquan.jianshen.starter.autoconfigure.Rbac3StarterProperties;
 import top.egon.cola.platform.tianquan.jianshen.starter.cache.SingleFlightSnapshotLoader;
 import top.egon.cola.platform.tianquan.jianshen.starter.client.Rbac3AuthorizationClient;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.*;
+import top.egon.cola.platform.tianquan.shoubing.contract.ServiceIdentityPrincipal;
+import top.egon.cola.platform.tianquan.shoubing.starter.security.IdpAuthenticationToken;
 import top.egon.cola.platform.tianquan.shoubing.starter.security.VerifiedUserTokenCarrier;
 import java.lang.reflect.*;
+import java.net.URI;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionRuntimeFixture.*;
 
 class ApiRequirementEnforcementTest {
+    private static final String SERVICE_READ_OR_OBSERVE = "shop.api.order.observe";
+    private static final String SERVICE_UNCHANGED = "shop.api.order.status";
+    private static final String SERVICE_SCOPE_OPT_IN = "egon.cola.platform.tianquan.jianshen.service-any-scope-resources[0]";
+    private static final String READ_SCOPE = "machine:read";
+    private static final String OBSERVE_SCOPE = "machine:observe";
+
     @RequiresPermissions(codes="order:read")
     static class Handler {
         @PermissionResource(key="shop.api.update", type=ResourceType.API, labelPage="shop", labelKey="update")
@@ -84,6 +102,125 @@ class ApiRequirementEnforcementTest {
                 allowedPrincipals={PermissionManifest.PrincipalType.USER, PermissionManifest.PrincipalType.SERVICE}, oauthScopes="machine:activate")
         @RequiresPermissions(codes="order:read")
         public void shared() { }
+    }
+
+    static class ServiceScopeHandler {
+        @PermissionResource(key=SERVICE_READ_OR_OBSERVE, type=ResourceType.API, labelPage="shop", labelKey="observe",
+                allowedPrincipals={PermissionManifest.PrincipalType.USER, PermissionManifest.PrincipalType.SERVICE},
+                oauthScopes={READ_SCOPE, OBSERVE_SCOPE})
+        @RequiresPermissions(mode=PermissionMode.ANY, codes={"order:read", "order:approve"})
+        public void observe() { }
+
+        @PermissionResource(key=SERVICE_UNCHANGED, type=ResourceType.API, labelPage="shop", labelKey="status",
+                allowedPrincipals={PermissionManifest.PrincipalType.USER, PermissionManifest.PrincipalType.SERVICE},
+                oauthScopes={READ_SCOPE, OBSERVE_SCOPE})
+        @RequiresPermissions(mode=PermissionMode.ANY, codes={"order:read", "order:approve"})
+        public void status() { }
+    }
+
+    @Test void optedInServiceApiAcceptsEitherDeclaredScopeButStillRequiresCurrentVerifiedPolicy() throws Exception {
+        var catalog = serviceScopeManifest();
+        var policy = servicePolicy(catalog);
+        var currentPolicy = new AtomicReference<>(policy);
+        var manager = serviceScopeManager(catalog, currentPolicy, Map.of(SERVICE_SCOPE_OPT_IN, SERVICE_READ_OR_OBSERVE));
+
+        var observe = serviceScopeInvocation("observe");
+        var status = serviceScopeInvocation("status");
+        for (String scope : List.of(READ_SCOPE, OBSERVE_SCOPE)) {
+            authenticateService("20", Set.of(scope));
+            assertTrue(manager.check(() -> SecurityContextHolder.getContext().getAuthentication(), observe).isGranted());
+            assertThrows(AuthorizationDeniedException.class,
+                    () -> manager.check(() -> SecurityContextHolder.getContext().getAuthentication(), status));
+        }
+        authenticateService("20", Set.of("machine:unrelated"));
+        assertThrows(AuthorizationDeniedException.class,
+                () -> manager.check(() -> SecurityContextHolder.getContext().getAuthentication(), observe));
+        var unverified = new ServiceIdentityPrincipal("caller", "20", "caller", "41", URI.create("https://api.example/shop"),
+                0, Set.of(READ_SCOPE), "commerce", "caller", "test", "credential", NOW.minusSeconds(1), NOW.plusSeconds(60));
+        SecurityContextHolder.getContext().setAuthentication(new IdpAuthenticationToken(unverified));
+        assertThrows(AuthorizationDeniedException.class,
+                () -> manager.check(() -> SecurityContextHolder.getContext().getAuthentication(), observe));
+        authenticateService("21", Set.of(READ_SCOPE));
+        assertThrows(AuthorizationDeniedException.class,
+                () -> manager.check(() -> SecurityContextHolder.getContext().getAuthentication(), observe));
+        authenticateService("20", Set.of(OBSERVE_SCOPE));
+        currentPolicy.set(new ServicePolicySnapshot(SCOPE, "1", "3", policy.policyBinding(), Set.of(SERVICE_UNCHANGED), policy.expiresAt()));
+        assertThrows(AuthorizationDeniedException.class,
+                () -> manager.check(() -> SecurityContextHolder.getContext().getAuthentication(), observe));
+        var foreignBinding = new RuntimePolicyBinding("shop-java", "1", "b".repeat(64), policy.policyBinding().policyDigest(),
+                policy.policyBinding().manifestDigest());
+        currentPolicy.set(new ServicePolicySnapshot(SCOPE, "1", "3", foreignBinding, policy.resourceKeys(), policy.expiresAt()));
+        assertThrows(AuthorizationDeniedException.class,
+                () -> manager.check(() -> SecurityContextHolder.getContext().getAuthentication(), observe));
+    }
+
+    @Test void serviceScopesStayConjunctiveWithoutExplicitOptIn() throws Exception {
+        var catalog = serviceScopeManifest();
+        var manager = serviceScopeManager(catalog, new AtomicReference<>(servicePolicy(catalog)), Map.of());
+        var observe = serviceScopeInvocation("observe");
+        authenticateService("20", Set.of(READ_SCOPE));
+        assertThrows(AuthorizationDeniedException.class,
+                () -> manager.check(() -> SecurityContextHolder.getContext().getAuthentication(), observe));
+        authenticateService("20", Set.of(OBSERVE_SCOPE));
+        assertThrows(AuthorizationDeniedException.class,
+                () -> manager.check(() -> SecurityContextHolder.getContext().getAuthentication(), observe));
+        authenticateService("20", Set.of(READ_SCOPE, OBSERVE_SCOPE));
+        assertTrue(manager.check(() -> SecurityContextHolder.getContext().getAuthentication(), observe).isGranted());
+    }
+
+    @Test void rejectsOptInForUnknownResourcesAndConjunctivePermissions() {
+        var catalog = serviceScopeManifest();
+        assertThrows(IllegalStateException.class, () -> serviceScopeManager(catalog, new AtomicReference<>(),
+                Map.of(SERVICE_SCOPE_OPT_IN, "shop.api.missing")));
+        var resource = catalog.resources().stream().filter(rule -> SERVICE_READ_OR_OBSERVE.equals(rule.key())).findFirst().orElseThrow();
+        var allPermissions = manifest(List.of(new PermissionManifest.ResourceDefinition(resource.key(), resource.type(),
+                resource.target(), resource.access(), new PermissionRequirement(PermissionMode.ALL, List.of("order:read", "order:approve")),
+                null, resource.allowedPrincipals(), resource.oauthScopes(), resource.i18n(), resource.lifecycle())));
+        assertThrows(IllegalArgumentException.class, () -> serviceScopeManager(allPermissions, new AtomicReference<>(),
+                Map.of(SERVICE_SCOPE_OPT_IN, SERVICE_READ_OR_OBSERVE)));
+    }
+
+    private static PermissionManifest serviceScopeManifest() {
+        return manifest(List.of(SERVICE_READ_OR_OBSERVE, SERVICE_UNCHANGED).stream().map(key ->
+                new PermissionManifest.ResourceDefinition(key, ResourceType.API,
+                        Map.of("methods", List.of("GET"), "paths", List.of("/" + key)), ResourceAccess.PROTECTED,
+                        new PermissionRequirement(PermissionMode.ANY, List.of("order:read", "order:approve")), null,
+                        List.of(PermissionManifest.PrincipalType.USER, PermissionManifest.PrincipalType.SERVICE),
+                        List.of(READ_SCOPE, OBSERVE_SCOPE), new PermissionManifest.I18nReference("shop", "read"),
+                        DefinitionLifecycle.ACTIVE)).toList());
+    }
+
+    private static ServicePolicySnapshot servicePolicy(PermissionManifest catalog) {
+        var current = snapshot(catalog, Set.of());
+        return new ServicePolicySnapshot(SCOPE, "1", "3", current.policyBinding(), current.resourceCodes(), NOW.plusSeconds(30));
+    }
+
+    private static Rbac3MethodAuthorizationManager serviceScopeManager(PermissionManifest catalog,
+            AtomicReference<ServicePolicySnapshot> currentPolicy, Map<String, Object> settings) throws InterruptedException {
+        var properties = new Rbac3StarterProperties();
+        new Binder(new MapConfigurationPropertySource(settings)).bind("egon.cola.platform.tianquan.jianshen",
+                Bindable.ofInstance(properties));
+        var registry = registry(catalog);
+        var client = mock(Rbac3AuthorizationClient.class);
+        when(client.fetchPolicy(eq("shop"), any(ServiceIdentityPrincipal.class))).thenAnswer(call -> currentPolicy.get());
+        var services = new PermissionServicePolicyGuard(registry, client, "shop", CLOCK);
+        var guard = new Rbac3StarterAutoConfiguration().permissionExecutionGuard(registry, new CurrentRbac3User(),
+                new SingleFlightSnapshotLoader(client, "shop", CLOCK), services, properties, PermissionDenialAudit.UNOBSERVED, null);
+        return new Rbac3MethodAuthorizationManager(mock(AuthorizationService.class), guard);
+    }
+
+    private static MethodInvocation serviceScopeInvocation(String operation) throws NoSuchMethodException {
+        var invocation = mock(MethodInvocation.class);
+        when(invocation.getMethod()).thenReturn(ServiceScopeHandler.class.getMethod(operation));
+        when(invocation.getThis()).thenReturn(new ServiceScopeHandler());
+        return invocation;
+    }
+
+    private static void authenticateService(String tenant, Set<String> scopes) {
+        var service = new ServiceIdentityPrincipal("caller", tenant, "caller", "41", URI.create("https://api.example/shop"),
+                0, scopes, "commerce", "caller", "test", "credential", NOW.minusSeconds(1), NOW.plusSeconds(60));
+        SecurityContextHolder.getContext().setAuthentication(new IdpAuthenticationToken(service, List.of(),
+                URI.create("https://idp.example/tenants/" + tenant)));
     }
 
     @Test void sharedApiKeepsUserScopeSeparateFromMachineScope() throws Exception {
