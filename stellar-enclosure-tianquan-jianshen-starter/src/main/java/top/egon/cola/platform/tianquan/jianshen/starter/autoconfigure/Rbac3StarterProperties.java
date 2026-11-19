@@ -438,6 +438,12 @@ public class Rbac3StarterProperties {
          * Meaning and usage: when reading, passing, or updating `endpoint`, preserve `Authorization`'s lifecycle, immutability, and thread-safety constraints.
          */
         private String endpoint;
+        /** Requires reviewed internal routes while keeping canonical OAuth resource identities. */
+        private boolean requireManagedTransport;
+
+        public boolean isRequireManagedTransport() { return requireManagedTransport; }
+        public void setRequireManagedTransport(boolean value) { requireManagedTransport = value; }
+
         /**
          * 字段 `cacheTtl` 表示 `Authorization` 中与 `cache Ttl` 相关的状态、依赖、配置或结果（声明类型 `Duration`）；其生命周期和取值含义由声明类型及所属对象共同确定。
          * Field `cacheTtl` stores the `cache Ttl`-related state, dependency, configuration, or result of `Authorization` (declared type `Duration`); its lifecycle and value semantics are defined by its declared type and owning object.

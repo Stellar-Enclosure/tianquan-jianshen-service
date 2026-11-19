@@ -19,6 +19,27 @@ class HttpTenantServiceTokenSupplierTest {
 
     private static final Instant NOW = Instant.parse("2026-08-11T10:00:00Z");
 
+    @Test void managedPreparationRejectsAnInconsistentTrustedCredentialBeforeAcquisition() {
+        var properties = new top.egon.cola.platform.tianquan.shoubing.starter.autoconfigure.IdpStarterProperties();
+        var config = properties.getServiceClient(); config.setAppId("app"); config.setRegistrationId("registration");
+        config.setCredentialVersions(java.util.Map.of("registration", 1L));
+        var facade = org.mockito.Mockito.mock(top.egon.cola.platform.tianquan.shoubing.starter.client.IdpServiceOAuth2Client.class);
+        var audience = URI.create("https://jianshen.example/api");
+        var issuer = URI.create("https://idp.example/20");
+        org.mockito.Mockito.when(facade.authorizationKey(org.mockito.ArgumentMatchers.any())).thenAnswer(call -> {
+            var wrong = new top.egon.cola.platform.tianquan.shoubing.starter.client.IdpServiceTokenRequest("registration", "app", audience,
+                    top.egon.cola.platform.tianquan.shoubing.contract.ServiceTokenContext.TENANT, "21", Set.of("snapshot"));
+            return top.egon.cola.platform.tianquan.shoubing.starter.client.ServiceAuthorizationKey.from(wrong, issuer.toString(), "caller", 1L);
+        });
+        var supplier = new HttpTenantServiceTokenSupplier(facade, properties, audience, Set.of("snapshot"));
+        assertThatThrownBy(() -> supplier.prepareManaged("20", URI.create("https://jianshen.example/snapshot"),
+                URI.create("https://jianshen.example/policy"), top.egon.cola.platform.tianquan.shoubing.starter.client.IdpTransportBindingRegistry.empty()))
+                .isInstanceOf(IllegalStateException.class).hasMessage("TIANQUAN_JIANSHEN_MANAGED_TRANSPORT_UNAVAILABLE");
+        org.mockito.Mockito.verify(facade, org.mockito.Mockito.never()).authorizeBounded(org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any());
+        org.mockito.Mockito.verify(facade, org.mockito.Mockito.never()).authorize(org.mockito.ArgumentMatchers.any());
+    }
+
     @Test
     void issuesAndCachesServiceTokensIndependentlyForExactTenants() {
         List<HttpTenantServiceTokenSupplier.TokenRequest> requests =

@@ -6,6 +6,8 @@ import top.egon.cola.platform.tianquan.shoubing.contract.ServiceTokenContext;
 import top.egon.cola.platform.tianquan.shoubing.starter.autoconfigure.IdpStarterProperties;
 import top.egon.cola.platform.tianquan.shoubing.starter.client.IdpServiceOAuth2Client;
 import top.egon.cola.platform.tianquan.shoubing.starter.client.IdpServiceTokenRequest;
+import top.egon.cola.platform.tianquan.shoubing.starter.client.IdpTransportBindingRegistry;
+import top.egon.cola.platform.tianquan.shoubing.starter.client.IdpTransportBindingVO;
 
 import java.io.IOException;
 import java.net.URI;
@@ -169,6 +171,68 @@ public final class HttpTenantServiceTokenSupplier
         this.endpoint = Objects.requireNonNull(endpoint, "endpoint");
         this.serviceClient = null;
         this.idpProperties = null;
+    }
+
+    /** Validates the configured native family without issuing a token or deriving identity from a URL. */
+    void requireManagedTransport(URI snapshots, URI policies, IdpTransportBindingRegistry bindings) {
+        if (serviceClient == null || idpProperties == null || bindings == null) throw managedUnavailable();
+        var client = idpProperties.getServiceClient();
+        client.validate();
+        var tenants = Map.copyOf(client.getTenantRegistrationIds());
+        if (tenants.isEmpty()) {
+            // A single registration may serve several explicitly verified request tenants. Exact issuer and
+            // both routes are revalidated against that request before any token can be obtained.
+            if (!bindings.hasBindings(client.getRegistrationId(), IdpTransportBindingVO.Operation.RESOURCE)) {
+                throw managedUnavailable();
+            }
+        } else {
+            for (String tenant : tenants.keySet()) prepareManaged(tenant, snapshots, policies, bindings);
+        }
+    }
+
+    /** Freezes the actual credential identity and both exact GET destinations before token acquisition. */
+    ManagedAuthorization prepareManaged(String tenantId, URI snapshots, URI policies,
+            IdpTransportBindingRegistry bindings) {
+        if (serviceClient == null || idpProperties == null || tenantId == null
+                || !tenantId.matches("[1-9][0-9]{0,18}")) throw managedUnavailable();
+        try {
+            Long.parseLong(tenantId);
+            var client = idpProperties.getServiceClient();
+            client.validate();
+            var request = new IdpServiceTokenRequest(client.registrationIdForTenant(tenantId), client.getAppId(),
+                    resourceUri, ServiceTokenContext.TENANT, tenantId, scopes);
+            var key = serviceClient.authorizationKey(request);
+            if (key == null || !request.registrationId().equals(key.registrationId())
+                    || !request.appId().equals(key.appId()) || !request.audience().equals(key.audience())
+                    || request.context() != key.context() || !tenantId.equals(key.tenantId())
+                    || !request.scopes().equals(key.scopes())) throw managedUnavailable();
+            URI issuer = URI.create(key.issuer());
+            var snapshotRoute = bindings.select(issuer, snapshots, resourceUri, request.registrationId(),
+                    IdpTransportBindingVO.Operation.RESOURCE, "GET").orElseThrow(HttpTenantServiceTokenSupplier::managedUnavailable);
+            var policyRoute = bindings.select(issuer, policies, resourceUri, request.registrationId(),
+                    IdpTransportBindingVO.Operation.RESOURCE, "GET").orElseThrow(HttpTenantServiceTokenSupplier::managedUnavailable);
+            if (snapshotRoute.transport() != IdpTransportBindingVO.Transport.HTTP
+                    || policyRoute.transport() != IdpTransportBindingVO.Transport.HTTP) throw managedUnavailable();
+            return new ManagedAuthorization(request, issuer.toASCIIString(), snapshotRoute.physicalUri(), policyRoute.physicalUri());
+        } catch (RuntimeException invalid) { throw managedUnavailable(); }
+    }
+
+    String authorizeManaged(ManagedAuthorization bound, Duration remaining) {
+        var token = serviceClient.authorizeBounded(bound.request(), bound.issuer(), remaining);
+        if (token == null || !org.springframework.security.oauth2.core.OAuth2AccessToken.TokenType.BEARER.equals(token.getTokenType())
+                || token.getExpiresAt() == null || !token.getExpiresAt().isAfter(Instant.now())
+                || !token.getScopes().containsAll(bound.request().scopes())
+                || token.getTokenValue() == null || token.getTokenValue().length() > 16_384
+                || !token.getTokenValue().matches("[A-Za-z0-9._~+/-]+=*")) throw managedUnavailable();
+        return token.getTokenValue();
+    }
+
+    record ManagedAuthorization(IdpServiceTokenRequest request, String issuer, URI snapshots, URI policies) {
+        @Override public String toString() { return "ManagedAuthorization[redacted]"; }
+    }
+
+    private static IllegalStateException managedUnavailable() {
+        return new IllegalStateException("TIANQUAN_JIANSHEN_MANAGED_TRANSPORT_UNAVAILABLE");
     }
 
     /**

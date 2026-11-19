@@ -26,6 +26,7 @@ import top.egon.cola.component.common.desensitize.strategy.SensitiveStrategyRegi
 import top.egon.cola.platform.tianquan.shoubing.starter.autoconfigure.IdpStarterAutoConfiguration;
 import top.egon.cola.platform.tianquan.shoubing.starter.autoconfigure.IdpStarterProperties;
 import top.egon.cola.platform.tianquan.shoubing.starter.client.IdpServiceOAuth2Client;
+import top.egon.cola.platform.tianquan.shoubing.starter.client.IdpTransportBindingRegistry;
 import top.egon.cola.platform.tianquan.shoubing.starter.security.IdpJwtVerifier;
 import top.egon.cola.platform.tianquan.jianshen.starter.authorization.AuthorizationService;
 import top.egon.cola.platform.tianquan.jianshen.starter.authorization.DefaultAuthorizationService;
@@ -232,7 +233,8 @@ public class Rbac3StarterAutoConfiguration {
             ObjectMapper objectMapper,
             Rbac3StarterProperties properties,
             IdpServiceOAuth2Client serviceClient,
-            @Qualifier("idpStarterProperties") IdpStarterProperties idpProperties) {
+            @Qualifier("idpStarterProperties") IdpStarterProperties idpProperties,
+            @Qualifier("idpTransportBindingRegistry") ObjectProvider<IdpTransportBindingRegistry> transportBindings) {
         var authorization = properties.getAuthorization();
         var serviceToken = authorization.getServiceToken();
         HttpTenantServiceTokenSupplier credentials =
@@ -245,11 +247,13 @@ public class Rbac3StarterAutoConfiguration {
                         )),
                         scopes(serviceToken.getScopes())
                 );
+        URI endpoint = URI.create(required(authorization.getEndpoint(), "authorization.endpoint"));
+        if (authorization.isRequireManagedTransport()) {
+            return new HttpRbac3AuthorizationClient(endpoint, credentials, authorization.getFetchTimeout(), objectMapper,
+                    required(properties.getSystemCode(), "systemCode"), transportBindings.getObject());
+        }
         return new HttpRbac3AuthorizationClient(
-                URI.create(required(
-                        authorization.getEndpoint(),
-                        "authorization.endpoint"
-                )),
+                endpoint,
                 credentials,
                 authorization.getFetchTimeout(),
                 objectMapper

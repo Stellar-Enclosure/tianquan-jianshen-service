@@ -15,12 +15,17 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Objects;
+import top.egon.cola.platform.tianquan.shoubing.starter.client.IdpTransportBindingRegistry;
 
 /**
  * Fetches USER authorization snapshots with two explicit credentials.
  */
 public final class HttpRbac3AuthorizationClient implements Rbac3AuthorizationClient {
+    private static final String SNAPSHOTS_PATH = "/internal/v1/authorization/snapshots/current";
+    private static final String POLICIES_PATH = "/internal/v1/authorization/policies/current";
     private final URI endpoint;
+    private final String expectedSystemCode;
+    private final IdpTransportBindingRegistry bindings;
     private final HttpTenantServiceTokenSupplier serviceTokens;
     private final Duration timeout;
     private final ObjectMapper objectMapper;
@@ -38,11 +43,35 @@ public final class HttpRbac3AuthorizationClient implements Rbac3AuthorizationCli
                                  Duration timeout,
                                  ObjectMapper objectMapper,
                                  Transport transport) {
+        this(endpoint, serviceTokens, timeout, objectMapper, null, null, transport);
+    }
+
+    /** Native deployments retain canonical HTTPS identity while requiring two exact internal GET routes. */
+    public HttpRbac3AuthorizationClient(URI endpoint, HttpTenantServiceTokenSupplier serviceTokens,
+            Duration timeout, ObjectMapper objectMapper, String expectedSystemCode,
+            IdpTransportBindingRegistry bindings) {
+        this(endpoint, serviceTokens, timeout, objectMapper, Objects.requireNonNull(expectedSystemCode, "expectedSystemCode"),
+                Objects.requireNonNull(bindings, "bindings"), new JdkTransport(timeout));
+    }
+
+    HttpRbac3AuthorizationClient(URI endpoint, HttpTenantServiceTokenSupplier serviceTokens,
+            Duration timeout, ObjectMapper objectMapper, String expectedSystemCode,
+            IdpTransportBindingRegistry bindings, Transport transport) {
         this.endpoint = secureEndpoint(endpoint);
         this.serviceTokens = Objects.requireNonNull(serviceTokens, "serviceTokens");
         this.timeout = bounded(timeout);
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper");
         this.transport = Objects.requireNonNull(transport, "transport");
+        this.expectedSystemCode = expectedSystemCode;
+        this.bindings = bindings;
+        if (expectedSystemCode != null || bindings != null) {
+            if (expectedSystemCode == null || expectedSystemCode.isBlank() || expectedSystemCode.length() > 128
+                    || expectedSystemCode.codePoints().anyMatch(Character::isISOControl) || bindings == null
+                    || !"https".equals(endpoint.getScheme()) || endpoint.getHost() == null
+                    || endpoint.getRawUserInfo() != null || endpoint.getRawQuery() != null || endpoint.getRawFragment() != null
+                    || !endpoint.normalize().equals(endpoint)) throw new IllegalArgumentException("TIANQUAN_JIANSHEN_MANAGED_TRANSPORT_INVALID");
+            serviceTokens.requireManagedTransport(endpoint.resolve(SNAPSHOTS_PATH), endpoint.resolve(POLICIES_PATH), bindings);
+        }
     }
 
     @Override
@@ -59,11 +88,8 @@ public final class HttpRbac3AuthorizationClient implements Rbac3AuthorizationCli
             String userAccessToken) throws InterruptedException {
         Objects.requireNonNull(principal, "principal");
         String userToken = requiredUserToken(userAccessToken);
-        String serviceToken = serviceTokens.apply(principal.tenantId());
-        URI uri = endpoint.resolve("/internal/v1/authorization/snapshots/current?systemCode="
-                + encode(systemCode));
         try {
-            HttpResponse response = transport.get(uri, serviceToken, userToken, timeout);
+            HttpResponse response = get(systemCode, principal.tenantId(), userToken, true);
             if (response.statusCode() == 401 || response.statusCode() == 403 || response.statusCode() == 404) {
                 throw new AuthorizationDeniedException("TIANQUAN_JIANSHEN_AUTHORIZATION_DENIED");
             }
@@ -78,7 +104,7 @@ public final class HttpRbac3AuthorizationClient implements Rbac3AuthorizationCli
         } catch (AuthorizationDeniedException | AuthorizationUnavailableException exception) {
             throw exception;
         } catch (IOException | RuntimeException exception) {
-            throw new AuthorizationUnavailableException("TIANQUAN_JIANSHEN_AUTHORIZATION_UNAVAILABLE", exception);
+            throw new AuthorizationUnavailableException("TIANQUAN_JIANSHEN_AUTHORIZATION_UNAVAILABLE", bindings == null ? exception : null);
         }
     }
 
@@ -86,9 +112,8 @@ public final class HttpRbac3AuthorizationClient implements Rbac3AuthorizationCli
     public top.egon.cola.platform.tianquan.jianshen.contract.authorization.ServicePolicySnapshot fetchPolicy(String systemCode,
             top.egon.cola.platform.tianquan.shoubing.contract.ServiceIdentityPrincipal caller) throws InterruptedException {
         if (caller == null || caller.tenantId() == null) throw new AuthorizationDeniedException("SERVICE_IDENTITY_DENIED");
-        URI uri = endpoint.resolve("/internal/v1/authorization/policies/current?systemCode=" + encode(systemCode));
         try {
-            HttpResponse response = transport.get(uri, serviceTokens.apply(caller.tenantId()), null, timeout);
+            HttpResponse response = get(systemCode, caller.tenantId(), null, false);
             if (response.statusCode() == 401 || response.statusCode() == 403) throw new AuthorizationDeniedException("SERVICE_POLICY_DENIED");
             if (response.statusCode() != 200) throw new AuthorizationUnavailableException("SERVICE_POLICY_RUNTIME_UNAVAILABLE");
             JsonNode data = objectMapper.readTree(response.body()).get("data");
@@ -99,7 +124,7 @@ public final class HttpRbac3AuthorizationClient implements Rbac3AuthorizationCli
             }
             return policy;
         } catch (AuthorizationDeniedException | AuthorizationUnavailableException known) { throw known; }
-        catch (IOException | RuntimeException failed) { throw new AuthorizationUnavailableException("SERVICE_POLICY_RUNTIME_UNAVAILABLE", failed); }
+        catch (IOException | RuntimeException failed) { throw new AuthorizationUnavailableException("SERVICE_POLICY_RUNTIME_UNAVAILABLE", bindings == null ? failed : null); }
     }
 
     @Override
@@ -111,10 +136,8 @@ public final class HttpRbac3AuthorizationClient implements Rbac3AuthorizationCli
         try { Long.parseLong(verifiedServiceTenant); }
         catch (NumberFormatException invalid) { throw new AuthorizationDeniedException("DELEGATED_TENANT_INVALID"); }
         String userToken = requiredUserToken(userAccessToken);
-        String serviceToken = serviceTokens.apply(verifiedServiceTenant);
-        URI uri = endpoint.resolve("/internal/v1/authorization/snapshots/current?systemCode=" + encode(systemCode));
         try {
-            HttpResponse response = transport.get(uri, serviceToken, userToken, timeout);
+            HttpResponse response = get(systemCode, verifiedServiceTenant, userToken, true);
             if (response.statusCode() == 401 || response.statusCode() == 403 || response.statusCode() == 404) {
                 throw new AuthorizationDeniedException("TIANQUAN_JIANSHEN_AUTHORIZATION_DENIED");
             }
@@ -131,7 +154,30 @@ public final class HttpRbac3AuthorizationClient implements Rbac3AuthorizationCli
             }
             return snapshot;
         } catch (AuthorizationDeniedException | AuthorizationUnavailableException known) { throw known; }
-        catch (IOException | RuntimeException failed) { throw new AuthorizationUnavailableException("TIANQUAN_JIANSHEN_AUTHORIZATION_UNAVAILABLE", failed); }
+        catch (IOException | RuntimeException failed) { throw new AuthorizationUnavailableException("TIANQUAN_JIANSHEN_AUTHORIZATION_UNAVAILABLE", bindings == null ? failed : null); }
+    }
+
+    private HttpResponse get(String systemCode, String tenantId, String userToken, boolean snapshot)
+            throws IOException, InterruptedException {
+        if (bindings == null) {
+            URI target = endpoint.resolve((snapshot ? SNAPSHOTS_PATH : POLICIES_PATH) + "?systemCode=" + encode(systemCode));
+            return transport.get(target, serviceTokens.apply(tenantId), userToken, timeout);
+        }
+        if (!expectedSystemCode.equals(systemCode)) {
+            throw new AuthorizationDeniedException("TIANQUAN_JIANSHEN_AUTHORIZATION_BINDING_MISMATCH");
+        }
+        long started = System.nanoTime();
+        var bound = serviceTokens.prepareManaged(tenantId, endpoint.resolve(SNAPSHOTS_PATH), endpoint.resolve(POLICIES_PATH), bindings);
+        String serviceToken = serviceTokens.authorizeManaged(bound, remaining(started));
+        URI fixed = snapshot ? bound.snapshots() : bound.policies();
+        URI target = URI.create(fixed.toASCIIString() + "?systemCode=" + encode(expectedSystemCode));
+        return transport.get(target, serviceToken, userToken, remaining(started));
+    }
+
+    private Duration remaining(long started) {
+        long left = timeout.toNanos() - (System.nanoTime() - started);
+        if (left <= 0) throw new AuthorizationUnavailableException("TIANQUAN_JIANSHEN_AUTHORIZATION_UNAVAILABLE");
+        return Duration.ofNanos(left);
     }
 
     private static String requiredUserToken(String value) {
@@ -179,6 +225,9 @@ public final class HttpRbac3AuthorizationClient implements Rbac3AuthorizationCli
     static HttpRequest request(URI uri, String serviceToken, String userToken, Duration timeout) {
         HttpRequest.Builder builder = HttpRequest.newBuilder(uri).timeout(timeout)
                 .header("Accept", "application/json").header("Authorization", "Bearer " + serviceToken);
+        if ("http".equalsIgnoreCase(uri.getScheme())) {
+            builder.version(HttpClient.Version.HTTP_1_1);
+        }
         if (userToken != null) builder.header("X-Egon-Subject-Token", userToken);
         var trace = top.egon.cola.component.common.trace.TraceContext.capture();
         if (trace.traceId() != null) trace.child().inject(builder::header);
@@ -189,7 +238,7 @@ public final class HttpRbac3AuthorizationClient implements Rbac3AuthorizationCli
         private final HttpClient client;
 
         private JdkTransport(Duration timeout) {
-            client = HttpClient.newBuilder().connectTimeout(timeout)
+            client = HttpClient.newBuilder().proxy(HttpClient.Builder.NO_PROXY).connectTimeout(timeout)
                     .followRedirects(HttpClient.Redirect.NEVER).build();
         }
 

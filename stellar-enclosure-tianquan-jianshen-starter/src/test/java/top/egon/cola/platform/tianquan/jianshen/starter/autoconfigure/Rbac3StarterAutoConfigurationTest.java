@@ -122,6 +122,62 @@ class Rbac3StarterAutoConfigurationTest {
                         top.egon.cola.platform.tianquan.shoubing.starter.autoconfigure.IdpStarterProperties::new)
                 .run(context->assertThat(context).hasNotFailed().hasSingleBean(Rbac3AuthorizationClient.class));
     }
+    @Test void managedAuthorizationCannotStartWithoutItsNamedTransportRegistry(){
+        configured(false).withPropertyValues("egon.cola.platform.tianquan.jianshen.authorization.service-token.enabled=true",
+                        "egon.cola.platform.tianquan.jianshen.authorization.service-token.resource-uri=https://api.example/permission",
+                        "egon.cola.platform.tianquan.jianshen.authorization.service-token.scopes=service:authorization:snapshot,service:authorization:policy",
+                        "egon.cola.platform.tianquan.jianshen.authorization.endpoint=https://api.example/authorization",
+                        "egon.cola.platform.tianquan.jianshen.authorization.require-managed-transport=true")
+                .withBean("idpServiceOAuth2Client",top.egon.cola.platform.tianquan.shoubing.starter.client.IdpServiceOAuth2Client.class,
+                        ()->mock(top.egon.cola.platform.tianquan.shoubing.starter.client.IdpServiceOAuth2Client.class))
+                .withBean("idpStarterProperties",top.egon.cola.platform.tianquan.shoubing.starter.autoconfigure.IdpStarterProperties.class,
+                        top.egon.cola.platform.tianquan.shoubing.starter.autoconfigure.IdpStarterProperties::new)
+                .withBean("anotherIdpProperties",top.egon.cola.platform.tianquan.shoubing.starter.autoconfigure.IdpStarterProperties.class,
+                        top.egon.cola.platform.tianquan.shoubing.starter.autoconfigure.IdpStarterProperties::new)
+                .run(context->assertThat(context).hasFailed());
+    }
+    @Test void managedAuthorizationAssemblesOnlyWithTheNamedExactRegistryAndDoesNotAcquireTokensAtStartup() {
+        for (String registryName : List.of("idpTransportBindingRegistry", "unrelatedTransportRegistry")) {
+            var oauth = mock(top.egon.cola.platform.tianquan.shoubing.starter.client.IdpServiceOAuth2Client.class);
+            org.mockito.Mockito.when(oauth.authorizationKey(org.mockito.ArgumentMatchers.any())).thenAnswer(call ->
+                    top.egon.cola.platform.tianquan.shoubing.starter.client.ServiceAuthorizationKey.from(call.getArgument(0),
+                            "https://idp.example/20", "caller", 1L));
+            var identity = new top.egon.cola.platform.tianquan.shoubing.starter.autoconfigure.IdpStarterProperties();
+            var service = identity.getServiceClient(); service.setAppId("shop-app"); service.setRegistrationId("shop-registration");
+            service.setCredentialVersions(Map.of("shop-registration", 1L)); service.setTenantRegistrationIds(Map.of("20", "shop-registration"));
+            var routes = new ArrayList<top.egon.cola.platform.tianquan.shoubing.starter.client.IdpTransportBindingVO>();
+            for (String operation : List.of("snapshots", "policies")) {
+                String path = "/internal/v1/authorization/" + operation + "/current";
+                routes.add(new top.egon.cola.platform.tianquan.shoubing.starter.client.IdpTransportBindingVO(operation, 7L,
+                        java.net.URI.create("https://idp.example/20"), java.net.URI.create("https://api.example" + path),
+                        java.net.URI.create("https://api.example/permission"), "shop-registration",
+                        top.egon.cola.platform.tianquan.shoubing.starter.client.IdpTransportBindingVO.Operation.RESOURCE,
+                        "GET", path, "auth-system", "jianshen", 8080,
+                        top.egon.cola.platform.tianquan.shoubing.starter.client.IdpTransportBindingVO.Transport.HTTP));
+            }
+            var registry = new top.egon.cola.platform.tianquan.shoubing.starter.client.IdpTransportBindingRegistry(routes);
+            configured(false).withPropertyValues("egon.cola.platform.tianquan.jianshen.authorization.service-token.enabled=true",
+                            "egon.cola.platform.tianquan.jianshen.authorization.service-token.resource-uri=https://api.example/permission",
+                            "egon.cola.platform.tianquan.jianshen.authorization.service-token.scopes=service:authorization:snapshot,service:authorization:policy",
+                            "egon.cola.platform.tianquan.jianshen.authorization.endpoint=https://api.example/authorization",
+                            "egon.cola.platform.tianquan.jianshen.authorization.require-managed-transport=true")
+                    .withBean("idpServiceOAuth2Client", top.egon.cola.platform.tianquan.shoubing.starter.client.IdpServiceOAuth2Client.class, () -> oauth)
+                    .withBean("idpStarterProperties", top.egon.cola.platform.tianquan.shoubing.starter.autoconfigure.IdpStarterProperties.class, () -> identity)
+                    .withBean("unrelatedIdentityProperties", top.egon.cola.platform.tianquan.shoubing.starter.autoconfigure.IdpStarterProperties.class,
+                            top.egon.cola.platform.tianquan.shoubing.starter.autoconfigure.IdpStarterProperties::new)
+                    .withBean(registryName, top.egon.cola.platform.tianquan.shoubing.starter.client.IdpTransportBindingRegistry.class, () -> registry)
+                    .run(context -> {
+                        if (registryName.equals("idpTransportBindingRegistry")) {
+                            assertThat(context).hasNotFailed().hasSingleBean(Rbac3AuthorizationClient.class);
+                            assertThat(context.getBean(Rbac3StarterProperties.class).getAuthorization().isRequireManagedTransport()).isTrue();
+                        } else assertThat(context).hasFailed();
+                    });
+            org.mockito.Mockito.verify(oauth, org.mockito.Mockito.never()).authorize(org.mockito.ArgumentMatchers.any());
+            org.mockito.Mockito.verify(oauth, org.mockito.Mockito.never()).authorizeBounded(org.mockito.ArgumentMatchers.any(),
+                    org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any());
+        }
+    }
+
     @Test void consumerAuthorizationServiceRemainsAnExistingExtensionPoint(){
         var consumer=mock(AuthorizationService.class);
         configured(true).withBean(AuthorizationService.class,()->consumer).run(context->{
