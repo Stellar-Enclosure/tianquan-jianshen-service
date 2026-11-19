@@ -46,6 +46,7 @@ class PermissionProducerCoverageTest {
             "top.egon.cola.platform.tianquan.jianshen.contract.authorization.DataScopeDecision",
             "top.egon.cola.platform.tianquan.jianshen.contract.authorization.ExecutionAuthorizationContract$Decision",
             "top.egon.cola.platform.tianquan.jianshen.contract.authorization.ExecutionAuthorizationContract$Request",
+            "top.egon.cola.platform.tianquan.jianshen.contract.authorization.ExecutionScopeAuthorizationContract$Decision",
             "top.egon.cola.platform.tianquan.jianshen.contract.authorization.ServiceExecutionAuthorizationContract$Decision",
             "top.egon.cola.platform.tianquan.jianshen.contract.authorization.ServiceExecutionAuthorizationContract$Request",
             "top.egon.cola.platform.tianquan.jianshen.contract.authorization.FieldPolicyDecision",
@@ -113,7 +114,7 @@ class PermissionProducerCoverageTest {
                 }
             }
         }
-        assertThat(apiKeys).hasSize(111);
+        assertThat(apiKeys).hasSize(112).contains("tianquan-jianshen.api.runtime.executionGrantScopes");
         assertThat(fields).hasSize(620);
         assertThat(resources.values().stream().filter(value -> value.type() == ResourceType.API)
                 .map(PermissionManifest.ResourceDefinition::key).toList()).containsExactlyInAnyOrderElementsOf(apiKeys);
@@ -123,7 +124,8 @@ class PermissionProducerCoverageTest {
     }
 
     private List<Class<?>> explicitInputs(Class<?> controller, Method method) {
-        if (controller.getSimpleName().equals("ExecutionGrantAuthorizationController") && method.getName().equals("decide")) {
+        if (controller.getSimpleName().equals("ExecutionGrantAuthorizationController")
+                && Set.of("decide", "decideScopes").contains(method.getName())) {
             return List.of(top.egon.cola.platform.tianquan.jianshen.contract.authorization.ExecutionAuthorizationContract.Request.class);
         }
         if (controller.getSimpleName().equals("ServiceExecutionGrantAuthorizationController") && method.getName().equals("decide")) {
