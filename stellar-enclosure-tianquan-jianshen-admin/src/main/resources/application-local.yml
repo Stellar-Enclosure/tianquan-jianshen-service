@@ -1,4 +1,7 @@
 spring:
+  config:
+    import:
+      - optional:file:${UNIFIED_XINGYUAN_RUNTIME_DIR:target/local-unified-xingyuan}/env/tianquan-jianshen.properties
   datasource:
     url: ${TIANQUAN_JIANSHEN_POSTGRES_URL:jdbc:postgresql://127.0.0.1:5432/egon_rbac3_unified_identity_local}
     username: ${TIANQUAN_JIANSHEN_POSTGRES_USER:postgres}
@@ -29,6 +32,10 @@ management:
 egon.cola.platform:
   tianquan:
     shoubing:
+      rpc:
+        enabled: ${TIANQUAN_JIANSHEN_RPC_CONSUMER_ENABLED:false}
+        consumer:
+          enabled: ${TIANQUAN_JIANSHEN_RPC_CONSUMER_ENABLED:false}
       usage-observation:
         receiver: JIANSHEN
         enabled: true
@@ -110,17 +117,15 @@ egon.cola.platform:
 
 egon:
   tianquan-jianshen:
+    logical-catalog:
+      enabled: ${TIANQUAN_JIANSHEN_LOGICAL_CATALOG_ENABLED:false}
+      origin: ${TIANQUAN_JIANSHEN_LOGICAL_CATALOG_ORIGIN:http://tianshu-admin-http.platform-local.svc.cluster.local:18080}
     development-bootstrap:
       enabled: ${TIANQUAN_JIANSHEN_DEVELOPMENT_BOOTSTRAP_ENABLED:false}
       auto-activate-local-admin-roles: ${TIANQUAN_JIANSHEN_DEVELOPMENT_AUTO_ACTIVATE_LOCAL_ADMIN_ROLES:false}
       tenant-ids: ${TIANQUAN_JIANSHEN_DEVELOPMENT_TENANT_IDS:}
       identity-sub: ${TIANQUAN_JIANSHEN_DEVELOPMENT_IDENTITY_SUB:}
     component-keys: ${TIANQUAN_JIANSHEN_COMPONENT_KEYS:tianquan-jianshen-page}
-    yuheng-status:
-      admin-base-url: ${YUHENG_ADMIN_BASE_URL:http://localhost:8088}
-      yuheng-group-id: ${YUHENG_GROUP_ID:local}
-      release-id: ${YUHENG_RELEASE_ID:local}
-      oauth-token-file: ${YUHENG_STATUS_OAUTH_TOKEN_FILE:build/local-yuheng-status-token.json}
     security:
       audit-cursor-secret-file: ${TIANQUAN_JIANSHEN_AUDIT_CURSOR_SECRET_FILE:build/local-audit-secret}
   cola:
@@ -128,32 +133,18 @@ egon:
       id:
         machine-id: ${TIANQUAN_JIANSHEN_SNOWFLAKE_MACHINE_ID:0}
       rpc:
-        tls:
-          enabled: false
-          development-plaintext: true
-        provider:
-          bind-address: 127.0.0.1
-      tianshu:
-        tenant-id: ${TIANSHU_TENANT_ID:}
-        enabled: ${TIANQUAN_JIANSHEN_TIANSHU_ENABLED:false}
-        env: local
-        rpc:
-          target: ${TIANSHU_RPC_TARGET:dns:///127.0.0.1:19080}
-          tls:
-            enabled: false
-            development-plaintext: ${TIANSHU_RPC_DEVELOPMENT_PLAINTEXT:true}
-        redis:
-          username: ${TIANSHU_REDIS_USERNAME:}
-          password: ${TIANSHU_REGISTRY_REDIS_PASSWORD:HomeLab666}
-        registry:
-          enabled: ${TIANQUAN_JIANSHEN_TIANSHU_ENABLED:false}
-          http:
-            enabled: ${TIANQUAN_JIANSHEN_HTTP_PROVIDER_ENABLED:false}
-            port: 0
+        identity:
+          env: ${DEPLOYMENT_ENV:local}
+          host: ${TIANQUAN_JIANSHEN_ADVERTISED_HOST:127.0.0.1}
+          instance-id: ${TIANQUAN_JIANSHEN_INSTANCE_ID:tianquan-jianshen-local}
+        consumer:
+          enabled: ${TIANQUAN_JIANSHEN_RPC_CONSUMER_ENABLED:false}
+          bindings:
+            shoubing-identity-directory:
+              namespace: ${TIANQUAN_SHOUBING_RPC_SERVICE_NAMESPACE:permission-local}
       yuheng:
         openapi:
           enabled: ${TIANQUAN_JIANSHEN_OPENAPI_ENABLED:true}
-          publish-to-tianshu: ${TIANQUAN_JIANSHEN_OPENAPI_PUBLISH_TO_TIANSHU:true}
           published-groups:
             - iam
           biz-code: ${TIANQUAN_JIANSHEN_OPENAPI_BIZ_CODE:${TIANQUAN_JIANSHEN_RESOURCE_BIZ_CODE:permission}}

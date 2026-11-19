@@ -45,6 +45,7 @@ public class Rbac3AdminApplication {
         if (isBootstrapCommand(args)) {
             SpringApplication application = new SpringApplication(Rbac3AdminApplication.class);
             application.setWebApplicationType(WebApplicationType.NONE);
+            application.setAdditionalProfiles("rbac3-platform-bootstrap");
             application.addInitializers(context -> context.getEnvironment()
                     .getPropertySources()
                     .addFirst(new MapPropertySource(
@@ -86,7 +87,8 @@ public class Rbac3AdminApplication {
         return Map.of(
                 "egon.cola.component.tianshu.enabled", false,
                 "egon.cola.component.yuheng.reporting.enabled", false,
-                "egon.cola.component.tianshu.registry.http.enabled", false,
+                "egon.cola.component.tianshu.delivery.enabled", false,
+                "egon.tianquan-jianshen.logical-catalog.enabled", false,
                 "egon.cola.component.transactional-outbox.polling.enabled", false,
                 "management.endpoint.health.validate-group-membership", false);
     }

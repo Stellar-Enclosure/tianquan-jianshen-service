@@ -1,56 +1,10 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.config.runtime;
 
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.domain.vo.BusinessCatalogEntry;
-
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.domain.vo.ApplicationCatalogEntry;
-
-import io.micrometer.core.instrument.MeterRegistry;
-import jakarta.validation.Validator;
-import org.redisson.api.RedissonClient;
-import org.redisson.spring.starter.RedissonAutoConfigurationV4;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.boot.micrometer.metrics.autoconfigure.MetricsAutoConfiguration;
-import org.springframework.boot.micrometer.metrics.autoconfigure.export.simple.SimpleMetricsExportAutoConfiguration;
-import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
-import org.springframework.boot.security.oauth2.client.autoconfigure.OAuth2ClientAutoConfiguration;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.context.annotation.Primary;
-import org.springframework.context.annotation.Profile;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
-import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
-import top.egon.cola.component.common.core.validation.ValidationUtils;
-import top.egon.cola.component.rpc.provider.registration.RpcLeaseOperationResult;
-import top.egon.cola.component.rpc.provider.registration.RpcProviderLease;
-import top.egon.cola.component.rpc.provider.registration.RpcProviderLeaseIdentity;
-import top.egon.cola.component.rpc.provider.registration.RpcProviderRegistration;
-import top.egon.cola.component.rpc.provider.registration.RpcProviderRegistry;
-import top.egon.cola.component.rpc.tianshu.autoconfigure.DdcRpcAutoConfiguration;
-import top.egon.cola.component.rpc.tianshu.client.registry.RpcDdcServiceRegistryClient;
-import top.egon.cola.component.rpc.tianshu.registry.RpcDdcRegistrySnapshotLoader;
-import top.egon.cola.component.tianshu.api.client.DdcServiceRegistryClient;
-import top.egon.cola.component.tianshu.listener.registry.DdcRegistrySubscriptionCoordinator;
-import top.egon.cola.platform.tianquan.shoubing.core.observability.IdpSecurityMetricsRecorder;
-import top.egon.cola.platform.tianquan.shoubing.starter.audit.OAuthUsageObservationProperties;
-import top.egon.cola.platform.tianquan.shoubing.starter.autoconfigure.IdpStarterAutoConfiguration;
-import top.egon.cola.platform.tianquan.shoubing.starter.autoconfigure.IdpStarterProperties;
-import top.egon.cola.platform.tianquan.shoubing.starter.client.IdpClientCredentialsRequestEntityConverter;
-import top.egon.cola.platform.tianquan.shoubing.starter.client.IdpServiceOAuth2Client;
-import top.egon.cola.platform.tianquan.shoubing.starter.observability.IdpSecurityMetricsComponent;
-import top.egon.cola.platform.tianquan.shoubing.starter.security.TrustedIssuerRegistry;
-import top.egon.cola.platform.tianquan.shoubing.starter.state.IdentityAuthorityProperties;
-import top.egon.cola.platform.tianquan.shoubing.starter.security.rpc.IdpRpcClientCredentialInterceptorFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.transaction.support.TransactionTemplate;
 import top.egon.cola.component.common.id.snowflake.SnowflakeIdGenerator;
-import top.egon.cola.component.tianshu.api.client.DdcManagementClient;
-import top.egon.cola.component.rpc.tianshu.client.DdcRpcClientFactory;
-import top.egon.cola.component.rpc.tianshu.client.DdcRpcClientHandle;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.activation.repository.jpa.JpaRoleActivationFactRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.activation.repository.jpa.JpaUserActiveRoleRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.activation.service.RoleActivationCandidateService;
@@ -76,7 +30,6 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.parti
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.participation.service.ParticipationFacade;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.BusinessCatalogService;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.repository.DdcCatalogGateway;
-import top.egon.cola.platform.tianquan.jianshen.admin.iam.business.service.RpcDdcCatalogGateway;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.business.service.UserBusinessAccessFacade;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.business.repository.UserBusinessAccessRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.application.service.TenantApplicationFacade;
@@ -109,7 +62,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
-import java.util.List;
 
 /**
  * 类型 `Rbac3ApplicationConfiguration` 位于当前包内，是类型，用于承载 `Rbac3 Application Configuration` 相关的职责、状态或契约；调用方通常通过其公开 API、Spring 装配或实现关系使用。
@@ -118,6 +70,7 @@ import java.util.List;
  */
 @lombok.extern.slf4j.Slf4j
 @Configuration(value = "rbac3ApplicationConfiguration", proxyBeanMethods = false)
+@Import(Rbac3LogicalCatalogConfiguration.class)
 public class Rbac3ApplicationConfiguration {
 
     /**
@@ -381,56 +334,6 @@ public class Rbac3ApplicationConfiguration {
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
 
-    @Bean(name = "rbac3DdcManagementClientHandle", destroyMethod = "close")
-    @ConditionalOnProperty(
-            prefix = "egon.cola.component.tianshu",
-            name = "enabled",
-            havingValue = "true")
-    DdcRpcClientHandle<DdcManagementClient> rbac3DdcManagementClientHandle(
-            DdcRpcClientFactory factory) {
-        return factory.managementClient();
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-            prefix = "egon.cola.component.tianshu",
-            name = "enabled",
-            havingValue = "true")
-    DdcCatalogGateway rbac3DdcCatalogGateway(
-            DdcRpcClientHandle<DdcManagementClient> handle) {
-        return new RpcDdcCatalogGateway(handle.client());
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(DdcCatalogGateway.class)
-    DdcCatalogGateway unavailableDdcCatalogGateway() {
-        return new DdcCatalogGateway() {
-            @Override
-            public java.util.Optional<top.egon.cola.platform.tianquan.jianshen.admin.iam.business.domain.vo.BusinessCatalogEntry>
-                    findBusiness(String ddcBusinessId) {
-                return java.util.Optional.empty();
-            }
-
-            @Override
-            public java.util.List<top.egon.cola.platform.tianquan.jianshen.admin.iam.business.domain.vo.BusinessCatalogEntry>
-                    listBusinesses(String keyword) {
-                return java.util.List.of();
-            }
-
-            @Override
-            public java.util.Optional<top.egon.cola.platform.tianquan.jianshen.admin.iam.business.domain.vo.ApplicationCatalogEntry>
-                    findApplication(String ddcApplicationId) {
-                return java.util.Optional.empty();
-            }
-
-            @Override
-            public java.util.List<top.egon.cola.platform.tianquan.jianshen.admin.iam.business.domain.vo.ApplicationCatalogEntry>
-                    listApplications(String ddcBusinessId, String keyword) {
-                return java.util.List.of();
-            }
-        };
-    }
-
     @Bean
     BusinessCatalogService businessCatalogService(DdcCatalogGateway catalog) {
         return new BusinessCatalogService(catalog);
@@ -655,154 +558,6 @@ public class Rbac3ApplicationConfiguration {
             JpaAuthorizationMutationRepository mutations,
             AuthorizationMutationRecoveryService recovery) {
         return new RuntimeQueryService(status, mutations, recovery);
-    }
-
-    @Bean("ddcCatalogGateway")
-    @Primary
-    @ConditionalOnMissingBean(name = "ddcCatalogGateway")
-    DdcCatalogGateway namedCatalogGateway(ConfigurableListableBeanFactory beans) {
-        var candidates = java.util.Arrays.stream(beans.getBeanNamesForType(DdcCatalogGateway.class, false, false))
-                .filter(name -> !name.equals("ddcCatalogGateway")).toList();
-        if (candidates.size() != 1) { throw new IllegalStateException("Exactly one existing DDC catalog gateway is required"); }
-        return beans.getBean(candidates.getFirst(), DdcCatalogGateway.class);
-    }
-
-    /** Client-only dependencies: use existing OAuth and read-only registry adapters, never register this process as a provider. */
-    @lombok.extern.slf4j.Slf4j
-    @Configuration(value = "rbac3CatalogClientConfiguration", proxyBeanMethods = false)
-    @Profile("rbac3-catalog-command")
-    @ConditionalOnProperty(prefix = "egon.cola.component.rpc.consumer", name = "enabled", havingValue = "true")
-    @ImportAutoConfiguration({
-            OAuth2ClientAutoConfiguration.class,
-            RedissonAutoConfigurationV4.class,
-            MetricsAutoConfiguration.class,
-            SimpleMetricsExportAutoConfiguration.class})
-    public static class CatalogClientConfiguration {
-        @Bean("catalogForbiddenProviderRegistry")
-        RpcProviderRegistry forbiddenProviderRegistry() {
-            return new CommandProviderRegistrationDeniedStrategy();
-        }
-
-        @Bean("idpStarterProperties")
-        @Primary
-        @ConfigurationProperties("egon.cola.platform.tianquan.shoubing")
-        IdpStarterProperties properties() {
-            return new IdpStarterProperties();
-        }
-
-        @Bean("idpClock")
-        Clock clientClock() { return Clock.systemUTC(); }
-
-        @Bean("trustedIssuerRegistry")
-        TrustedIssuerRegistry trustedIssuers(
-                @Qualifier("idpStarterProperties") IdpStarterProperties properties) {
-            return new TrustedIssuerRegistry(properties);
-        }
-
-        @Bean("idpClientCredentialsRequestEntityConverter")
-        IdpClientCredentialsRequestEntityConverter credentialConverter() {
-            return new IdpStarterAutoConfiguration().idpClientCredentialsRequestEntityConverter();
-        }
-
-        @Bean("idpOAuth2AuthorizedClientService")
-        OAuth2AuthorizedClientService authorizedClients(
-                @Qualifier("clientRegistrationRepository") ClientRegistrationRepository registrations) {
-            return new IdpStarterAutoConfiguration().idpOAuth2AuthorizedClientService(registrations);
-        }
-
-        @Bean("idpOAuth2AuthorizedClientManager")
-        OAuth2AuthorizedClientManager clientManager(
-                @Qualifier("clientRegistrationRepository") ClientRegistrationRepository registrations,
-                @Qualifier("idpOAuth2AuthorizedClientService") OAuth2AuthorizedClientService clients,
-                @Qualifier("idpClientCredentialsRequestEntityConverter") IdpClientCredentialsRequestEntityConverter converter,
-                @Qualifier("idpStarterProperties") IdpStarterProperties properties,
-                @Qualifier("identityAuthorityProperties") IdentityAuthorityProperties authorityProperties) {
-            return new IdpStarterAutoConfiguration().idpOAuth2AuthorizedClientManager(registrations, clients, converter, properties, authorityProperties);
-        }
-
-        @Bean("identityAuthorityProperties")
-        @ConfigurationProperties("egon.cola.platform.tianquan.shoubing.authority")
-        IdentityAuthorityProperties authorityProperties() {
-            return new IdentityAuthorityProperties();
-        }
-
-        @Bean("oauthUsageObservationProperties")
-        OAuthUsageObservationProperties clientObservationProperties() {
-            return new OAuthUsageObservationProperties();
-        }
-
-        @Bean("idpSecurityMetricsRecorder")
-        IdpSecurityMetricsRecorder clientMetrics(
-                ObjectProvider<MeterRegistry> registries,
-                @Qualifier("defaultValidator") Validator validator,
-                @Qualifier("oauthUsageObservationProperties") OAuthUsageObservationProperties usage) {
-            new ValidationUtils(validator).validate(usage);
-            registries.getObject();
-            return new IdpSecurityMetricsComponent(registries::getObject, validator, usage);
-        }
-
-        @Bean("idpServiceOAuth2Client")
-        IdpServiceOAuth2Client serviceTokens(
-                @Qualifier("idpOAuth2AuthorizedClientManager") OAuth2AuthorizedClientManager manager,
-                @Qualifier("idpClientCredentialsRequestEntityConverter") IdpClientCredentialsRequestEntityConverter converter,
-                @Qualifier("clientRegistrationRepository") ClientRegistrationRepository registrations,
-                @Qualifier("idpOAuth2AuthorizedClientService") OAuth2AuthorizedClientService clients,
-                @Qualifier("trustedIssuerRegistry") TrustedIssuerRegistry issuers,
-                @Qualifier("idpStarterProperties") IdpStarterProperties properties,
-                @Qualifier("idpClock") Clock clock,
-                @Qualifier("idpSecurityMetricsRecorder") IdpSecurityMetricsRecorder metrics) {
-            return IdpServiceOAuth2Client.createConfigured(manager, converter, clock,
-                    properties.getServiceClient().getRenewalSkew(), registrations, clients, issuers, properties,
-                    metrics);
-        }
-
-        @Bean("idpRpcClientCredentialInterceptorFactory")
-        IdpRpcClientCredentialInterceptorFactory credentials(
-                @Qualifier("idpServiceOAuth2Client") IdpServiceOAuth2Client client,
-                @Qualifier("idpStarterProperties") IdpStarterProperties properties,
-                @Qualifier("defaultValidator") Validator validator) {
-            return IdpRpcClientCredentialInterceptorFactory.createConfigured(client, properties, validator);
-        }
-
-        @Bean(name = "rbac3CatalogRegistryClientHandle", destroyMethod = "close")
-        DdcRpcClientHandle<DdcServiceRegistryClient> registryHandle(
-                @Qualifier("ddcRpcClientFactory") DdcRpcClientFactory factory) {
-            return factory.registryClient();
-        }
-
-        @Bean(name = "ddcRedissonClient", destroyMethod = "")
-        RedissonClient sharedRedis(@Qualifier("redisson") RedissonClient primary) { return primary; }
-
-        @Bean("rpcDdcRegistrySnapshotLoader")
-        RpcDdcRegistrySnapshotLoader snapshots(
-                @Qualifier("rbac3CatalogRegistryClientHandle") DdcRpcClientHandle<DdcServiceRegistryClient> handle) {
-            return new RpcDdcRegistrySnapshotLoader(
-                    (RpcDdcServiceRegistryClient) handle.client());
-        }
-
-        // The existing DdcRpcAutoConfiguration owns the read-only subscription coordinator and its close callback.
-        @Bean("ddcRpcServiceRegistryClient")
-        DdcServiceRegistryClient registry(
-                @Qualifier("rbac3CatalogRegistryClientHandle") DdcRpcClientHandle<DdcServiceRegistryClient> handle,
-                @Qualifier("ddcRpcRegistrySubscriptions") DdcRegistrySubscriptionCoordinator subscriptions) {
-            return new DdcRpcAutoConfiguration().ddcRpcServiceRegistryClient(handle, subscriptions);
-        }
-    }
-
-    @lombok.extern.slf4j.Slf4j
-    private static class CommandProviderRegistrationDeniedStrategy implements RpcProviderRegistry {
-        @Override
-        public RpcProviderLease register(RpcProviderRegistration registration) {
-            throw new IllegalStateException("Catalog command cannot publish a RPC Provider");
-        }
-        @Override
-        public RpcLeaseOperationResult heartbeat(RpcProviderLeaseIdentity lease) {
-            throw new IllegalStateException("Catalog command cannot renew a RPC Provider");
-        }
-        @Override
-        public RpcLeaseOperationResult deregister(RpcProviderLeaseIdentity lease) {
-            throw new IllegalStateException("Catalog command cannot deregister a RPC Provider");
-        }
     }
 
 }

@@ -4,12 +4,11 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.beans.factory.ObjectProvider;
-import top.egon.cola.component.tianshu.model.instance.DdcRuntimeState;
-import top.egon.cola.component.tianshu.model.lease.DdcLeaseRole;
-import top.egon.cola.component.tianshu.service.lifecycle.DdcRuntimeCoordinator;
+import lombok.extern.slf4j.Slf4j;
 import top.egon.cola.component.yuheng.starter.reporting.GatewayReportingState;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.ApplyObserver;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.tianshu.AtomicRbac3RuntimePolicy;
+import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.tianshu.DdcConfigClientStatusRepository;
 
 import java.util.Objects;
 import java.util.Set;
@@ -19,6 +18,7 @@ import java.util.Set;
  * Type `Rbac3IntegrationMetrics` is a type in its package and carries the responsibility, state, or contract for `Rbac3 Integration Metrics`; callers normally use it through its public API, Spring assembly, or implementation relationship.
  * Registers the bounded Tianquan-Jianshen Tianshu and Gateway integration metrics.
  */
+@Slf4j
 public final class Rbac3IntegrationMetrics
         implements ApplyObserver {
 
@@ -47,14 +47,7 @@ public final class Rbac3IntegrationMetrics
      * Meaning and usage: when reading, passing, or updating `policy`, preserve `Rbac3IntegrationMetrics`'s lifecycle, immutability, and thread-safety constraints.
      */
     private final AtomicRbac3RuntimePolicy policy;
-    /**
-     * 字段 `coordinator` 表示 `Rbac3IntegrationMetrics` 中与 `coordinator` 相关的状态、依赖、配置或结果（声明类型 `ObjectProvider&lt;DdcRuntimeCoordinator&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
-     * Field `coordinator` stores the `coordinator`-related state, dependency, configuration, or result of `Rbac3IntegrationMetrics` (declared type `ObjectProvider&lt;DdcRuntimeCoordinator&gt;`); its lifecycle and value semantics are defined by its declared type and owning object.
-     *
-     * 含义与用法：读取、传递或更新 `coordinator` 时应保持 `Rbac3IntegrationMetrics` 的生命周期、不可变性和线程安全约束。
-     * Meaning and usage: when reading, passing, or updating `coordinator`, preserve `Rbac3IntegrationMetrics`'s lifecycle, immutability, and thread-safety constraints.
-     */
-    private final ObjectProvider<DdcRuntimeCoordinator> coordinator;
+    private final DdcConfigClientStatusRepository configStatus;
     /**
      * 字段 `reportingState` 表示 `Rbac3IntegrationMetrics` 中与 `reporting State` 相关的状态、依赖、配置或结果（声明类型 `ObjectProvider&lt;GatewayReportingState&gt;`）；其生命周期和取值含义由声明类型及所属对象共同确定。
      * Field `reportingState` stores the `reporting State`-related state, dependency, configuration, or result of `Rbac3IntegrationMetrics` (declared type `ObjectProvider&lt;GatewayReportingState&gt;`); its lifecycle and value semantics are defined by its declared type and owning object.
@@ -73,17 +66,17 @@ public final class Rbac3IntegrationMetrics
      *
      * @param registry 输入参数 `registry`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @param policy 输入参数 `policy`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param coordinator 输入参数 `coordinator`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
+     * @param configStatus current native configuration readiness projection
      * @param reportingState 输入参数 `reportingState`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      */
     public Rbac3IntegrationMetrics(
             MeterRegistry registry,
             AtomicRbac3RuntimePolicy policy,
-            ObjectProvider<DdcRuntimeCoordinator> coordinator,
+            DdcConfigClientStatusRepository configStatus,
             ObjectProvider<GatewayReportingState> reportingState) {
         this.registry = Objects.requireNonNull(registry, "registry");
         this.policy = Objects.requireNonNull(policy, "policy");
-        this.coordinator = Objects.requireNonNull(coordinator, "coordinator");
+        this.configStatus = Objects.requireNonNull(configStatus, "configStatus");
         this.reportingState = Objects.requireNonNull(reportingState, "reportingState");
         AtomicRbac3RuntimePolicy.CONFIG_KEYS.stream().sorted().forEach(this::registerVersionGauge);
         Gauge.builder("tianquan_jianshen_tianshu_config_ready", this, Rbac3IntegrationMetrics::ready)
@@ -145,12 +138,7 @@ public final class Rbac3IntegrationMetrics
      */
     private double ready() {
         try {
-            DdcRuntimeCoordinator runtime = coordinator.getIfAvailable();
-            return runtime != null
-                    && runtime.state() == DdcRuntimeState.READY
-                    && runtime.currentSession()
-                    .filter(lease -> lease.role() == DdcLeaseRole.CONFIG_CLIENT)
-                    .isPresent() ? 1.0d : 0.0d;
+            return configStatus.ready() ? 1.0d : 0.0d;
         } catch (RuntimeException unavailable) {
             return 0.0d;
         }

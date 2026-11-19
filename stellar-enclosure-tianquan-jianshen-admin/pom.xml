@@ -91,7 +91,7 @@
         </dependency>
         <dependency>
             <groupId>top.egon</groupId>
-            <artifactId>stellar-enclosure-component-rpc-tianshu-adapter</artifactId>
+            <artifactId>stellar-enclosure-component-rpc-starter</artifactId>
         </dependency>
         <dependency>
             <groupId>top.egon</groupId>
@@ -105,7 +105,7 @@
         </dependency>
         <dependency>
             <groupId>top.egon</groupId>
-            <artifactId>stellar-enclosure-tianshu-http-registration-starter</artifactId>
+            <artifactId>stellar-enclosure-tianshu-starter</artifactId>
             <version>${stellar-enclosure.tianshu.version}</version>
         </dependency>
         <dependency>

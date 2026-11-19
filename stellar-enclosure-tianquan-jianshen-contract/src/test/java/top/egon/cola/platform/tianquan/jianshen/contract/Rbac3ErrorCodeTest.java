@@ -76,7 +76,10 @@ class Rbac3ErrorCodeTest {
                 "RATE_LIMITED",
                 "AUTH_SNAPSHOT_NOT_READY",
                 "SIGNING_KEY_UNAVAILABLE",
-                "DIRECTORY_RUNTIME_UNAVAILABLE"
+                "DIRECTORY_RUNTIME_UNAVAILABLE",
+                "IDENTITY_TENANT_MEMBERSHIP_INVALID",
+                "IDENTITY_TENANT_MEMBERSHIP_NOT_ACTIVE",
+                "IDENTITY_TENANT_MEMBERSHIP_UNAVAILABLE"
         ), codes);
     }
 
@@ -107,4 +110,10 @@ class Rbac3ErrorCodeTest {
         assertEquals(false, Rbac3ErrorCode.ACTIVE_ROLE_ROOT_LIMIT_EXCEEDED.retryable());
     }
 
+    @Test
+    void distinguishesIdentityDirectoryFailureFromBadInputAndMembershipDenial() {
+        assertEquals(400, Rbac3ErrorCode.valueOf("IDENTITY_TENANT_MEMBERSHIP_INVALID").httpStatus());
+        assertEquals(403, Rbac3ErrorCode.valueOf("IDENTITY_TENANT_MEMBERSHIP_NOT_ACTIVE").httpStatus());
+        assertEquals(503, Rbac3ErrorCode.valueOf("IDENTITY_TENANT_MEMBERSHIP_UNAVAILABLE").httpStatus());
+    }
 }

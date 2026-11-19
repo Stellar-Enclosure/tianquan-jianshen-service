@@ -1,10 +1,9 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.user.repository;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.grpc.Status;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import top.egon.cola.component.rpc.annotation.EgonRpcReference;
-import top.egon.cola.component.rpc.consumer.reference.RpcReferenceMode;
 import top.egon.cola.platform.tianquan.shoubing.rpc.contract.IdentityDirectoryRpc;
 import top.egon.cola.platform.tianquan.shoubing.rpc.contract.proto.v1.GetTenantMembershipRequest;
 import top.egon.cola.platform.tianquan.shoubing.rpc.contract.proto.v1.GetTenantMembershipResponse;
@@ -23,11 +22,9 @@ import java.util.Objects;
  * persists the Tianquan-Shoubing profile and it maps transport, missing and malformed
  * responses to stable RBAC violations.</p>
  */
-@Component
+@Slf4j
+@Component("identityTenantMembershipDirectory")
 public final class IdentityTenantMembershipDirectory {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(
-            IdentityTenantMembershipDirectory.class);
 
     private static final String NOT_ACTIVE =
             "IDENTITY_TENANT_MEMBERSHIP_NOT_ACTIVE";
@@ -37,10 +34,11 @@ public final class IdentityTenantMembershipDirectory {
             "IDENTITY_TENANT_MEMBERSHIP_INVALID";
 
     @EgonRpcReference(
-            mode = RpcReferenceMode.DIRECT,
-            bizCode = "${egon.cola.platform.tianquan.shoubing.identity-directory.biz-code:permission}",
-            appCode = "${egon.cola.platform.tianquan.shoubing.identity-directory.app-code:tianquan-shoubing}",
-            timeoutMs = 1500)
+            bindingId = "shoubing-identity-directory",
+            group = "tianquan-shoubing",
+            version = "1.0.0",
+            timeoutMs = 1500,
+            retries = -1)
     private IdentityDirectoryRpc rpc;
 
     public IdentityTenantMembershipDirectory() {
@@ -61,7 +59,7 @@ public final class IdentityTenantMembershipDirectory {
         String normalizedIdentitySub = identitySub(identitySub);
         IdentityDirectoryRpc client = rpc;
         if (client == null) {
-            LOGGER.error("Tianquan-Shoubing identity RPC reference was not injected");
+            log.error("Tianquan-Shoubing identity RPC reference was not injected");
             throw unavailable();
         }
 
@@ -72,9 +70,9 @@ public final class IdentityTenantMembershipDirectory {
                             .setTenantId(normalizedTenantId)
                             .setIdentitySub(normalizedIdentitySub)
                             .build());
-        } catch (RuntimeException unavailable) {
-            LOGGER.error("Tianquan-Shoubing tenant membership RPC call failed: clientType={}, message={}",
-                    client.getClass().getName(), unavailable.getMessage(), unavailable);
+        } catch (RuntimeException failure) {
+            log.warn("Tianquan-Shoubing tenant membership RPC failed: status={}",
+                    Status.fromThrowable(failure).getCode());
             throw unavailable();
         }
         if (response == null || !response.hasProfile()) {

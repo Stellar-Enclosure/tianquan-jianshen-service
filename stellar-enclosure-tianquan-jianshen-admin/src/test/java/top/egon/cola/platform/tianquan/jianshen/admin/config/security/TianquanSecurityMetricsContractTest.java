@@ -401,7 +401,7 @@ class TianquanSecurityMetricsContractTest {
     }
 
     @Test
-    void ownProfilesDeclareTheSameObservationAndDeliveryLeaves() throws Exception {
+    void ownProfilesKeepObservationLeavesWithoutRetiredRpcTransport() throws Exception {
         var loader = new org.springframework.boot.env.YamlPropertySourceLoader();
         String prefix = "egon.cola.platform.tianquan.shoubing.";
         for (String profile : java.util.List.of("src/main/resources/application.yml", "src/main/resources/application-local.yml", "src/test/resources/application-local-it.yml")) {
@@ -409,9 +409,9 @@ class TianquanSecurityMetricsContractTest {
             var names = new java.util.HashSet<String>();
             for (var source : sources) { names.addAll(java.util.List.of(((org.springframework.core.env.EnumerablePropertySource<?>) source).getPropertyNames())); }
             assertThat(names).as(profile).contains(prefix + "usage-observation.enabled", prefix + "usage-observation.receiver", prefix + "usage-observation.fallback-issuer",
-                    prefix + "usage-observation.allow-local-plaintext",
-                    "egon.cola.component.rpc.tls.enabled", "egon.cola.component.rpc.tls.development-plaintext",
-                    "egon.cola.component.tianshu.rpc.tls.enabled", "egon.cola.component.tianshu.rpc.tls.development-plaintext");
+                    prefix + "usage-observation.allow-local-plaintext");
+            assertThat(names).noneMatch(name -> name.startsWith("egon.cola.component.rpc.tls.")
+                    || name.startsWith("egon.cola.component.tianshu.rpc."));
             var environment = new org.springframework.mock.env.MockEnvironment()
                     .withProperty("TIANQUAN_SHOUBING_OAUTH_ISSUER", ISSUER.toASCIIString());
             for (var source : sources) { environment.getPropertySources().addLast(source); }
@@ -453,9 +453,13 @@ class TianquanSecurityMetricsContractTest {
     @Test
     void transportGuardAllowsOnlyTheExplicitLocalLoopbackException() throws Exception {
         secureHostRunner(false).run(context -> assertThat(context).hasNotFailed());
+        secureHostRunner(false).withPropertyValues(
+                        "egon.cola.component.rpc.enabled=true",
+                        "egon.cola.component.rpc.transport=h2c",
+                        "egon.cola.component.tianshu.enabled=true",
+                        "egon.cola.component.tianshu.delivery.enabled=true")
+                .run(context -> assertThat(context).hasNotFailed());
         for (String invalid : java.util.List.of(
-                "egon.cola.component.rpc.enabled=true",
-                "egon.cola.component.tianshu.enabled=true",
                 "egon.cola.platform.tianquan.shoubing.trusted-issuers.tenant.issuer=http://idp.example/tenants/1001",
                 "egon.cola.platform.tianquan.shoubing.authority.base-uri=http://idp.example",
                 "spring.security.oauth2.client.provider.unsafe.token-uri=http://remote.example/token")) {

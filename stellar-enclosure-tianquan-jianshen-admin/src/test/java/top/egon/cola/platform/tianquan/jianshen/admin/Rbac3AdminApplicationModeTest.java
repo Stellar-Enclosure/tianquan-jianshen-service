@@ -48,7 +48,8 @@ class Rbac3AdminApplicationModeTest {
         assertThat(Rbac3AdminApplication.bootstrapRuntimeProperties())
                 .containsEntry("egon.cola.component.tianshu.enabled", false)
                 .containsEntry("egon.cola.component.yuheng.reporting.enabled", false)
-                .containsEntry("egon.cola.component.tianshu.registry.http.enabled", false)
+                .containsEntry("egon.cola.component.tianshu.delivery.enabled", false)
+                .containsEntry("egon.tianquan-jianshen.logical-catalog.enabled", false)
                 .containsEntry(
                         "egon.cola.component.transactional-outbox.polling.enabled",
                         false)

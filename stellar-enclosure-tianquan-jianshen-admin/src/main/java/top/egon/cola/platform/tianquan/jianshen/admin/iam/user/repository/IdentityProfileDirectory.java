@@ -1,8 +1,9 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.user.repository;
 
+import io.grpc.Status;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import top.egon.cola.component.rpc.annotation.EgonRpcReference;
-import top.egon.cola.component.rpc.consumer.reference.RpcReferenceMode;
 import top.egon.cola.platform.tianquan.shoubing.rpc.contract.IdentityDirectoryRpc;
 import top.egon.cola.platform.tianquan.shoubing.rpc.contract.proto.v1.BatchGetIdentityProfilesRequest;
 import top.egon.cola.platform.tianquan.shoubing.rpc.contract.proto.v1.BatchGetIdentityProfilesResponse;
@@ -22,16 +23,18 @@ import java.util.Set;
  * <p>Authorization rows remain usable when Tianquan-Shoubing is unavailable; callers receive an explicit
  * partial marker instead of persisting a profile copy in RBAC.</p>
  */
-@Component
+@Slf4j
+@Component("identityProfileDirectory")
 public final class IdentityProfileDirectory {
 
     private static final int MAX_SUBJECTS = 100;
 
     @EgonRpcReference(
-            mode = RpcReferenceMode.DIRECT,
-            bizCode = "${egon.cola.platform.tianquan.shoubing.identity-directory.biz-code:permission}",
-            appCode = "${egon.cola.platform.tianquan.shoubing.identity-directory.app-code:tianquan-shoubing}",
-            timeoutMs = 1500)
+            bindingId = "shoubing-identity-directory",
+            group = "tianquan-shoubing",
+            version = "1.0.0",
+            timeoutMs = 1500,
+            retries = 0)
     private IdentityDirectoryRpc rpc;
 
     public IdentityProfileDirectory() {
@@ -60,7 +63,9 @@ public final class IdentityProfileDirectory {
                             .addAllSubjects(normalized)
                             .build());
             return map(response, normalized);
-        } catch (RuntimeException exception) {
+        } catch (RuntimeException failure) {
+            log.debug("Tianquan-Shoubing profile batch RPC failed: status={}",
+                    Status.fromThrowable(failure).getCode());
             return BatchResult.unavailable();
         }
     }
@@ -68,7 +73,8 @@ public final class IdentityProfileDirectory {
     private BatchResult map(
             BatchGetIdentityProfilesResponse response,
             List<String> requested) {
-        if (response == null) {
+        if (response == null
+                || response.getProfilesCount() != requested.size() - response.getMissingSubjectsCount()) {
             return BatchResult.unavailable();
         }
         Map<String, Profile> profiles = new LinkedHashMap<>();
@@ -87,7 +93,8 @@ public final class IdentityProfileDirectory {
         }
         Set<String> missing = new LinkedHashSet<>(
                 response.getMissingSubjectsList());
-        if (missing.stream().anyMatch(value -> value == null || value.isBlank())
+        if (missing.size() != response.getMissingSubjectsCount()
+                || missing.stream().anyMatch(String::isBlank)
                 || !requested.containsAll(profiles.keySet())
                 || !requested.containsAll(missing)
                 || profiles.keySet().stream().anyMatch(missing::contains)) {

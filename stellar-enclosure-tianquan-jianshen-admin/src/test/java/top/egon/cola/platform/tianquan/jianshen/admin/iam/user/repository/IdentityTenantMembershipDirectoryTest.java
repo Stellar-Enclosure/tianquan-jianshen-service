@@ -1,9 +1,7 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.user.repository;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.mock.env.MockEnvironment;
 import top.egon.cola.component.rpc.annotation.EgonRpcReference;
-import top.egon.cola.component.rpc.consumer.reference.RpcReferenceMode;
 import top.egon.cola.platform.tianquan.shoubing.rpc.contract.IdentityDirectoryRpc;
 import top.egon.cola.platform.tianquan.shoubing.rpc.contract.proto.v1.GetTenantMembershipRequest;
 import top.egon.cola.platform.tianquan.shoubing.rpc.contract.proto.v1.GetTenantMembershipResponse;
@@ -25,22 +23,19 @@ import static org.mockito.Mockito.when;
 class IdentityTenantMembershipDirectoryTest {
 
     @Test
-    void usesTheDirectIdpProviderForAuthoritativeMembershipChecks()
-            throws NoSuchFieldException {
-        Field field = IdentityTenantMembershipDirectory.class
-                .getDeclaredField("rpc");
-        EgonRpcReference reference = field.getAnnotation(
-                EgonRpcReference.class);
-        MockEnvironment environment = new MockEnvironment();
+    void usesTheApprovedShoubingBindingForAuthoritativeMembershipChecks() throws NoSuchFieldException {
+        Field field = IdentityTenantMembershipDirectory.class.getDeclaredField("rpc");
+        EgonRpcReference reference = field.getAnnotation(EgonRpcReference.class);
 
-        assertThat(reference.mode()).isEqualTo(RpcReferenceMode.DIRECT);
-        assertThat(environment.resolveRequiredPlaceholders(reference.bizCode())).isEqualTo("permission");
-        assertThat(environment.resolveRequiredPlaceholders(reference.appCode())).isEqualTo("tianquan-shoubing");
-
-        environment.setProperty("egon.cola.platform.tianquan.shoubing.identity-directory.biz-code", "identity");
-        environment.setProperty("egon.cola.platform.tianquan.shoubing.identity-directory.app-code", "tianquan-shoubing-admin");
-        assertThat(environment.resolveRequiredPlaceholders(reference.bizCode())).isEqualTo("identity");
-        assertThat(environment.resolveRequiredPlaceholders(reference.appCode())).isEqualTo("tianquan-shoubing-admin");
+        assertThat(reference).isNotNull();
+        assertThat(reference.bindingId())
+                .isEqualTo("shoubing-identity-directory");
+        assertThat(reference.group())
+                .isEqualTo("tianquan-shoubing");
+        assertThat(reference.version())
+                .isEqualTo("1.0.0");
+        assertThat(reference.timeoutMs()).isEqualTo(1500);
+        assertThat(reference.retries()).isEqualTo(-1);
     }
 
     @Test
@@ -117,6 +112,29 @@ class IdentityTenantMembershipDirectoryTest {
                 .isInstanceOf(Rbac3RuleViolation.class)
                 .extracting(exception -> ((Rbac3RuleViolation) exception).reasonCode())
                 .isEqualTo("IDENTITY_TENANT_MEMBERSHIP_INVALID");
+    }
+
+    @Test
+    void rejectsActiveRepliesForAnotherTenantOrSubject() {
+        IdentityDirectoryRpc rpc = mock(IdentityDirectoryRpc.class);
+        GetTenantMembershipResponse bound = response(
+                TenantStatus.TENANT_STATUS_ACTIVE,
+                IdentityStatus.IDENTITY_STATUS_ACTIVE,
+                MembershipStatus.MEMBERSHIP_STATUS_ACTIVE,
+                7L);
+        when(rpc.getTenantMembership(any(GetTenantMembershipRequest.class)))
+                .thenReturn(bound.toBuilder().setProfile(bound.getProfile().toBuilder()
+                        .setTenantId("18")).build())
+                .thenReturn(bound.toBuilder().setProfile(bound.getProfile().toBuilder()
+                        .setIdentitySub("subject-18")).build());
+        IdentityTenantMembershipDirectory directory = new IdentityTenantMembershipDirectory(rpc);
+
+        for (int attempt = 0; attempt < 2; attempt++) {
+            assertThatThrownBy(() -> directory.requireActive("17", "subject-17"))
+                    .isInstanceOfSatisfying(Rbac3RuleViolation.class,
+                            failure -> assertThat(failure.reasonCode())
+                                    .isEqualTo("IDENTITY_TENANT_MEMBERSHIP_UNAVAILABLE"));
+        }
     }
 
     private static GetTenantMembershipResponse response(

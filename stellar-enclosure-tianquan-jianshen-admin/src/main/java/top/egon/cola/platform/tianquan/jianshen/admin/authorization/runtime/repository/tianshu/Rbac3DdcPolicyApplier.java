@@ -1,6 +1,8 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.tianshu;
 
-import top.egon.cola.component.tianshu.api.refresh.DdcConfigApplier;
+import lombok.extern.slf4j.Slf4j;
+import top.egon.cola.component.tianshu.model.config.DdcConfigBaselineVO;
+import top.egon.cola.component.tianshu.service.refresh.DdcYamlConfigApplier;
 
 import java.util.Objects;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.ApplyObserver;
@@ -10,7 +12,8 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repo
  * Type `Rbac3DdcPolicyApplier` is a type in its package and carries the responsibility, state, or contract for `Rbac3 Ddc Policy Applier`; callers normally use it through its public API, Spring assembly, or implementation relationship.
  * Adapts one exact Tianshu key to the atomic Tianquan-Jianshen runtime policy.
  */
-public final class Rbac3DdcPolicyApplier implements DdcConfigApplier {
+@Slf4j
+public final class Rbac3DdcPolicyApplier implements DdcYamlConfigApplier.TypedLeafApplier {
 
     /**
      * 字段 `key` 表示 `Rbac3DdcPolicyApplier` 中与 `key` 相关的状态、依赖、配置或结果（声明类型 `String`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -107,10 +110,61 @@ public final class Rbac3DdcPolicyApplier implements DdcConfigApplier {
         }
         try {
             policy.apply(actualKey, value, version);
-            observer.recordApply(key, "success");
+            observe("success");
         } catch (RuntimeException failure) {
-            observer.recordApply(key, "failed");
+            observe("failed");
             throw failure;
+        }
+    }
+
+    @Override
+    public DdcYamlConfigApplier.PreparedLeaf prepare(String actualKey, DdcYamlConfigApplier.ValueVO next,
+            DdcYamlConfigApplier.ValueVO previous, DdcConfigBaselineVO.RuleVO rule, long version) {
+        if (!key.equals(actualKey) || rule == null || !key.equals(rule.getKey())
+                || rule.getMode() != DdcConfigBaselineVO.ReloadModeEnum.HOT
+                || !"INTEGER".equals(rule.getValueType()) || rule.getSchemaRef() != null
+                || next == null || next.present() && !next.value().isIntegralNumber()
+                || !next.present() && !rule.getDeletionAllowed()) {
+            throw new IllegalArgumentException("INVALID_RBAC_POLICY_RULE");
+        }
+        final DdcYamlConfigApplier.PreparedLeaf prepared;
+        try {
+            prepared = policy.prepare(actualKey, next.present() ? next.value().asText() : next.resolvedValue(), version);
+        } catch (RuntimeException invalid) {
+            observe("failed");
+            throw invalid;
+        }
+        return new DdcYamlConfigApplier.PreparedLeaf() {
+            private boolean committed;
+
+            @Override
+            public void commit() {
+                try {
+                    prepared.commit();
+                    committed = true;
+                    observe("success");
+                } catch (RuntimeException failure) {
+                    observe("failed");
+                    throw failure;
+                }
+            }
+
+            @Override
+            public void rollback() {
+                prepared.rollback();
+                if (committed) {
+                    committed = false;
+                    observe("failed");
+                }
+            }
+        };
+    }
+
+    private void observe(String status) {
+        try {
+            observer.recordApply(key, status);
+        } catch (RuntimeException failure) {
+            log.warn("RBAC policy apply metric unavailable failureType={}", failure.getClass().getSimpleName());
         }
     }
 

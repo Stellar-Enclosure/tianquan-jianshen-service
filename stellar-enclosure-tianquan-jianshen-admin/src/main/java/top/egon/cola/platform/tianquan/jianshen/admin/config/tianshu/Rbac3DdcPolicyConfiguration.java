@@ -3,12 +3,14 @@ package top.egon.cola.platform.tianquan.jianshen.admin.config.tianshu;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import top.egon.cola.component.tianshu.api.refresh.DdcConfigApplierRegistry;
-import top.egon.cola.component.tianshu.service.lifecycle.DdcRuntimeCoordinator;
+import top.egon.cola.component.tianshu.service.config.DdcConfigSnapshotCoordinator;
+import top.egon.cola.component.tianshu.state.DdcLocalConfigState;
 import top.egon.cola.component.yuheng.starter.reporting.GatewayReportingState;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.ApplyObserver;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.tianshu.AtomicRbac3RuntimePolicy;
@@ -36,7 +38,7 @@ public class Rbac3DdcPolicyConfiguration {
      *
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
-    @Bean
+    @Bean("rbac3DdcValueDeclarations")
     public Rbac3DdcValueDeclarations rbac3DdcValueDeclarations() {
         return new Rbac3DdcValueDeclarations();
     }
@@ -53,11 +55,11 @@ public class Rbac3DdcPolicyConfiguration {
      * @param metrics 输入参数 `metrics`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
-    @Bean
+    @Bean("rbac3DdcPolicyRegistrar")
     public InitializingBean rbac3DdcPolicyRegistrar(
-            DdcConfigApplierRegistry registry,
-            AtomicRbac3RuntimePolicy policy,
-            ObjectProvider<Rbac3IntegrationMetrics> metrics) {
+            @Qualifier("ddcConfigApplierRegistry") DdcConfigApplierRegistry registry,
+            @Qualifier("rbac3RuntimePolicy") AtomicRbac3RuntimePolicy policy,
+            @Qualifier("rbac3IntegrationMetrics") ObjectProvider<Rbac3IntegrationMetrics> metrics) {
         Rbac3IntegrationMetrics available = metrics.getIfAvailable();
         ApplyObserver observer = available == null
                 ? ApplyObserver.noop()
@@ -93,11 +95,12 @@ public class Rbac3DdcPolicyConfiguration {
      * @param policy 输入参数 `policy`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
-    @Bean
+    @Bean("ddcConfigClientStatusService")
     DdcConfigClientStatusRepository ddcConfigClientStatusService(
-            ObjectProvider<DdcRuntimeCoordinator> coordinator,
-            AtomicRbac3RuntimePolicy policy) {
-        return new DdcConfigClientStatusRepository(coordinator, policy);
+            @Qualifier("ddcLocalConfigState") ObjectProvider<DdcLocalConfigState> observations,
+            @Qualifier("ddcConfigSnapshotCoordinator") ObjectProvider<DdcConfigSnapshotCoordinator> coordinator,
+            @Qualifier("rbac3RuntimePolicy") AtomicRbac3RuntimePolicy policy) {
+        return new DdcConfigClientStatusRepository(observations, coordinator, policy);
     }
 
     /**
@@ -113,15 +116,15 @@ public class Rbac3DdcPolicyConfiguration {
      * @param reportingState 输入参数 `reportingState`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
-    @Bean
+    @Bean("rbac3IntegrationMetrics")
     @ConditionalOnBean(MeterRegistry.class)
     Rbac3IntegrationMetrics rbac3IntegrationMetrics(
             MeterRegistry registry,
-            AtomicRbac3RuntimePolicy policy,
-            ObjectProvider<DdcRuntimeCoordinator> coordinator,
+            @Qualifier("rbac3RuntimePolicy") AtomicRbac3RuntimePolicy policy,
+            @Qualifier("ddcConfigClientStatusService") DdcConfigClientStatusRepository status,
             ObjectProvider<GatewayReportingState> reportingState) {
         return new Rbac3IntegrationMetrics(
-                registry, policy, coordinator, reportingState);
+                registry, policy, status, reportingState);
     }
 
     /**

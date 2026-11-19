@@ -1,5 +1,7 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.tianshu;
 
+import lombok.extern.slf4j.Slf4j;
+import top.egon.cola.component.tianshu.service.refresh.DdcYamlConfigApplier;
 import top.egon.cola.platform.tianquan.jianshen.admin.config.properties.Rbac3AdminProperties;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.domain.exception.PolicyApplyException;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.domain.vo.ApplyFailureVO;
@@ -18,6 +20,7 @@ import java.util.regex.Pattern;
  * Atomically applies RBAC-only Tianshu settings. Tianquan-Shoubing owns access-token and
  * refresh-token lifetimes, so no token or identity-state keys are accepted here.
  */
+@Slf4j
 public final class AtomicRbac3RuntimePolicy implements Rbac3RuntimePolicy {
 
     public static final String MAXIMUM_ACTIVE_ROOTS_KEY = "tianquan-jianshen.maximum-active-roots";
@@ -44,19 +47,7 @@ public final class AtomicRbac3RuntimePolicy implements Rbac3RuntimePolicy {
 
     public synchronized void apply(String key, String rawValue, long version) {
         try {
-            if (!CONFIG_KEYS.contains(key)) {
-                throw new PolicyApplyException("UNKNOWN_KEY");
-            }
-            if (version < 0) {
-                throw new PolicyApplyException("INVALID_VERSION");
-            }
-            long value = parse(rawValue);
-            if (value < 1 || value > 32) {
-                throw new PolicyApplyException("MAXIMUM_ACTIVE_ROOTS_OUT_OF_RANGE");
-            }
-            Map<String, Long> versions = new LinkedHashMap<>(snapshot.get().configVersions());
-            versions.put(key, version);
-            snapshot.set(new Rbac3RuntimePolicySnapshotVO(Math.toIntExact(value), versions));
+            snapshot.set(candidate(snapshot.get(), key, rawValue, version));
             ApplyFailureVO previous = lastApplyFailure.get();
             if (previous != null && previous.key().equals(key)) {
                 lastApplyFailure.compareAndSet(previous, null);
@@ -69,6 +60,66 @@ public final class AtomicRbac3RuntimePolicy implements Rbac3RuntimePolicy {
                             + " version=" + version + " code=" + errorCode,
                     failure);
         }
+    }
+
+    /** Captures actual runtime material; preparation never mutates the installed policy or diagnostics. */
+    synchronized DdcYamlConfigApplier.PreparedLeaf prepare(String key, String rawValue, long version) {
+        Rbac3RuntimePolicySnapshotVO previous = snapshot.get();
+        ApplyFailureVO previousFailure = lastApplyFailure.get();
+        Rbac3RuntimePolicySnapshotVO candidate = candidate(previous, key, rawValue, version);
+        ApplyFailureVO committedFailure = previousFailure != null && previousFailure.key().equals(key)
+                ? null : previousFailure;
+        return new DdcYamlConfigApplier.PreparedLeaf() {
+            private boolean committed;
+            private boolean rolledBack;
+
+            @Override
+            public void commit() {
+                synchronized (AtomicRbac3RuntimePolicy.this) {
+                    if (committed || rolledBack) {
+                        throw new IllegalStateException("POLICY_PREPARED_CHANGE_ALREADY_USED");
+                    }
+                    if (snapshot.get() != previous || lastApplyFailure.get() != previousFailure) {
+                        throw new IllegalStateException("POLICY_PREPARED_STATE_CHANGED");
+                    }
+                    snapshot.set(candidate);
+                    lastApplyFailure.set(committedFailure);
+                    committed = true;
+                }
+            }
+
+            @Override
+            public void rollback() {
+                synchronized (AtomicRbac3RuntimePolicy.this) {
+                    if (!committed || rolledBack) {
+                        return;
+                    }
+                    if (snapshot.get() != candidate || lastApplyFailure.get() != committedFailure) {
+                        throw new IllegalStateException("POLICY_ROLLBACK_STATE_CHANGED");
+                    }
+                    snapshot.set(previous);
+                    lastApplyFailure.set(previousFailure);
+                    rolledBack = true;
+                }
+            }
+        };
+    }
+
+    private static Rbac3RuntimePolicySnapshotVO candidate(Rbac3RuntimePolicySnapshotVO previous,
+            String key, String rawValue, long version) {
+        if (!CONFIG_KEYS.contains(key)) {
+            throw new PolicyApplyException("UNKNOWN_KEY");
+        }
+        if (version < 0) {
+            throw new PolicyApplyException("INVALID_VERSION");
+        }
+        long value = parse(rawValue);
+        if (value < 1 || value > 32) {
+            throw new PolicyApplyException("MAXIMUM_ACTIVE_ROOTS_OUT_OF_RANGE");
+        }
+        Map<String, Long> versions = new LinkedHashMap<>(previous.configVersions());
+        versions.put(key, version);
+        return new Rbac3RuntimePolicySnapshotVO(Math.toIntExact(value), versions);
     }
 
     private static long parse(String rawValue) {
@@ -90,6 +141,6 @@ public final class AtomicRbac3RuntimePolicy implements Rbac3RuntimePolicy {
     }
 
     private static String safeKey(String key) {
-        return key == null || key.isBlank() ? "<missing>" : key;
+        return key != null && CONFIG_KEYS.contains(key) ? key : "<unsupported>";
     }
 }

@@ -4,11 +4,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.core.env.PropertySource;
 import org.springframework.core.io.FileSystemResource;
-import top.egon.cola.component.tianshu.http.registration.DdcHttpRegistrationRuntime;
-import top.egon.cola.component.tianshu.http.registration.DdcHttpRegistrationRuntimeProperties;
-import top.egon.cola.component.tianshu.http.registration.DdcHttpRegistrationState;
-import top.egon.cola.component.tianshu.model.lease.DdcLeaseRole;
-import top.egon.cola.component.tianshu.model.lease.DdcLeaseSession;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.domain.GatewayServiceKey;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.domain.vo.DdcProviderLeaseStatusVO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.domain.vo.GatewayAdminSnapshotVO;
@@ -18,22 +13,17 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.doma
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.domain.vo.GatewayProviderObservationVO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.domain.vo.GatewayReleaseObservationVO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.domain.vo.ServiceIdentityVO;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.tianshu.DdcProviderLeaseStatusRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.http.GatewayAdminControlPlaneStatusClient;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.service.GatewayDdcRuntimeStatusService;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -46,109 +36,71 @@ class GatewayDdcConfigurationTest {
                     "HTTP_PROVIDER", "http",
                     "tianquan-jianshen-admin", "default", "1.0.0");
 
-    @Test
-    void productionProviderRequiresAnExplicitPortAndProductionYamlHasNoLocalFallback()
-            throws Exception {
-        assertThatThrownBy(() -> new DdcHttpRegistrationRuntimeProperties(
-                true, "prod", "default", "instance-1", "tianquan-jianshen-admin",
-                "default", "1.0.0", "http", "tianquan-jianshen.internal", 0,
-                30, 10, true, Map.of()))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("port=0 is only allowed in local/test");
+    private static final String TIANSHU = "egon.cola.component.tianshu.";
+    private static final String CATALOG = "egon.tianquan-jianshen.logical-catalog.";
+    private static final String RPC = "egon.cola.component.rpc.";
 
-        Path yaml = Path.of(System.getProperty("basedir"))
-                .resolve("src/main/resources/application.yml");
-        if (Files.exists(yaml)) {
-            assertThat(Files.readString(yaml))
-                    .doesNotContain("localhost", "127.0.0.1", "rbac3RuntimeRedissonClient")
-                    .contains("TIANQUAN_JIANSHEN_RESOURCE_BIZ_CODE", "TIANQUAN_JIANSHEN_ADVERTISED_PORT",
-                            "ddcRedissonClient");
+    @Test
+    void deploymentUsesAnExplicitStableHttpCatalogAndH2cBinding() throws Exception {
+        PropertySource<?> base = yaml("application.yml").getFirst();
+        PropertySource<?> local = yaml("application-local.yml").getFirst();
+
+        assertThat(base.getProperty(CATALOG + "origin")).isEqualTo(
+                "${TIANQUAN_JIANSHEN_LOGICAL_CATALOG_ORIGIN:http://tianshu-admin-http.platform-prod.svc.cluster.local:18080}");
+        assertThat(local.getProperty(CATALOG + "origin")).isEqualTo(
+                "${TIANQUAN_JIANSHEN_LOGICAL_CATALOG_ORIGIN:http://tianshu-admin-http.platform-local.svc.cluster.local:18080}");
+        assertThat(local.getProperty(CATALOG + "enabled"))
+                .isEqualTo("${TIANQUAN_JIANSHEN_LOGICAL_CATALOG_ENABLED:false}");
+        assertThat(base.getProperty("egon.cola.component.id.machine-id")).isNull();
+        assertThat(base.getProperty("spring.config.import[0]")).isNull();
+        assertThat(base.getProperty(RPC + "transport")).isEqualTo("h2c");
+        assertThat(base.getProperty(RPC + "provider.enabled")).isEqualTo(false);
+        assertThat(base.getProperty(RPC + "consumer.bindings.shoubing-identity-directory.port"))
+                .isEqualTo("${TIANQUAN_SHOUBING_RPC_SERVICE_PORT:18122}");
+        assertThat(local.getProperty(RPC + "consumer.bindings.shoubing-identity-directory.namespace"))
+                .isEqualTo("${TIANQUAN_SHOUBING_RPC_SERVICE_NAMESPACE:permission-local}");
+        for (var source : List.of(base, local)) {
+            assertThat(source.getProperty(TIANSHU + "rpc.target")).isNull();
+            assertThat(source.getProperty(TIANSHU + "registry.http.enabled")).isNull();
+            assertThat(source.getProperty("egon.cola.component.yuheng.openapi.publish-to-tianshu")).isNull();
+            assertThat(source.getProperty(TIANSHU + "instance.lease-seconds")).isNull();
+            assertThat(source.getProperty("spring.config.import")).isNull();
         }
     }
 
     @Test
-    void productionEnablesIndependentDdcConfigAndRegistryLeases() throws Exception {
-        PropertySource<?> production = yaml("application.yml");
-
-        assertThat(production.getProperty("egon.cola.component.tianshu.enabled")).isEqualTo(true);
-        assertThat(production.getProperty("egon.cola.component.tianshu.biz-code"))
-                .isEqualTo("${TIANQUAN_JIANSHEN_RESOURCE_BIZ_CODE:permission}");
-        assertThat(production.getProperty("egon.cola.component.tianshu.app-code"))
-                .isEqualTo("${TIANQUAN_JIANSHEN_RESOURCE_APP_CODE:tianquan-jianshen}");
-        assertThat(production.getProperty("egon.cola.component.tianshu.env"))
-                .isEqualTo("${DEPLOYMENT_ENV}");
-        assertThat(production.getProperty("egon.cola.component.tianshu.namespace"))
-                .isEqualTo("${DEPLOYMENT_NAMESPACE}");
-        assertThat(production.getProperty(
-                "egon.cola.component.tianshu.rpc.target"))
-                .isEqualTo("${TIANSHU_RPC_TARGET:dns:///tianshu-admin:19080}");
-        assertThat(production.getProperty(
-                "egon.cola.component.tianshu.rpc.load-balancing-policy"))
-                .isEqualTo("round_robin");
-        assertThat(production.getProperty(
-                "egon.cola.component.tianshu.admin." + "endpoint"))
-                .isNull();
-        assertThat(production.getProperty("egon.cola.component.tianshu.instance.id"))
-                .isEqualTo("${TIANQUAN_JIANSHEN_INSTANCE_ID}");
-        assertThat(production.getProperty("egon.cola.component.tianshu.instance.lease-seconds"))
-                .isEqualTo(30);
-        assertThat(production.getProperty(
-                "egon.cola.component.tianshu.instance.heartbeat-interval-seconds"))
-                .isEqualTo(10);
-        assertThat(production.getProperty("egon.cola.component.tianshu.consistency.fail-fast"))
-                .isEqualTo(true);
-        assertThat(production.getProperty(
-                "egon.cola.component.tianshu.consistency.reconcile-enabled"))
-                .isEqualTo(true);
-        assertThat(production.getProperty(
-                "egon.cola.component.tianshu.consistency.reconcile-interval-seconds"))
-                .isEqualTo(30);
-        assertThat(production.getProperty("egon.cola.component.tianshu.registry.enabled"))
-                .isEqualTo(true);
-        assertThat(production.getProperty(
-                "egon.cola.component.yuheng.reporting.enabled"))
-                .isEqualTo("${TIANQUAN_JIANSHEN_YUHENG_REPORTING_ENABLED:true}");
-        assertThat(production.getProperty(
-                "egon.cola.component.tianshu.registry.http.enabled"))
-                .isEqualTo(true);
-        assertThat(production.getProperty("egon.cola.component.rpc.enabled"))
-                .isEqualTo("${TIANQUAN_JIANSHEN_RPC_ENABLED:true}");
-        assertThat(production.getProperty(
-                "egon.cola.component.rpc.consumer.enabled"))
-                .isEqualTo("${TIANQUAN_JIANSHEN_RPC_CONSUMER_ENABLED:true}");
+    void adminClasspathContainsNoLegacyTransportEvenThroughOtherStarters() {
+        ClassLoader loader = GatewayDdcConfigurationTest.class.getClassLoader();
+        assertThat(loader.getResource(
+                "top/egon/cola/component/tianshu/http/registration/DdcHttpRegistrationRuntime.class")).isNull();
+        assertThat(loader.getResource(
+                "top/egon/cola/component/rpc/tianshu/autoconfigure/DdcRpcAutoConfiguration.class")).isNull();
     }
 
     @Test
-    void localProfileAllowsExplicitDdcAndProviderEnablement() throws Exception {
-        PropertySource<?> local = yaml("application-local.yml");
+    void cloudNativeDeliveryRequiresExactlyTheMountedBaselineOutsideCommandProfiles() throws Exception {
+        List<PropertySource<?>> docs = yaml("application.yml");
+        assertThat(docs).hasSize(2);
+        assertThat(docs.getFirst().getProperty(TIANSHU + "enabled")).isEqualTo(false);
+        assertThat(docs.getFirst().getProperty(TIANSHU + "delivery.enabled")).isEqualTo(false);
 
-        assertThat(local.getProperty("egon.cola.component.tianshu.enabled"))
-                .isEqualTo("${TIANQUAN_JIANSHEN_TIANSHU_ENABLED:false}");
-        assertThat(local.getProperty("egon.cola.component.tianshu.registry.enabled"))
-                .isEqualTo("${TIANQUAN_JIANSHEN_TIANSHU_ENABLED:false}");
-        assertThat(local.getProperty("egon.cola.component.yuheng.reporting.enabled"))
-                .isEqualTo("${TIANQUAN_JIANSHEN_YUHENG_REPORTING_ENABLED:false}");
-        assertThat(local.getProperty(
-                "egon.cola.component.tianshu.registry.http.enabled"))
-                .isEqualTo("${TIANQUAN_JIANSHEN_HTTP_PROVIDER_ENABLED:false}");
-    }
+        assertThat(docs.getFirst().getProperty("tianquan-jianshen.maximum-active-roots"))
+                .isEqualTo("${egon.tianquan-jianshen.maximum-active-roots}");
 
-    @Test
-    void ddcLeaseStatesRemainIndependent() {
-        DdcHttpRegistrationRuntime runtime = mock(DdcHttpRegistrationRuntime.class);
-        when(runtime.instanceId()).thenReturn("instance-1");
-        when(runtime.state()).thenReturn(DdcHttpRegistrationState.RECOVERING);
-        when(runtime.lease()).thenReturn(Optional.empty());
-        var service = new DdcProviderLeaseStatusRepository(runtime, IDENTITY);
-
-        assertThat(service.status().state()).isEqualTo("RECOVERING");
-        when(runtime.state()).thenReturn(DdcHttpRegistrationState.REGISTERED);
-        when(runtime.lease()).thenReturn(Optional.of(new DdcLeaseSession(
-                "instance-1", "lease-1", DdcLeaseRole.HTTP_PROVIDER, 30, 10,
-                NOW.minusSeconds(1), NOW.plusSeconds(30))));
-        assertThat(service.status().state()).isEqualTo("REGISTERED");
-        when(runtime.state()).thenReturn(DdcHttpRegistrationState.STOPPED);
-        assertThat(service.status().state()).isEqualTo("STOPPED");
+        PropertySource<?> cloud = docs.getLast();
+        assertThat(cloud.getProperty("spring.config.activate.on-profile"))
+                .isEqualTo("cloud-native & !rbac3-catalog-command & !rbac3-platform-bootstrap");
+        assertThat(cloud.getProperty("spring.config.import"))
+                .isEqualTo("tianshu-baseline:/var/run/tianshu/config/baseline.json");
+        assertThat(cloud.getProperty(TIANSHU + "delivery.enabled")).isEqualTo(true);
+        assertThat(cloud.getProperty(TIANSHU + "baseline.scope.tenant-id"))
+                .isEqualTo("${TIANSHU_CONFIG_TENANT_ID}");
+        assertThat(cloud.getProperty(TIANSHU + "delivery.identity-tenant-id"))
+                .isEqualTo("${TIANSHU_CONFIG_IDENTITY_TENANT_ID}");
+        assertThat(cloud.getProperty(TIANSHU + "delivery.pod-uid"))
+                .isEqualTo("${KUBERNETES_POD_UID}");
+        assertThat(cloud.getProperty(TIANSHU + "baseline.target.binding-id"))
+                .isEqualTo("${TIANSHU_CONFIG_BINDING_ID}");
     }
 
     @Test
@@ -230,12 +182,11 @@ class GatewayDdcConfigurationTest {
                         "SUCCESS", "release-1", "SUCCESS", true, "1", null), NOW);
     }
 
-    private PropertySource<?> yaml(String fileName) throws Exception {
+    private List<PropertySource<?>> yaml(String fileName) throws Exception {
         Path yaml = Path.of(System.getProperty("basedir"))
                 .resolve("src/main/resources")
                 .resolve(fileName);
         return new YamlPropertySourceLoader()
-                .load(fileName, new FileSystemResource(yaml))
-                .getFirst();
+                .load(fileName, new FileSystemResource(yaml));
     }
 }

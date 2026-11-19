@@ -47,7 +47,7 @@ public class TianquanSecurityObservationConfiguration {
                 .orElseGet(top.egon.cola.platform.tianquan.shoubing.starter.autoconfigure.IdpStarterProperties::new);
         boolean local = java.util.Arrays.asList(environment.getActiveProfiles()).contains("local")
                 && java.util.Set.of("local", "dev").contains(environment.getProperty("DEPLOYMENT_ENV",
-                        environment.getProperty("egon.cola.component.tianshu.env", ""))) && usage.isAllowLocalPlaintext();
+                        environment.getProperty("egon.cola.component.rpc.identity.env", ""))) && usage.isAllowLocalPlaintext();
         if (idp.getTrustedIssuers().isEmpty()) {
             throw new IllegalStateException("OAUTH_OBSERVATION_TRUSTED_ISSUERS_REQUIRED");
         } else {
@@ -69,18 +69,6 @@ public class TianquanSecurityObservationConfiguration {
             if (provider.getIssuerUri() != null) { secureEndpoint(provider.getIssuerUri(), "https", false); }
             for (String endpoint : new String[] { provider.getTokenUri(), provider.getJwkSetUri(), provider.getAuthorizationUri(), provider.getUserInfoUri() }) {
                 if (endpoint != null) { secureEndpoint(endpoint, "https", local); }
-            }
-        }
-        for (String prefix : java.util.List.of("egon.cola.component.rpc", "egon.cola.component.tianshu")) {
-            if (!environment.getProperty(prefix + ".enabled", Boolean.class, false)) { continue; }
-            String tls = prefix + (prefix.endsWith("tianshu") ? ".rpc.tls" : ".tls");
-            boolean enabled = environment.getProperty(tls + ".enabled", Boolean.class, false);
-            boolean plaintext = environment.getProperty(tls + ".development-plaintext", Boolean.class, false);
-            if (!enabled && !(local && plaintext) || plaintext && !local) { throw new IllegalStateException("OAUTH_OBSERVATION_RPC_TLS_REQUIRED"); }
-            if (!enabled && (prefix.endsWith("tianshu") || environment.getProperty(prefix + ".provider.enabled", Boolean.class, false))) {
-                String target = environment.getProperty(prefix.endsWith("tianshu") ? prefix + ".rpc.target" : prefix + ".provider.bind-address", "");
-                String host = target.replaceFirst("^dns:///", "").replaceFirst("^https?://", "").replaceFirst(":\\d+$", "");
-                if (!java.util.Set.of("localhost", "127.0.0.1", "[::1]").contains(host)) { throw new IllegalStateException("OAUTH_OBSERVATION_RPC_LOCAL_TARGET_REQUIRED"); }
             }
         }
     }

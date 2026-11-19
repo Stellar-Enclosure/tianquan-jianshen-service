@@ -29,15 +29,11 @@ management:
 egon.cola.component:
   rpc:
     enabled: false
-    tls:
-      enabled: false
-      development-plaintext: false
+    transport: h2c
   tianshu:
     enabled: false
-    rpc:
-      tls:
-        enabled: false
-        development-plaintext: false
+    delivery:
+      enabled: false
 
 egon.cola.platform.tianquan.jianshen.user-scope-policy:
   enabled: true

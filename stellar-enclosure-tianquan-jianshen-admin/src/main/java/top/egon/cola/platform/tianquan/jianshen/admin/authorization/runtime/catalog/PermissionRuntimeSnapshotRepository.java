@@ -9,6 +9,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.acti
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.activation.repository.ActivationTransaction;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.service.RoleEligibilityService;
 import top.egon.cola.platform.tianquan.jianshen.admin.shared.domain.DatabaseClock;
+import top.egon.cola.platform.tianquan.jianshen.admin.shared.tenant.domain.CatalogProjectionTenantContext;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.RuntimePolicyBinding;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.SystemAuthorizationSnapshot;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.CanonicalJson;
@@ -135,7 +136,8 @@ public class PermissionRuntimeSnapshotRepository {
                 """, Map.of("tenant", tenantId, "subject", subject), "IDENTITY_INACTIVE");
         long userId = number(user[0]);
         long authVersion = number(user[1]);
-        if (!eligibility.isEffectiveForProjection(scope.tenantId(), Long.toString(userId), Long.toString(state.applicationId()), now)) {
+        if (!CatalogProjectionTenantContext.call(scope.tenantId(), () -> eligibility.isEffectiveForProjection(
+                scope.tenantId(), Long.toString(userId), Long.toString(state.applicationId()), now))) {
             throw new Rbac3RuleViolation("APPLICATION_BINDING_DENIED");
         }
         var fact = facts.load(scope.tenantId(), Long.toString(userId), now);

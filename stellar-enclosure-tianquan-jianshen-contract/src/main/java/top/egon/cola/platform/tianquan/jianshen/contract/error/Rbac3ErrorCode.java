@@ -57,7 +57,10 @@ public enum Rbac3ErrorCode {
     RATE_LIMITED(429, true),
     AUTH_SNAPSHOT_NOT_READY(503, true),
     SIGNING_KEY_UNAVAILABLE(503, true),
-    DIRECTORY_RUNTIME_UNAVAILABLE(503, true);
+    DIRECTORY_RUNTIME_UNAVAILABLE(503, true),
+    IDENTITY_TENANT_MEMBERSHIP_INVALID(400, false),
+    IDENTITY_TENANT_MEMBERSHIP_NOT_ACTIVE(403, false),
+    IDENTITY_TENANT_MEMBERSHIP_UNAVAILABLE(503, true);
 
     private final int httpStatus;
     private final boolean retryable;
