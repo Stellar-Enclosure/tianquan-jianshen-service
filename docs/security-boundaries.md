@@ -2,15 +2,15 @@
 
 ## 1. Trust zones
 
-| Boundary                                  | Trusted input                                                                                                            | Untrusted input and treatment                                                           |
-|-------------------------------------------|--------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
-| Public/API client -> Yuheng              | USER Access Token cookie/Bearer over TLS; Yuheng may use the Tianquan-Shoubing Refresh Token only for one expired/missing-AT recovery | All headers/body/path; validate schema, size, identity and permission                   |
-| Yuheng -> Tianquan-Jianshen Admin                    | Yuheng-owned routing plus the original USER Access Token after allow                                                    | Client-supplied identity headers are removed/replaced; Refresh Token is never forwarded |
-| Business service -> Starter PEP           | Locally verified Tianquan-Shoubing USER Access Token and named runtime Redis                                                           | Missing/invalid snapshots, mappings or fences deny                                      |
-| Trusted provider -> Manifest/internal API | Scoped service identity and tenant/APP contract                                                                          | Manifest content remains strictly validated and immutable                               |
-| Tianquan-Jianshen Admin -> Yuheng Admin              | HMAC Definition report credential                                                                                        | Separate OAuth read token; credentials are not interchangeable                          |
-| Tianquan-Jianshen Admin -> Tianshu                        | Separate runtime/registry signing credentials and explicit service identity                                              | Direct RPC target, env, namespace, host, port and version require local configuration   |
-| Admin -> PostgreSQL/Redis                 | Named deployment-owned clients                                                                                           | No implicit localhost, primary bean or cross-role database reuse                        |
+| Boundary | Trusted input | Validation |
+| --- | --- | --- |
+| Public client → Cilium Gateway | Public HTTPS host and approved HTTPRoute | Match the approved host, path and method and select its Service. |
+| Gateway → resource service | HTTP request and Bearer intended for the resource | The resource Starter verifies issuer, audience, tenant, token status and applicable authorization before processing. |
+| Resource service → runtime authorization API | Approved SERVICE credential and explicit binding | Require the expected operation and policy versions. Treat missing, invalid or fenced evidence as a refusal. |
+| Trusted producer → manifest API | Scoped SERVICE identity and tenant/application binding | Validate immutable manifest content, producer and deployment evidence. |
+| Jianshen → Yuheng Admin | HMAC credential scoped to definition reporting | Validate the report identity and scope. Status reads use their own OAuth credential. |
+| Jianshen → Tianshu configuration API | Scoped SERVICE token and projected workload token | Verify the bound workload identity and configuration scope. |
+| Admin → PostgreSQL/Redis | Named deployment-owned clients | Restrict each role to its assigned data store and credentials. |
 
 ## 2. Tenant and APP isolation
 
@@ -25,15 +25,14 @@ not allow a trusted service for APP A to obtain decisions or snapshots for APP B
 
 ## 3. Credential handling
 
-- Access Tokens are five-minute Tianquan-Shoubing-signed JWTs with identity claims only. The
-  browser uses an HttpOnly cookie; the React SDK never reads or persists them.
-- Refresh Tokens are stable, signed Tianquan-Shoubing JWTs with an absolute expiry. Tianquan-Shoubing stores
-  only a digest and subject/status index in Redis; deleting that record blocks
-  future refresh. Tianquan-Jianshen never stores or processes them.
-- Tianquan-Shoubing owns private JWT keys and JWKS. Tianquan-Jianshen only performs local public-key
-  verification; its audit cursor secret is a separate file-backed secret.
-- Yuheng HMAC write keys, Yuheng OAuth read tokens and Tianshu signing keys have
-  separate scopes and lifecycles.
+- Browser clients use PUBLIC authorization-code flow with S256 PKCE and get a
+  bearer issued for the target Resource. At expiry, the browser starts a new
+  authorization exchange through Shoubing.
+- Shoubing owns signing keys, JWKS and authoritative token status. Jianshen
+  verifies public claims and the current state through its configured authority
+  binding. The audit cursor uses its own file-backed secret.
+- Yuheng report credentials, status-read tokens and Tianshu configuration
+  credentials each have their own scope and lifecycle.
 - Logs, UI errors, audit details and verification evidence redact Authorization,
   cookies, passwords, key material and sensitive field values recursively.
 
@@ -70,10 +69,12 @@ value in hidden DOM state or alternate JSON fields.
 
 ## 7. Network and operational controls
 
-Use TLS for all cross-process links and restrict management endpoints by network
-policy plus scoped credentials. Do not expose internal authorization, Manifest
-reporting, the Tianshu gRPC control plane, or Yuheng report endpoints publicly. Set bounded
-connect/read timeouts, payload limits, worker concurrency and retry backoff.
+Cilium Gateway terminates public HTTPS. The approved upstream Service uses
+HTTP inside the cluster. Namespace and workload policies and host firewalls
+restrict internal authorization, manifest, Tianshu configuration and Yuheng
+reporting endpoints. Cross-node traffic uses the platform WireGuard policy.
+Resources still enforce OAuth and authorization. Set bounded connect and read
+timeouts, payload limits, worker concurrency and retry backoff.
 
 Verification scripts accept only explicit URLs and secret files. Fixture cleanup
 accepts a strict schema/prefix and exact keys from a non-symbolic-link state
@@ -83,5 +84,5 @@ file. Scripts do not control service processes.
 
 Unit and integration tests do not demonstrate the user's TLS, firewall, secret
 permissions, PostgreSQL isolation, Redis ACL, clock synchronization, multi-node
-Snowflake allocation, Tianshu lease expiry or Yuheng failover. Those controls need
+Snowflake allocation, Tianshu snapshot convergence or Cilium route failover. Those controls need
 deployment review and recorded live evidence.

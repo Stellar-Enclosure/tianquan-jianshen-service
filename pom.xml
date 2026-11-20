@@ -23,7 +23,6 @@
         <module>stellar-enclosure-tianquan-jianshen-manifest-cli</module>
         <module>stellar-enclosure-tianquan-jianshen-core</module>
         <module>stellar-enclosure-tianquan-jianshen-starter</module>
-        <module>stellar-enclosure-tianquan-jianshen-gateway-adapter</module>
         <module>stellar-enclosure-tianquan-jianshen-admin</module>
     </modules>
 
@@ -56,11 +55,6 @@
             <dependency>
                 <groupId>top.egon</groupId>
                 <artifactId>stellar-enclosure-tianquan-jianshen-starter</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>top.egon</groupId>
-                <artifactId>stellar-enclosure-tianquan-jianshen-gateway-adapter</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

@@ -10,63 +10,38 @@ Admin HTTP/API
   -> PostgreSQL facts + mutation journal + outbox
   -> projection workers
   -> immutable Redis authorization snapshots
-  -> Starter PEP / Yuheng Adapter PEP
+  -> resource-service Starter policy enforcement
 ```
 
 The Contract module owns wire compatibility. Core owns deterministic policy and
-graph algorithms. Admin owns I/O and orchestration. Starter and Yuheng Adapter
-are consumers of immutable runtime state, not clients of Admin implementation.
+graph algorithms. Admin owns I/O and orchestration. The resource-service Starter
+validates the bearer and consumes the scoped authorization decision through the
+published runtime contract.
 
 The integration control plane is deliberately decomposed:
 
 ```text
-Definition report receipt  -- proves Yuheng knows the interface definition
-Tianshu HTTP_PROVIDER lease    -- proves at least one live provider registration
-Yuheng Release            -- proves a specific rule set was published
-Runtime consistency        -- proves engines observed the explicit release
-Routed request             -- proves the complete route works at observation time
+Definition report receipt  -- Yuheng accepted the logical interface definition
+Tianshu configuration receipt  -- the identified workload applied the expected revision
+Kubernetes Service and EndpointSlice  -- the cluster observed backend endpoints
+Yuheng URL exposure status  -- the declared HTTPRoute and current observation agree
+Routed request  -- the request reached the resource and its authorization was evaluated
 ```
 
 No single health flag substitutes for these observations.
 
-### 1.1 Tianshu configuration scope and service scope
+### 1.1 Configuration and workload discovery
 
-Tianshu configuration and service discovery use separate identities and separate
-leases. Configuration scope is:
+Tianshu delivers configuration by `bizCode + appCode + env + resourceName`.
+The deployment selects the namespace binding. The application starts from its
+immutable ConfigMap and uses its SERVICE bearer and projected workload token
+for protected snapshots and receipts. Readiness reflects the effective
+configuration revision and application health.
 
-```text
-bizCode + appCode + env + resourceName
-```
-
-Namespace bindings control configuration visibility but are not part of the
-resource identity. The Tianshu runtime owns one `CONFIG_CLIENT` lease for this scope.
-Service scope is:
-
-```text
-bizCode + appCode + env + namespace + serviceKind + protocol
-  + serviceName + group + version
-```
-
-The Yuheng provider runtime owns a different `HTTP_PROVIDER` lease for that
-scope. `CONFIG_CLIENT` and `HTTP_PROVIDER` may use the same process instance ID,
-but their lease IDs, roles, lifecycle, readiness and recovery state are never
-derived from one another. Yuheng resolves providers only from the service scope;
-it does not use the configuration-client lease as a provider registration.
-
-Startup uses a small state gate rather than another registry implementation:
-
-```text
-CONFIG_CLIENT register -> pull/apply snapshots -> Tianshu READY
-  + root WebServerInitializedEvent port
-  + ApplicationReadyEvent
-  -> publish the existing HTTP_PROVIDER runtime exactly once
-```
-
-The gate ignores management web-server events, rejects an explicit advertised
-port that differs from the root server port, and fails closed when Tianshu is not
-`READY` or no `CONFIG_CLIENT` lease exists. It delegates registration,
-heartbeat, recovery and offline behavior to the existing Yuheng provider
-runtime.
+Kubernetes owns the Service, endpoint state and workload observation. Cilium
+Gateway uses explicitly approved HTTPRoute bindings to the Service. The
+resource-service Starter makes the authorization decision when the request
+reaches the service.
 
 ### 1.2 Atomic runtime policy and document catalog
 
@@ -90,11 +65,9 @@ name, summary, tags, accessibility and schema descriptions. The resulting
 Yuheng Interface Catalog is the sole API document center. Tianquan-Jianshen reports a
 Definition but never auto-publishes a Yuheng Release.
 
-Routeability is evaluated from five facts without collapsing them: Tianshu Config
-Client, accepted Yuheng Definition, unexpired HTTP Provider lease, explicit
-Release/engine consistency, and routed-request evidence. The first four are
-available from the runtime status API; the fifth must come from an actual routed
-request observation.
+Record the configuration receipt, accepted Definition, Kubernetes endpoint state,
+current URL exposure and routed-request result independently. The routed-request
+result includes the response status and the selected resource handler.
 
 ## 2. Role graph model
 
@@ -197,9 +170,10 @@ Missing state, Redis errors, untrusted keys, version drift, unknown mappings and
 rule errors deny access. A bounded last-known-good public-key cache may cover a
 temporary key-source failure, but never version or authorization state drift.
 
-The Yuheng Adapter performs no blocking Admin HTTP or PostgreSQL call on the
-request path. Original credentials are forwarded only after a complete allow,
-and never for anonymous, denied, errored, RPC or multiple-credential requests.
+The resource-service Starter validates the original Bearer credential and
+enforces the current authorization decision at the protected method or data
+boundary. The runtime authorization client uses a fixed deployment binding for
+current state. Missing evidence or an unavailable authority prevents execution.
 
 ## 6. Persistence and delivery
 
@@ -223,7 +197,7 @@ the UI cannot issue a broad “retry everything” command.
 | Facade             | Assignment, Manifest, Management Policy, activation, simulation             | Keeps HTTP orchestration out of domain algorithms and provides one transaction boundary                           |
 | Ports and Adapters | Database clock, locks, query stores, Redis projection, Tianshu/Yuheng status   | Core/application code depends on capabilities, while infrastructure details remain replaceable in tests           |
 | State              | Mutation/fence status and runtime publication status                        | Transitions and illegal moves are explicit rather than scattered boolean combinations                             |
-| Adapter            | Starter PEP, Yuheng Adapter and the exact Tianshu policy applier               | Translates host/configuration contracts into typed policy behavior without duplicating their lifecycle algorithms |
+| Adapter            | Resource Starter and the exact Tianshu policy applier               | Translates host/configuration contracts into typed policy behavior without duplicating their lifecycle algorithms |
 | Observer           | Optional Micrometer apply observer                                          | Adds fixed-cardinality success/failure evidence without making configuration delivery depend on metrics           |
 | Immutable Snapshot | Runtime policy and authorization snapshot publication                       | One reference swap gives command-scoped consistency and preserves a last-known-good value on validation failure   |
 
@@ -236,7 +210,7 @@ and safer than runtime-configurable indirection.
 
 - Role graph traversal: `O(V + E)` under configured role/edge/depth limits.
 - Permission merge: `O(P log P)` from canonical sorting; membership is set based.
-- Snapshot lookup: bounded Redis reads, no SQL or Admin HTTP on Yuheng hot path.
+- Snapshot and runtime authorization lookup use bounded reads and deadlines.
 - Assignment/participation capacity: serialized by stable PostgreSQL lock keys.
 - Admin list/audit APIs: bounded cursor/page sizes and query-count tests.
 - Workers: bounded batch size and concurrency, SKIP LOCKED ownership, retry state.

@@ -195,11 +195,11 @@ The checksum is calculated from a canonical, stable-key serialization excluding
 transport-only metadata. A duplicate `definitionSetId` with different content
 or checksum is rejected.
 
-## 8. Yuheng discovery
+## 8. API registration and URL exposure
 
-Every externally or internally routed controller operation has an explicit,
-stable `@GatewayOperation` name. Tianquan-Jianshen Admin reports the complete definition set
-to Yuheng Admin and separately registers `HTTP_PROVIDER` in Tianshu. Yuheng Engine
-routes the explicit Release using Tianshu instances. Definition acknowledgement,
-provider lease, Release publication and actual routing are separate acceptance
-facts and must be recorded separately.
+Each reported controller operation has a stable `@GatewayOperation` name.
+Tianquan-Jianshen Admin reports the logical definition set to Yuheng Admin.
+Kubernetes tracks endpoints for the approved Service. For a public operation,
+an authorized publisher reconciles its URL intent to Cilium HTTPRoute. Record
+definition acceptance, the current endpoint and exposure observations, and the
+result of an authorized routed request separately.

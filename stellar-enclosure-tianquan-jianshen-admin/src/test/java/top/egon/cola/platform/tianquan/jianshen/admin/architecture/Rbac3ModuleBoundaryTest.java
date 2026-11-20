@@ -9,6 +9,8 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class Rbac3ModuleBoundaryTest {
@@ -25,11 +27,23 @@ class Rbac3ModuleBoundaryTest {
                 platform.resolve("stellar-enclosure-tianquan-jianshen-core/src/main/java"),
                 List.of("org.springframework", "jakarta.persistence", "org.redisson",
                         "java.sql", "WebClient", "RestClient"));
-        assertNoSourceReference(
-                platform.resolve("stellar-enclosure-tianquan-jianshen-gateway-adapter/src/main/java"),
-                List.of("top.egon.cola.platform.tianquan.jianshen.admin", "EntityManager",
-                        "JdbcTemplate", "WebClient", "RestClient"));
-        assertNoSourceReference(admin.resolve("src/main/java"), List.of("@Async"));
+        String retiredAdapter = "stellar-enclosure-tianquan-jianshen-gateway-adapter";
+        String reactorPom = Files.readString(platform.resolve("pom.xml"));
+        assertFalse(reactorPom.contains(retiredAdapter));
+        assertFalse(Files.isRegularFile(platform.resolve(retiredAdapter).resolve("pom.xml")));
+        List<String> retiredImports = List.of("top.egon.cola.platform.tianquan.jianshen.yuheng.",
+                "top.egon.cola.platform.tianquan.shoubing.yuheng.",
+                "top.egon.cola.component.yuheng.core.security.");
+        assertNoSourceReference(platform.resolve("stellar-enclosure-tianquan-jianshen-starter/src/main/java"),
+                retiredImports);
+        List<String> forbiddenAdmin = new ArrayList<>(retiredImports);
+        forbiddenAdmin.add("@Async");
+        assertNoSourceReference(admin.resolve("src/main/java"), forbiddenAdmin);
+        ClassLoader loader = getClass().getClassLoader();
+        String basePackage = "top/egon/cola/platform/tianquan/jianshen/";
+        assertNotNull(loader.getResource(basePackage + "starter/security/Rbac3MethodAuthorizationManager.class"));
+        assertNotNull(loader.getResource(basePackage + "starter/permission/PermissionServicePolicyGuard.class"));
+        assertNull(loader.getResource(basePackage + "yuheng/autoconfigure/Rbac3GatewayAdapterAutoConfiguration.class"));
     }
 
     @Test

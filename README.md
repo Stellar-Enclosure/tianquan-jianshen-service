@@ -10,7 +10,7 @@ Tenant-isolated IAM/RBAC3 management and runtime user authorization for Stellar 
 - Maintain role DAGs, inheritance, user assignments, explicit permission-code grants and user-level active role sets. Evaluate separation-of-duty, prerequisite and cardinality constraints before accepting mutations.
 - Decide function, operation, data and field access from immutable authorization snapshots; provide management delegation policies, authorization simulation and role-change impact analysis.
 - Persist mutation journals/audit evidence and publish runtime snapshots with fail-closed fences; expose runtime status/retry and the scoped permission-manifest protocol.
-- Integrate with Tianshu configuration/service registration and Yuheng definition reporting; enforce user permissions in consuming services through the Starter.
+- Consume Tianshu configuration and report logical API definitions to Yuheng. Enforce user permissions at each resource service through the Starter.
 
 ## Modules and boundaries
 
@@ -19,12 +19,11 @@ Tenant-isolated IAM/RBAC3 management and runtime user authorization for Stellar 
 | [Contract](stellar-enclosure-tianquan-jianshen-contract/) | Stable DTOs, manifests, enums and authorization decision contracts. |
 | [Core](stellar-enclosure-tianquan-jianshen-core/) | Pure Java role graphs, activation algorithms, permission algebra and constraints. |
 | [Starter](stellar-enclosure-tianquan-jianshen-starter/) | Service-side enforcement, Shoubing JWT validation and runtime authorization state consumption. |
-| [Gateway adapter](stellar-enclosure-tianquan-jianshen-gateway-adapter/) | Internal Yuheng integration without depending on the Admin implementation. |
 | [Admin](stellar-enclosure-tianquan-jianshen-admin/) | Management/runtime decision APIs, PostgreSQL facts, workers, Redis projections and platform integration. |
 
 The code-level responsibility here is user authorization and IAM governance. [Shoubing](https://github.com/Stellar-Enclosure/tianquan-shoubing-service) handles login and token issuance; Jianshen does not issue tokens or own personnel sessions. SERVICE callers are checked against Shoubing scopes rather than borrowing USER role decisions. The [React SDK](https://github.com/Stellar-Enclosure/web-sdk/tree/main/packages/stellar-enclosure-tianquan-jianshen-react-sdk) and [console](https://github.com/Stellar-Enclosure/tianquan-jianshen-web) are separate npm repositories/workspaces, not modules in this Maven reactor.
 
-Management APIs primarily use `/api/tianquan-jianshen/v1`, with bootstrap/about under `/api/v1/auth` and internal runtime decisions under `/internal/v1/authorization`. PostgreSQL/Redis projection health, Tianshu leases, Yuheng release consistency and actual routed requests are separate observations; see the [architecture](docs/architecture.md), [API/manifest contract](docs/api-and-manifest.md) and [security boundaries](docs/security-boundaries.md).
+Management APIs primarily use `/api/tianquan-jianshen/v1`, with bootstrap/about under `/api/v1/auth` and internal runtime decisions under `/internal/v1/authorization`. PostgreSQL and Redis projection health, Tianshu configuration receipts, Kubernetes Service endpoints, Yuheng URL exposure and routed requests are separate observations. See the [architecture](docs/architecture.md), [API/manifest contract](docs/api-and-manifest.md) and [security boundaries](docs/security-boundaries.md).
 
 The default-off execution-grant authorization service can independently resolve a sealed intent through Shoubing, match its attested source tuple to the verified calling SERVICE, and read the current USER roles and activated resource policy in one local transaction. Deployments must explicitly configure finite `egon.tianquan-jianshen.execution-grants.policies` containing each system/purpose, exact normal and optional session API keys and paths, minimum permission codes, and permission-to-USER-scope mappings; the existing identity authority binding for the issuer and source resource must include `tianquan-shoubing:execution-grant:resolve`. Missing bindings or policy drift fail closed. Shoubing identity checks and the local authorization transaction are separate points in time; callers must recheck before each protected execution boundary, and a concurrent revocation is not globally atomic with a subsequent model call. The default-off internal POST `/internal/v1/authorization/execution-grants:decide` requires the separately scoped SERVICE credential `service:authorization:execution`; it does not grant permissions or register an application.
 
@@ -84,7 +83,7 @@ The bootstrap installs parent/BOM models before building components and business
 
 ## Publish to Maven Central
 
-Publishes the Jianshen parent, contract, core and Starter. Admin and the gateway adapter remain internal and are excluded. Requires the published platform parent, Components and Shoubing Starter.
+Publishes the Jianshen parent, contract, core and Starter. The executable Admin is delivered internally. Requires the published platform parent, Components and Shoubing Starter.
 
 Run these commands from this repository. Configure a Central Portal token under Maven server ID `central` and a local GPG signing key; credentials stay outside Git. See the [credential setup and initial dependency order](https://github.com/Stellar-Enclosure/Stellar-Enclosure-Parent/blob/main/docs/first-release.md).
 
