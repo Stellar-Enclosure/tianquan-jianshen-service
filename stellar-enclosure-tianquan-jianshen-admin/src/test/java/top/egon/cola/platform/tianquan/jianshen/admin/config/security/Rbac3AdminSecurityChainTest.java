@@ -5,6 +5,8 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.mock.web.MockServletContext;
@@ -65,7 +67,7 @@ class Rbac3AdminSecurityChainTest {
         context.refresh();
         try {
             var mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
-            for (String path : java.util.List.of("/internal/test", "/api/tianquan-jianshen/v1/test")) {
+            for (String path : java.util.List.of("/internal/test", "/api/tianquan-jianshen/v1/test", "/api/tianquan-jianshen/v1/iam/roles/3801")) {
                 var response = mvc.perform(get(path)).andReturn().getResponse();
                 assertThat(response.getStatus()).isEqualTo(401);
                 assertThat(response.getHeader("Cache-Control")).contains("no-store");
@@ -119,8 +121,9 @@ class Rbac3AdminSecurityChainTest {
         } finally { org.springframework.security.core.context.SecurityContextHolder.clearContext(); }
     }
 
-    @Test
-    void invalidTokenAndUnavailableSnapshotFailBeforeBusinessWithOwnStatus() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"/api/tianquan-jianshen/v1/test", "/api/tianquan-jianshen/v1/iam/roles/3801"})
+    void invalidTokenAndUnavailableSnapshotFailBeforeBusinessWithOwnStatus(String path) throws Exception {
         var context = new AnnotationConfigWebApplicationContext();
         context.setServletContext(new MockServletContext());
         context.register(Rbac3AdminSecurityConfiguration.class, FixtureConfiguration.class);
@@ -131,7 +134,7 @@ class Rbac3AdminSecurityChainTest {
             var loader = context.getBean(SingleFlightSnapshotLoader.class);
             org.mockito.Mockito.when(users.verify("invalid")).thenReturn(
                     new top.egon.cola.platform.tianquan.shoubing.starter.security.AccessTokenVerification.Invalid<>("TOKEN_INVALID"));
-            var invalid = mvc.perform(get("/api/tianquan-jianshen/v1/test").header("Authorization", "Bearer invalid")).andReturn().getResponse();
+            var invalid = mvc.perform(get(path).header("Authorization", "Bearer invalid")).andReturn().getResponse();
             assertThat(invalid.getStatus()).isEqualTo(401);
             assertThat(invalid.getHeader("WWW-Authenticate")).isEqualTo("Bearer");
             var now = java.time.Instant.now();
@@ -142,13 +145,13 @@ class Rbac3AdminSecurityChainTest {
                     new top.egon.cola.platform.tianquan.shoubing.starter.security.AccessTokenVerification.Valid<>(identity));
             org.mockito.Mockito.doThrow(
                     new top.egon.cola.platform.tianquan.jianshen.starter.client.Rbac3AuthorizationClient.AuthorizationDeniedException("SNAPSHOT_DENIED")).when(loader).load(identity);
-            var denied = mvc.perform(get("/api/tianquan-jianshen/v1/test").header("Authorization", "Bearer valid")).andReturn().getResponse();
+            var denied = mvc.perform(get(path).header("Authorization", "Bearer valid")).andReturn().getResponse();
             assertThat(denied.getStatus()).isEqualTo(403);
             assertThat(denied.getContentAsString()).contains("SNAPSHOT_DENIED");
             assertThat(denied.getHeader("Cache-Control")).contains("no-store");
             org.mockito.Mockito.doThrow(
                     new top.egon.cola.platform.tianquan.jianshen.starter.client.Rbac3AuthorizationClient.AuthorizationUnavailableException("SNAPSHOT_UNAVAILABLE")).when(loader).load(identity);
-            var unavailable = mvc.perform(get("/api/tianquan-jianshen/v1/test").header("Authorization", "Bearer valid")).andReturn().getResponse();
+            var unavailable = mvc.perform(get(path).header("Authorization", "Bearer valid")).andReturn().getResponse();
             assertThat(unavailable.getStatus()).isEqualTo(503);
             assertThat(unavailable.getContentAsString()).contains("SNAPSHOT_UNAVAILABLE");
             assertThat(unavailable.getHeader("Cache-Control")).contains("no-store");

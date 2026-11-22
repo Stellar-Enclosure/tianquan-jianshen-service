@@ -25,6 +25,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.iam.organization.controlle
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.position.controller.PositionController;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.position.controller.UserPositionAssignmentController;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.controller.RoleController;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.vo.RoleEditDetailVO;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.user.controller.UserController;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.user.controller.UserDirectoryController;
 
@@ -101,6 +102,19 @@ class Rbac3OpenApiGroupContractTest {
         Schema<?> requestSchema = request.referencedSchemas.get("ReplaceRolePermissionsRequestDTO");
         assertThat(requestSchema.getProperties()).containsKeys("target", "expectedVersion", "permissionCodes", "validFrom", "validTo");
         assertThat(requestSchema.getProperties()).doesNotContainKey("resourceIds");
+    }
+
+    @Test
+    void roleEditDetailSchemaContainsOnlyTheEditProjection() {
+        var detail = ModelConverters.getInstance(true).resolveAsResolvedSchema(
+                new AnnotatedType(RoleEditDetailVO.class).resolveAsRef(true));
+        Schema<?> schema = detail.referencedSchemas.get("RoleEditDetailVO");
+        assertThat(schema.getProperties()).containsOnlyKeys("roleId", "applicationId", "roleName", "status",
+                "landingRouteId", "landingPriority", "maximumAssignmentDays", "version");
+        assertThat(schema.getRequired()).contains("landingRouteId", "maximumAssignmentDays");
+        assertThat(schema.getProperties().get("landingRouteId").getTypes()).containsExactlyInAnyOrder("string", "null");
+        assertThat(schema.getProperties().get("maximumAssignmentDays").getTypes())
+                .containsExactlyInAnyOrder("integer", "null");
     }
 
     private EgonApiCatalog catalog(Class<?> controller) {

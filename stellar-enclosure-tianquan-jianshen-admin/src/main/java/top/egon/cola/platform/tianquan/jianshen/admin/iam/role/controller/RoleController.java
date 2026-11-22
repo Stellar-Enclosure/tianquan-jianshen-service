@@ -8,7 +8,24 @@ import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType
 
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
 
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Pattern;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
+import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.vo.RoleEditDetailVO;
 import jakarta.validation.constraints.PositiveOrZero;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -52,7 +69,10 @@ import java.util.List;
  * 语义与用法：将 `RoleController` 作为 `当前包` 的职责边界使用，优先依赖其已有构造、接口或 Spring 装配方式。
  * Semantics and usage: use `RoleController` as the responsibility boundary of `the current package`, following its existing construction, interface, or Spring-assembly mechanism.
  */
-@RestController
+@Slf4j
+@RestController("roleController")
+@RequiredArgsConstructor(onConstructor_ = @Autowired)
+@SecurityScheme(name = "bearerAuth", type = SecuritySchemeType.HTTP, scheme = "bearer", bearerFormat = "JWT")
 @RequestMapping("/api/tianquan-jianshen/v1/iam/roles")
 @Tag(name = "role-permission", description = "角色与权限接口组")
 @EgonApiCatalog(
@@ -71,6 +91,7 @@ public class RoleController {
      * 含义与用法：读取、传递或更新 `facade` 时应保持 `RoleController` 的生命周期、不可变性和线程安全约束。
      * Meaning and usage: when reading, passing, or updating `facade`, preserve `RoleController`'s lifecycle, immutability, and thread-safety constraints.
      */
+    @Qualifier("roleFacade")
     private final RoleFacade facade;
     /**
      * 字段 `databaseClock` 表示 `RoleController` 中与 `database Clock` 相关的状态、依赖、配置或结果（声明类型 `DatabaseClock`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -79,22 +100,51 @@ public class RoleController {
      * 含义与用法：读取、传递或更新 `databaseClock` 时应保持 `RoleController` 的生命周期、不可变性和线程安全约束。
      * Meaning and usage: when reading, passing, or updating `databaseClock`, preserve `RoleController`'s lifecycle, immutability, and thread-safety constraints.
      */
+    @Qualifier("jpaDatabaseClock")
     private final DatabaseClock databaseClock;
 
-    /**
-     * 构造器 `RoleController` 用于创建并初始化 `RoleController` 实例，建立该类型后续方法所依赖的状态和不变量。
-     * Constructor `RoleController` creates and initializes `RoleController`, establishing the state and invariants required by subsequent operations.
-     *
-     * 用法：通过 `RoleController` 的构造入口创建实例，不绕过构造器建立的校验和初始化约束。
-     * Usage: create the instance through `RoleController`'s constructor entry point and do not bypass the validation and initialization constraints established there.
-     *
-     * @param facade 输入参数 `facade`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param databaseClock 输入参数 `databaseClock`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     */
-    public RoleController(RoleFacade facade, DatabaseClock databaseClock) {
-        this.facade = facade;
-        this.databaseClock = databaseClock;
+    @PermissionResource(key = "tianquan-jianshen.api.Role.roleEditDetail", type = ResourceType.API,
+            labelPage = "tianquan-jianshen.permissions", labelKey = "api.Role.roleEditDetail")
+    @GetMapping(value = "/{roleId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequiresPermissions(codes = "system:role:update")
+    @EgonGatewayPolicy(exposure = EgonGatewayPolicy.Exposure.EXTERNAL)
+    @Operation(operationId = "tianquan-jianshen-role-edit-detail-v1", summary = "读取角色编辑详情",
+            tags = {"tianquan-jianshen", "role"}, security = @SecurityRequirement(name = "bearerAuth"))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "本租户角色原值和版本",
+                    headers = @Header(name = "Cache-Control", description = "no-store")),
+            @ApiResponse(responseCode = "400", description = "REQUEST_INVALID",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ResultRecord.class))),
+            @ApiResponse(responseCode = "401", description = "AUTHENTICATION_REQUIRED",
+                    headers = @Header(name = "WWW-Authenticate", description = "Bearer"),
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = RoleEditSecurityErrorVO.class))),
+            @ApiResponse(responseCode = "403", description = "请求或角色更新权限被拒绝",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(anyOf = {RoleEditSecurityErrorVO.class, ResultRecord.class}))),
+            @ApiResponse(responseCode = "404", description = "RESOURCE_NOT_FOUND",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ResultRecord.class))),
+            @ApiResponse(responseCode = "503", description = "安全审计交付或授权运行态不可用",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(anyOf = {RoleEditSecurityErrorVO.class, ResultRecord.class})))
+    })
+    public ResultRecord<RoleEditDetailVO> roleEditDetail(
+            @PathVariable @Pattern(regexp = "^[1-9][0-9]{0,18}$") String roleId,
+            HttpServletResponse response
+    ) {
+        response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store");
+        long numericRoleId = Long.parseLong(roleId);
+        return ResultRecord.success(facade.roleEditDetail(
+                TenantContext.requireCurrent().authenticatedTenantId(), numericRoleId));
     }
+
+    /** OpenAPI view of the existing two-string response sent by the security chain. */
+    public record RoleEditSecurityErrorVO(
+            @Schema(requiredMode = Schema.RequiredMode.REQUIRED) String code,
+            @Schema(requiredMode = Schema.RequiredMode.REQUIRED) String message
+    ) { }
 
     /**
      * 方法 `roles` 按照 `RoleController` 的职责处理输入，完成 `roles` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。

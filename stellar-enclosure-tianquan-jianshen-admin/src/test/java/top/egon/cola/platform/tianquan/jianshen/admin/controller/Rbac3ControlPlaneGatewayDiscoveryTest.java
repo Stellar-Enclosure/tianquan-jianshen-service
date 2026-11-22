@@ -40,7 +40,7 @@ class Rbac3ControlPlaneGatewayDiscoveryTest {
     @Autowired
     private RequestMappingHandlerMapping handlerMappings;
 
-    @MockitoBean
+    @MockitoBean(name = "roleFacade")
     private RoleFacade roleFacade;
 
     @MockitoBean
@@ -49,7 +49,7 @@ class Rbac3ControlPlaneGatewayDiscoveryTest {
     @MockitoBean
     private GlobalResourceCatalogService globalResourceCatalogService;
 
-    @MockitoBean
+    @MockitoBean(name = "jpaDatabaseClock")
     private DatabaseClock databaseClock;
 
     @MockitoBean
@@ -66,7 +66,8 @@ class Rbac3ControlPlaneGatewayDiscoveryTest {
         org.assertj.core.api.Assertions.assertThat(operationIds(ApplicationResourceController.class))
                 .contains("tianquan-jianshen-application-list-v1", "tianquan-jianshen-application-resource-list-v1");
         org.assertj.core.api.Assertions.assertThat(operationIds(RoleController.class))
-                .contains("tianquan-jianshen-role-create-v1", "tianquan-jianshen-role-inheritance-add-v1");
+                .contains("tianquan-jianshen-role-create-v1", "tianquan-jianshen-role-inheritance-add-v1",
+                        "tianquan-jianshen-role-edit-detail-v1");
         org.assertj.core.api.Assertions.assertThat(operationIds(ConstraintController.class))
                 .contains(
                         "tianquan-jianshen-sod-set-create-v1",

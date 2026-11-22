@@ -114,8 +114,22 @@ class PermissionProducerCoverageTest {
                 }
             }
         }
-        assertThat(apiKeys).hasSize(112).contains("tianquan-jianshen.api.runtime.executionGrantScopes");
-        assertThat(fields).hasSize(620);
+        String detailApiKey = "tianquan-jianshen.api.Role.roleEditDetail";
+        assertThat(apiKeys).hasSize(113).contains("tianquan-jianshen.api.runtime.executionGrantScopes", detailApiKey);
+        var detailApi = resources.get(detailApiKey);
+        assertThat(detailApi.access()).isEqualTo(ResourceAccess.PROTECTED);
+        assertThat(detailApi.allowedPrincipals()).containsExactly(PermissionManifest.PrincipalType.USER);
+        assertThat(detailApi.requirement().codes()).containsExactly("system:role:update");
+        assertThat(fields).hasSize(628);
+        String detailFieldPrefix = "tianquan-jianshen.field.iam.role.domain.vo.RoleEditDetailVO.";
+        for (String property : List.of("roleId", "applicationId", "roleName", "status",
+                "landingRouteId", "landingPriority", "maximumAssignmentDays", "version")) {
+            String key = detailFieldPrefix + property;
+            assertThat(fields).contains(key);
+            var field = resources.get(key);
+            assertThat(field.fieldPolicy().plainRead().codes()).containsExactly("system:role:update");
+            assertThat(field.fieldPolicy().write()).isNull();
+        }
         assertThat(resources.values().stream().filter(value -> value.type() == ResourceType.API)
                 .map(PermissionManifest.ResourceDefinition::key).toList()).containsExactlyInAnyOrderElementsOf(apiKeys);
         assertThat(resources.values().stream().filter(value -> value.type() == ResourceType.FIELD)

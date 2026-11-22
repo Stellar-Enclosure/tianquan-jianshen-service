@@ -225,6 +225,9 @@ import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.L
         defaults = @LocalizedText(locale = "zh-CN", text = "分析角色族与权限扩张影响"))
 @PermissionMessage(pageCode = "tianquan-jianshen.permissions", key = "api.Role.removeInheritance", defaultLocale = "zh-CN",
         defaults = @LocalizedText(locale = "zh-CN", text = "删除角色继承边并重建闭包"))
+@PermissionMessage(pageCode = "tianquan-jianshen.permissions", key = "api.Role.roleEditDetail", defaultLocale = "zh-CN",
+        defaults = {@LocalizedText(locale = "zh-CN", text = "读取角色编辑详情"),
+                @LocalizedText(locale = "en", text = "Read role edit details")})
 @PermissionMessage(pageCode = "tianquan-jianshen.permissions", key = "api.Role.roles", defaultLocale = "zh-CN",
         defaults = @LocalizedText(locale = "zh-CN", text = "查询租户角色"))
 @PermissionMessage(pageCode = "tianquan-jianshen.permissions", key = "api.Role.update", defaultLocale = "zh-CN",

@@ -1,5 +1,11 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.role.repository.jpa;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.vo.RoleEditDetailVO;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.converter.RoleEditDetailConverter;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import org.springframework.stereotype.Repository;
@@ -38,7 +44,9 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.doma
  * 语义与用法：将 `JpaRoleRepository` 作为 `当前包` 的职责边界使用，优先依赖其已有构造、接口或 Spring 装配方式。
  * Semantics and usage: use `JpaRoleRepository` as the responsibility boundary of `the current package`, following its existing construction, interface, or Spring-assembly mechanism.
  */
-@Repository
+@Slf4j
+@Repository("jpaRoleRepository")
+@RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class JpaRoleRepository implements RoleHierarchyRepository, RoleControlRepository {
 
     /**
@@ -48,6 +56,7 @@ public class JpaRoleRepository implements RoleHierarchyRepository, RoleControlRe
      * 含义与用法：读取、传递或更新 `entityManager` 时应保持 `JpaRoleRepository` 的生命周期、不可变性和线程安全约束。
      * Meaning and usage: when reading, passing, or updating `entityManager`, preserve `JpaRoleRepository`'s lifecycle, immutability, and thread-safety constraints.
      */
+    @Qualifier("jpaSharedEM_entityManagerFactory")
     private final EntityManager entityManager;
     /**
      * 字段 `closureStore` 表示 `JpaRoleRepository` 中与 `closure Store` 相关的状态、依赖、配置或结果（声明类型 `PostgresqlRoleClosureStore`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -56,6 +65,7 @@ public class JpaRoleRepository implements RoleHierarchyRepository, RoleControlRe
      * 含义与用法：读取、传递或更新 `closureStore` 时应保持 `JpaRoleRepository` 的生命周期、不可变性和线程安全约束。
      * Meaning and usage: when reading, passing, or updating `closureStore`, preserve `JpaRoleRepository`'s lifecycle, immutability, and thread-safety constraints.
      */
+    @Qualifier("postgresqlRoleClosureRepository")
     private final PostgresqlRoleClosureRepository closureStore;
     /**
      * 字段 `databaseClock` 表示 `JpaRoleRepository` 中与 `database Clock` 相关的状态、依赖、配置或结果（声明类型 `DatabaseClock`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -64,6 +74,7 @@ public class JpaRoleRepository implements RoleHierarchyRepository, RoleControlRe
      * 含义与用法：读取、传递或更新 `databaseClock` 时应保持 `JpaRoleRepository` 的生命周期、不可变性和线程安全约束。
      * Meaning and usage: when reading, passing, or updating `databaseClock`, preserve `JpaRoleRepository`'s lifecycle, immutability, and thread-safety constraints.
      */
+    @Qualifier("jpaDatabaseClock")
     private final DatabaseClock databaseClock;
     /**
      * 字段 `eventPort` 表示 `JpaRoleRepository` 中与 `event Port` 相关的状态、依赖、配置或结果（声明类型 `AuthorizationEventPublisher`）；其生命周期和取值含义由声明类型及所属对象共同确定。
@@ -72,33 +83,29 @@ public class JpaRoleRepository implements RoleHierarchyRepository, RoleControlRe
      * 含义与用法：读取、传递或更新 `eventPort` 时应保持 `JpaRoleRepository` 的生命周期、不可变性和线程安全约束。
      * Meaning and usage: when reading, passing, or updating `eventPort`, preserve `JpaRoleRepository`'s lifecycle, immutability, and thread-safety constraints.
      */
+    @Qualifier("authorizationEventPort")
     private final AuthorizationEventPublisher eventPort;
+    @Qualifier("jpaTenantAuthorizationStateRepository")
     private final TenantAuthorizationStateRepository authorizationState;
 
-    /**
-     * 构造器 `JpaRoleRepository` 用于创建并初始化 `JpaRoleRepository` 实例，建立该类型后续方法所依赖的状态和不变量。
-     * Constructor `JpaRoleRepository` creates and initializes `JpaRoleRepository`, establishing the state and invariants required by subsequent operations.
-     *
-     * 用法：通过 `JpaRoleRepository` 的构造入口创建实例，不绕过构造器建立的校验和初始化约束。
-     * Usage: create the instance through `JpaRoleRepository`'s constructor entry point and do not bypass the validation and initialization constraints established there.
-     *
-     * @param entityManager 输入参数 `entityManager`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param closureStore 输入参数 `closureStore`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param databaseClock 输入参数 `databaseClock`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param eventPort 输入参数 `eventPort`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     * @param authorizationState 输入参数 `authorizationState`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
-     */
-    public JpaRoleRepository(
-            EntityManager entityManager,
-            PostgresqlRoleClosureRepository closureStore,
-            DatabaseClock databaseClock,
-            AuthorizationEventPublisher eventPort,
-            TenantAuthorizationStateRepository authorizationState) {
-        this.entityManager = entityManager;
-        this.closureStore = closureStore;
-        this.databaseClock = databaseClock;
-        this.eventPort = eventPort;
-        this.authorizationState = authorizationState;
+    @Qualifier("roleEditDetailConverterImpl")
+    private final RoleEditDetailConverter roleEditDetailConverter;
+
+    @Override
+    @Transactional(readOnly = true)
+    public RoleEditDetailVO roleEditDetail(long tenantId, long roleId) {
+        if (tenantId <= 0 || roleId <= 0) {
+            throw new IllegalArgumentException("Invalid role lookup");
+        }
+        RolePO role = entityManager.createQuery(
+                        "select r from RoleEntity r where r.id = :roleId and r.tenantId = :tenantId", RolePO.class)
+                .setParameter("roleId", roleId)
+                .setParameter("tenantId", tenantId)
+                .getSingleResultOrNull();
+        if (role == null) {
+            throw new Rbac3RuleViolation("RESOURCE_NOT_FOUND");
+        }
+        return roleEditDetailConverter.toTarget(role);
     }
 
     /**

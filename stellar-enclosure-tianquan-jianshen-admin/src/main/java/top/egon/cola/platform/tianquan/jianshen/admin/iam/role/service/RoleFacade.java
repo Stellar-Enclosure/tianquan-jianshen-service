@@ -6,6 +6,8 @@ import top.egon.cola.platform.tianquan.jianshen.core.hierarchy.RoleHierarchyVali
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
 
 import java.util.ArrayList;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.vo.RoleEditDetailVO;
+import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 import java.util.Objects;
 import java.time.Instant;
@@ -25,6 +27,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.vo.RoleMut
  * Type `RoleFacade` is a type in its package and carries the responsibility, state, or contract for `Role Facade`; callers normally use it through its public API, Spring assembly, or implementation relationship.
  * Serializes role graph changes and rebuilds the materialized closure atomically.
  */
+@Slf4j
 public final class RoleFacade implements RoleImpactQuery {
 
     /**
@@ -290,6 +293,14 @@ public final class RoleFacade implements RoleImpactQuery {
      *
      * @return 操作产生的结果，其具体语义由返回类型和所属 API 定义；the result of the operation, whose exact semantics are defined by the return type and owning API.
      */
+    public RoleEditDetailVO roleEditDetail(String tenantId, long roleId) {
+        long verifiedTenantId = Long.parseLong(tenantId);
+        if (verifiedTenantId <= 0 || roleId <= 0) {
+            throw new IllegalArgumentException("Invalid role lookup");
+        }
+        return requiredControlStore().roleEditDetail(verifiedTenantId, roleId);
+    }
+
     private RoleControlRepository requiredControlStore() {
         if (roleControlStore == null) {
             throw new IllegalStateException("role control store is not configured");

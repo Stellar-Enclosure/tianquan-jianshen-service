@@ -6,6 +6,8 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
 import top.egon.cola.component.common.core.pojo.ResultRecord;
 import top.egon.cola.platform.tianquan.jianshen.contract.error.Rbac3ErrorCode;
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
@@ -72,6 +74,19 @@ public class Rbac3ApiExceptionHandler {
     ) {
         return response(Rbac3ErrorCode.REQUEST_INVALID,
                 "Request payload is invalid", request);
+    }
+
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<ResultRecord<Void>> handleRoleDetailValidation(
+            HandlerMethodValidationException error,
+            HttpServletRequest request
+    ) {
+        PermissionResource operation = error.getMethod().getAnnotation(PermissionResource.class);
+        if (error.isForReturnValue() || operation == null
+                || !"tianquan-jianshen.api.Role.roleEditDetail".equals(operation.key())) {
+            throw error;
+        }
+        return handleInvalidRequest(error, request);
     }
 
     /**

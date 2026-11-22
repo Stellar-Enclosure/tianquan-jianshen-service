@@ -1,6 +1,7 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.po;
 
 import jakarta.persistence.Column;
+import lombok.Getter;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -118,6 +119,7 @@ public class RolePO extends TenantScopedPO {
      * 含义与用法：读取、传递或更新 `landingRouteId` 时应保持 `RolePO` 的生命周期、不可变性和线程安全约束。
      * Meaning and usage: when reading, passing, or updating `landingRouteId`, preserve `RolePO`'s lifecycle, immutability, and thread-safety constraints.
      */
+    @Getter
     @Column(name = "landing_route_id")
     private Long landingRouteId;
     /**
@@ -127,6 +129,7 @@ public class RolePO extends TenantScopedPO {
      * 含义与用法：读取、传递或更新 `landingPriority` 时应保持 `RolePO` 的生命周期、不可变性和线程安全约束。
      * Meaning and usage: when reading, passing, or updating `landingPriority`, preserve `RolePO`'s lifecycle, immutability, and thread-safety constraints.
      */
+    @Getter
     @Column(name = "landing_priority", nullable = false)
     private int landingPriority;
     /**

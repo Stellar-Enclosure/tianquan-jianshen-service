@@ -2,6 +2,17 @@ package top.egon.cola.platform.tianquan.jianshen.admin.iam.role;
 
 import top.egon.cola.component.common.id.snowflake.SnowflakeIdGenerator;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.TypedQuery;
+import org.mapstruct.factory.Mappers;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.converter.RoleEditDetailConverter;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.po.RolePO;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.vo.RoleEditDetailVO;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.enums.RoleRiskLevelEnum;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.enums.RoleStatusEnum;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.enums.RoleTypeEnum;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.dto.UpdateRoleCommandDTO;
+import static org.mockito.Mockito.verifyNoInteractions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeAll;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.state.repository.TenantAuthorizationStateRepository;
@@ -53,7 +64,7 @@ class RoleControlFacadeTest {
                 closureStore,
                 databaseClock,
                 eventPort,
-                stateStore).recordGraphMutation(
+                stateStore, Mappers.getMapper(RoleEditDetailConverter.class)).recordGraphMutation(
                 "10001", "71001", new top.egon.cola.platform.tianquan.jianshen.core.hierarchy.RoleEdge(
                         "50001", "50002"), true, "actor");
 
@@ -78,7 +89,74 @@ class RoleControlFacadeTest {
                 .hasMessageContaining("same local application");
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void roleDetailBindsTenantAndIdAndProjectsWithoutPublishing() {
+        EntityManager entityManager = mock(EntityManager.class);
+        TypedQuery<RolePO> query = mock(TypedQuery.class);
+        var events = mock(AuthorizationEventPublisher.class);
+        var state = mock(TenantAuthorizationStateRepository.class);
+        when(entityManager.createQuery(
+                "select r from RoleEntity r where r.id = :roleId and r.tenantId = :tenantId", RolePO.class))
+                .thenReturn(query);
+        when(query.setParameter("roleId", 3801L)).thenReturn(query);
+        when(query.setParameter("tenantId", 10L)).thenReturn(query);
+        RolePO row = mock(RolePO.class);
+        when(row.getId()).thenReturn(3801L);
+        when(row.getApplicationId()).thenReturn(20L);
+        when(row.getRoleName()).thenReturn("仓库运营");
+        when(row.getStatus()).thenReturn(RoleStatusEnum.ACTIVE);
+        when(row.getLandingRouteId()).thenReturn(null);
+        when(row.getLandingPriority()).thenReturn(10);
+        when(row.getMaximumAssignmentDays()).thenReturn(45);
+        when(row.getVersion()).thenReturn(7L);
+        when(query.getSingleResultOrNull()).thenReturn(row, (RolePO) null);
+        var repository = new JpaRoleRepository(entityManager, mock(PostgresqlRoleClosureRepository.class),
+                mock(DatabaseClock.class), events, state, Mappers.getMapper(RoleEditDetailConverter.class));
+        var facade = new RoleFacade(repository, repository);
+        assertEquals(new RoleEditDetailVO("3801", "20", "仓库运营", "ACTIVE", null, 10, 45, 7),
+                facade.roleEditDetail("10", 3801L));
+        assertThatThrownBy(() -> facade.roleEditDetail("10", 3801L))
+                .hasMessageContaining("RESOURCE_NOT_FOUND");
+        verifyNoInteractions(events, state);
+    }
+
+    @Test
+    void roleDetailCanRoundTripOriginalConfigurationThroughTheExistingUpdate() {
+        var entityManager = mock(EntityManager.class);
+        var clock = mock(DatabaseClock.class);
+        var events = mock(AuthorizationEventPublisher.class);
+        var state = mock(TenantAuthorizationStateRepository.class);
+        var row = new RolePO(3801L, 10L, 20L, "WAREHOUSE", "仓库运营",
+                RoleTypeEnum.POSITION, RoleRiskLevelEnum.LOW, false, 8201L, 10, 45, "actor", Instant.EPOCH);
+        when(entityManager.find(RolePO.class, 3801L, LockModeType.PESSIMISTIC_WRITE)).thenReturn(row);
+        when(clock.transactionNow()).thenReturn(Instant.EPOCH.plusSeconds(1));
+        when(events.enqueue(any())).thenReturn("propagation-accepted");
+        var converter = Mappers.getMapper(RoleEditDetailConverter.class);
+        var repository = new JpaRoleRepository(entityManager, mock(PostgresqlRoleClosureRepository.class),
+                clock, events, state, converter);
+        var facade = new RoleFacade(repository, repository);
+        var detail = converter.toTarget(row);
+
+        facade.updateRole(new UpdateRoleCommandDTO("10", detail.roleId(), "仓库运营二组", detail.status(),
+                detail.landingRouteId(), detail.landingPriority(), detail.maximumAssignmentDays(), detail.version(),
+                "actor"), Instant.EPOCH);
+
+        assertEquals(new RoleEditDetailVO("3801", "20", "仓库运营二组", "ACTIVE",
+                "8201", 10, 45, detail.version()), converter.toTarget(row));
+        assertThatThrownBy(() -> facade.updateRole(new UpdateRoleCommandDTO("10", "3801", "未提交名称", "ACTIVE",
+                null, 0, null, detail.version() + 1, "actor"), Instant.EPOCH))
+                .hasMessageContaining("RESOURCE_VERSION_CONFLICT");
+        assertEquals("8201", converter.toTarget(row).landingRouteId());
+    }
+
     private static final class RecordingControlStore implements RoleControlRepository {
+
+        @Override
+        public RoleEditDetailVO roleEditDetail(long tenantId, long roleId) {
+            throw new UnsupportedOperationException();
+        }
+
 
         @Override
         public RoleMutationResultVO create(

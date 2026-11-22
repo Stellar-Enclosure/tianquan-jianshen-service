@@ -6,6 +6,7 @@ import top.egon.cola.platform.tianquan.jianshen.core.hierarchy.RoleHierarchyVali
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
 import java.util.ArrayList;
 import java.util.List;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.vo.RoleEditDetailVO;
 import java.util.Objects;
 import java.time.Instant;
 import java.util.function.Function;
@@ -23,6 +24,8 @@ import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.domain.vo.RoleMut
      * Semantics and usage: use `RoleControlRepository` as the responsibility boundary of `RoleFacade`, following its existing construction, interface, or Spring-assembly mechanism.
      */
     public interface RoleControlRepository {
+
+        RoleEditDetailVO roleEditDetail(long tenantId, long roleId);
 
         /**
          * 方法 `create` 按照 `RoleControlRepository` 的职责处理输入，完成 `create` 操作并返回结果或产生声明的副作用；调用方应遵守参数和异常契约。
