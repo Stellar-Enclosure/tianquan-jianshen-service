@@ -272,7 +272,7 @@ public class PermissionRuntimeSnapshotRepository {
     private List<String> permissions(long scope, long catalog, List<String> roles, Instant now) {
         if (roles.isEmpty()) return List.of();
         return rows("""
-                select distinct p.permission_code from rbac3_catalog_role_permission g
+                select distinct p.permission_code as permission_code from rbac3_catalog_role_permission g
                   join rbac3_catalog_role_binding b on b.catalog_scope_id = g.catalog_scope_id and b.role_id = g.role_id and b.enabled
                   join rbac3_catalog_permission p on p.catalog_scope_id = g.catalog_scope_id and p.id = g.permission_id and p.governance_state = 'ACTIVE'
                   join rbac3_catalog_activation_producer ap on ap.catalog_scope_id = p.catalog_scope_id and ap.producer_id = p.owner_producer_id
@@ -281,7 +281,7 @@ public class PermissionRuntimeSnapshotRepository {
                        and pv.producer_version = ap.producer_version and pv.permission_id = p.id
                  where g.catalog_scope_id = :scope and ap.activation_version = :catalog and g.role_id in (:roles)
                    and g.status = 'ACTIVE' and g.valid_from <= :now and (g.valid_to is null or g.valid_to > :now)
-                 order by p.permission_code
+                 order by permission_code
                 """, Map.of("scope", scope, "catalog", catalog, "roles", roles.stream().map(Long::valueOf).toList(), "now", now))
                 .stream().map(row -> text(row[0])).toList();
     }

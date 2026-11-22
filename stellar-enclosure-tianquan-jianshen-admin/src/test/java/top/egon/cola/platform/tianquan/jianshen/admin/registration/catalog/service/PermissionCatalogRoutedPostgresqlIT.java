@@ -18,8 +18,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
+import org.springframework.test.util.ReflectionTestUtils;
 import top.egon.cola.platform.tianquan.jianshen.admin.audit.service.AuditQueryService;
+import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.activation.repository.ActivationTransaction;
+import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.activation.repository.RoleActivationFactRepository;
+import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.catalog.PermissionRuntimeProperties;
+import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.catalog.PermissionRuntimeSnapshotRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.AuthorizationEventPublisher;
+import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.service.RoleEligibilityService;
 import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.domain.PermissionCatalogCaller;
 import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.repository.PermissionCatalogActivationRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.repository.PermissionCatalogDefinitionRepository;
@@ -243,6 +249,11 @@ class PermissionCatalogRoutedPostgresqlIT {
         assertEquals(List.of("app.read"), actual.permissions().stream().map(permission -> permission.permissionCode()).toList());
         assertEquals(add.validFrom(), actual.permissions().getFirst().validFrom());
         assertEquals(add.validTo(), actual.permissions().getFirst().validTo());
+        var snapshots = new PermissionRuntimeSnapshotRepository(entityManager, new ObjectMapper(),
+                mock(RoleActivationFactRepository.class), mock(ActivationTransaction.class), mock(RoleEligibilityService.class),
+                () -> NOW, new PermissionRuntimeProperties(null, List.of()));
+        assertEquals(List.of("app.read"), transaction(() -> ReflectionTestUtils.<List<String>>invokeMethod(
+                snapshots, "permissions", 1L, 1L, List.of("40"), NOW.plusSeconds(300))));
         var stale = assertThrows(Rbac3RuleViolation.class, () -> transaction(() -> grants.replace(scope, 40, add, "test", NOW)));
         assertEquals("RESOURCE_VERSION_CONFLICT", stale.reasonCode());
         var invalid = new ReplaceRolePermissionsRequestDTO(
@@ -255,6 +266,8 @@ class PermissionCatalogRoutedPostgresqlIT {
         var removed = transaction(() -> grants.replace(scope, 40, clear, "test", NOW));
         assertEquals(new RolePermissionGrantRepository.Mutation("2", 0, 1), removed);
         assertTrue(transaction(() -> grants.read(scope, 40)).permissions().isEmpty());
+        assertEquals(List.of(), transaction(() -> ReflectionTestUtils.<List<String>>invokeMethod(
+                snapshots, "permissions", 1L, 1L, List.of("40"), NOW.plusSeconds(300))));
         assertEquals(1L, transaction(() -> ((Number) entityManager.createNativeQuery(
                 "select count(*) from rbac3_catalog_role_permission where catalog_scope_id=1 and role_id=40 and status='DISABLED'").getSingleResult()).longValue()));
     }
