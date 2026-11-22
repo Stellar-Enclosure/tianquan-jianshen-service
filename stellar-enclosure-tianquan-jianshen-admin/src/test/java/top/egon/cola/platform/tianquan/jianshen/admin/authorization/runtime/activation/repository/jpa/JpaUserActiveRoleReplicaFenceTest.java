@@ -26,7 +26,7 @@ class JpaUserActiveRoleReplicaFenceTest {
         when(user.getAuthVersion()).thenReturn(5L);
         @SuppressWarnings("unchecked") TypedQuery<UserPO> users = mock(TypedQuery.class, RETURNS_SELF);
         when(entities.createQuery(anyString(), eq(UserPO.class))).thenReturn(users);
-        when(users.getResultStream()).thenAnswer(ignored -> java.util.stream.Stream.of(user));
+        when(users.getSingleResultOrNull()).thenReturn(user);
         @SuppressWarnings("unchecked") TypedQuery<UserActiveRolePO> roles = mock(TypedQuery.class, RETURNS_SELF);
         when(entities.createQuery(anyString(), eq(UserActiveRolePO.class))).thenReturn(roles);
         var role = new UserActiveRolePO(7L, 9L, 11L, 13L, List.of("17"), NOW);
@@ -65,7 +65,7 @@ class JpaUserActiveRoleReplicaFenceTest {
         when(user.getAuthVersion()).thenReturn(5L);
         @SuppressWarnings("unchecked") TypedQuery<UserPO> users = mock(TypedQuery.class, RETURNS_SELF);
         when(entities.createQuery(anyString(), eq(UserPO.class))).thenReturn(users);
-        when(users.getResultStream()).thenAnswer(ignored -> java.util.stream.Stream.of(user));
+        when(users.getSingleResultOrNull()).thenReturn(user);
         @SuppressWarnings("unchecked") TypedQuery<UserActiveRolePO> roles = mock(TypedQuery.class, RETURNS_SELF);
         when(entities.createQuery(anyString(), eq(UserActiveRolePO.class))).thenReturn(roles);
         when(roles.getResultList()).thenReturn(List.of());

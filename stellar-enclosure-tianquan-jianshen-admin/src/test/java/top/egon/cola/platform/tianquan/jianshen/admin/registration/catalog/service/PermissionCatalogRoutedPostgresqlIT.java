@@ -60,6 +60,7 @@ class PermissionCatalogRoutedPostgresqlIT {
     private LocalContainerEntityManagerFactoryBean factory;
     private EntityManager entityManager;
     private javax.sql.DataSource logicalDataSource;
+    private com.zaxxer.hikari.HikariDataSource routedPhysicalDataSource;
     private PermissionCatalogJson json;
     private PermissionCatalogScopeRepository scopes;
     private PermissionManifestRepository manifests;
@@ -160,6 +161,7 @@ class PermissionCatalogRoutedPostgresqlIT {
         }
         if (factory != null) factory.destroy();
         if (logicalDataSource instanceof AutoCloseable closeable) closeable.close();
+        if (routedPhysicalDataSource != null) routedPhysicalDataSource.close();
         if (schemaCreated && "public".equals(schema)) {
             try (var connection = DriverManager.getConnection(url, user, password); var statement = connection.createStatement()) {
                 statement.execute("drop schema public cascade");
@@ -182,6 +184,41 @@ class PermissionCatalogRoutedPostgresqlIT {
         assertRejectedAfter("update rbac3_catalog_permission set owner_producer_id='other',version=version+1", request);
         assertRejectedAfter("update rbac3_catalog_message_owner set owner_producer_id='other',version=version+1", request);
         transaction(() -> { activations.requireReferenceClosure(request); return null; });
+    }
+
+    @Test
+    void activeRoleUserReadMaterializesWithinTheRoutedQueryAndPreservesIdentityBoundaries() throws Exception {
+        transaction(() -> {
+            entityManager.createNativeQuery("""
+                    insert into rbac3_user(id,tenant_id,identity_sub,status,auth_version,version,created_at,created_by,updated_at,updated_by)
+                    values(901,10,'route-user','ACTIVE',0,0,current_timestamp,'test',current_timestamp,'test')
+                    """).executeUpdate();
+            entityManager.createNativeQuery("""
+                    insert into rbac3_role(id,tenant_id,application_id,role_code,role_name,role_type,risk_level,status,created_at,created_by,updated_at,updated_by)
+                    values(40,10,20,'ROUTED_ACTIVE_ROLE','Routed active role','MANAGEMENT','LOW','ACTIVE',current_timestamp,'test',current_timestamp,'test')
+                    """).executeUpdate();
+            entityManager.createNativeQuery("""
+                    insert into rbac3_user_active_role(tenant_id,user_id,application_id,root_role_id,eligible_assignment_ids,activated_at)
+                    values(10,901,20,40,'["50"]',current_timestamp)
+                    """).executeUpdate();
+            return null;
+        });
+        switchToLogicalDataSource();
+        var routedEntityManager = org.springframework.orm.jpa.SharedEntityManagerCreator.createSharedEntityManager(factory.getObject());
+        var transactions = new org.springframework.transaction.support.TransactionTemplate(new org.springframework.orm.jpa.JpaTransactionManager(factory.getObject()));
+        var repository = new top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.activation.repository.jpa.JpaUserActiveRoleRepository(routedEntityManager);
+        var selected = transactions.execute(status -> {
+            routedEntityManager.createNativeQuery("select id,auth_version from rbac3_user where tenant_id=10 and id=901").getResultList();
+            routedEntityManager.createNativeQuery("select policy_version from rbac3_tenant_authorization_state where tenant_id=10").getSingleResult();
+            routedEntityManager.createNativeQuery("select id from rbac3_role where tenant_id=10 and application_id=20").getResultList();
+            return repository.current("10", "route-user", "901", NOW);
+        });
+        assertEquals(Map.of("20", java.util.Set.of("40")), selected.rootsByApplication());
+        assertThrows(IllegalArgumentException.class, () -> transactions.execute(status -> repository.current("10", "foreign-subject", "901", NOW)));
+        assertThrows(IllegalArgumentException.class, () -> transactions.execute(status -> repository.current("11", "route-user", "901", NOW)));
+        assertThrows(IllegalArgumentException.class, () -> transactions.execute(status -> repository.current("10", "route-user", "902", NOW)));
+        assertEquals(1L, transaction(() -> ((Number) entityManager.createNativeQuery(
+                "select count(*) from rbac3_user_active_role where tenant_id=10 and user_id=901").getSingleResult()).longValue()));
     }
 
     @Test
@@ -259,10 +296,13 @@ class PermissionCatalogRoutedPostgresqlIT {
     private void switchToLogicalDataSource() throws Exception {
         entityManager.close();
         factory.destroy();
-        var physical = new DriverManagerDataSource(url, user, password);
-        var properties = new Properties();
-        properties.setProperty("currentSchema", schema);
-        physical.setConnectionProperties(properties);
+        routedPhysicalDataSource = new com.zaxxer.hikari.HikariDataSource();
+        routedPhysicalDataSource.setJdbcUrl(url);
+        routedPhysicalDataSource.setUsername(user);
+        routedPhysicalDataSource.setPassword(password);
+        routedPhysicalDataSource.setSchema(schema);
+        routedPhysicalDataSource.setMaximumPoolSize(4);
+        routedPhysicalDataSource.setConnectionTimeout(5_000);
         String yaml;
         try (var source = getClass().getResourceAsStream("/rbac-sharding-native.yml")) {
             assertNotNull(source);
@@ -272,11 +312,13 @@ class PermissionCatalogRoutedPostgresqlIT {
                     .collect(Collectors.joining("\n"));
         }
         logicalDataSource = org.apache.shardingsphere.driver.api.yaml.YamlShardingSphereDataSourceFactory
-                .createDataSource(Map.of("rbac_primary", physical), yaml.getBytes(StandardCharsets.UTF_8));
+                .createDataSource(Map.of("rbac_primary", routedPhysicalDataSource), yaml.getBytes(StandardCharsets.UTF_8));
         factory = new LocalContainerEntityManagerFactoryBean();
         factory.setDataSource(logicalDataSource);
         factory.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
-        factory.setPackagesToScan("top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.state.domain.po");
+        factory.setPackagesToScan("top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.state.domain.po",
+                "top.egon.cola.platform.tianquan.jianshen.admin.iam.user.domain.po",
+                "top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.activation.domain.po");
         factory.setJpaPropertyMap(Map.of("hibernate.hbm2ddl.auto", "none", "hibernate.default_schema", schema, "hibernate.show_sql", false));
         factory.afterPropertiesSet();
         entityManager = factory.getObject().createEntityManager();

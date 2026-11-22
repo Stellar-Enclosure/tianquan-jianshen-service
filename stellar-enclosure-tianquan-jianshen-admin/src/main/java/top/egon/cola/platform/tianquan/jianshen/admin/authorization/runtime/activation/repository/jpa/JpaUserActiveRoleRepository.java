@@ -182,7 +182,7 @@ public class JpaUserActiveRoleRepository implements ActivationTransaction, Resel
                         select user from UserEntity user where user.tenantId = :tenant and user.id = :id
                         """, UserPO.class)
                 .setParameter("tenant", Long.valueOf(tenantId)).setParameter("id", Long.valueOf(userId))
-                .setMaxResults(1).getResultStream().findFirst().orElse(null);
+                .setMaxResults(1).getSingleResultOrNull();
         return requireTenantUser(user, tenantId);
     }
 
