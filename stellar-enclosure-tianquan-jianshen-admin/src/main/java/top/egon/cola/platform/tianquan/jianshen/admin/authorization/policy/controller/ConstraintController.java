@@ -1,8 +1,6 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.controller;
 
-import top.egon.cola.platform.tianquan.jianshen.starter.field.PermissionFieldBindingGuard;
-import top.egon.cola.platform.tianquan.jianshen.starter.field.SubmittedFieldSet;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.vo.RuleReferenceVO;
+import top.egon.cola.platform.tianquan.jianshen.starter.field.StrictFieldBinding;
 
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
 
@@ -13,16 +11,12 @@ import top.egon.cola.platform.tianquan.jianshen.contract.permission.ResourceType
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
 
 import jakarta.validation.Valid;
-import jakarta.validation.Validator;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.RequestParam;
 import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.domain.convertor.PermissionCatalogJson;
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
-import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Set;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -87,7 +81,6 @@ public class ConstraintController {
      */
     private final ConstraintFacade facade;
     private final PermissionCatalogJson catalogJson;
-    private final Validator validator;
 
     /**
      * 构造器 `ConstraintController` 用于创建并初始化 `ConstraintController` 实例，建立该类型后续方法所依赖的状态和不变量。
@@ -98,14 +91,9 @@ public class ConstraintController {
      *
      * @param facade 输入参数 `facade`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      */
-    private final PermissionFieldBindingGuard fieldWrites;
-
-    public ConstraintController(ConstraintFacade facade, PermissionCatalogJson catalogJson, Validator validator,
-                                PermissionFieldBindingGuard fieldWrites) {
-        this.fieldWrites = java.util.Objects.requireNonNull(fieldWrites, "fieldWrites");
+    public ConstraintController(ConstraintFacade facade, PermissionCatalogJson catalogJson) {
         this.facade = facade;
         this.catalogJson = catalogJson;
-        this.validator = validator;
     }
 
     /**
@@ -326,9 +314,12 @@ public class ConstraintController {
     @EgonGatewayPolicy(
             exposure = EgonGatewayPolicy.Exposure.EXTERNAL
     )
-    public ResultRecord<MutationResultVO> createDataRule(HttpServletRequest request) {
+    public ResultRecord<MutationResultVO> createDataRule(
+            @Valid @RequestBody @StrictFieldBinding(requiredFields = {
+                    "target", "applicationId", "roleId", "permissionId", "scopeType",
+                    "references", "validFrom", "expectedVersion"}) DataRuleRequestDTO request) {
         var actor = new CurrentRbac3User().require();
-        return ResultRecord.success(facade.saveDataRule(dataRuleCommand(null, dataRuleRequest(request), actor)));
+        return ResultRecord.success(facade.saveDataRule(dataRuleCommand(null, request, actor)));
     }
 
     /**
@@ -355,9 +346,13 @@ public class ConstraintController {
     @EgonGatewayPolicy(
             exposure = EgonGatewayPolicy.Exposure.EXTERNAL
     )
-    public ResultRecord<MutationResultVO> updateDataRule(@PathVariable String ruleId, HttpServletRequest request) {
+    public ResultRecord<MutationResultVO> updateDataRule(
+            @PathVariable String ruleId,
+            @Valid @RequestBody @StrictFieldBinding(requiredFields = {
+                    "target", "applicationId", "roleId", "permissionId", "scopeType",
+                    "references", "validFrom", "expectedVersion"}) DataRuleRequestDTO request) {
         var actor = new CurrentRbac3User().require();
-        return ResultRecord.success(facade.saveDataRule(dataRuleCommand(ruleId, dataRuleRequest(request), actor)));
+        return ResultRecord.success(facade.saveDataRule(dataRuleCommand(ruleId, request, actor)));
     }
 
     /**
@@ -493,33 +488,6 @@ public class ConstraintController {
                 ConstraintTypeEnum.valueOf(request.constraintType()),
                 request.applicationId(), request.maximumActiveRoles(), request.memberRoleIds(),
                 request.validFrom(), request.validTo(), request.expectedVersion(), new CurrentRbac3User().require().rbac3UserId());
-    }
-
-    /** 数据规则使用与目录治理相同的严格 JSON 边界。 / Data rules share the strict catalog-governance JSON boundary. */
-    private DataRuleRequestDTO dataRuleRequest(HttpServletRequest request) {
-        try {
-            Map<String, Object> body = catalogJson.readObject(request.getInputStream());
-            if (!body.keySet().containsAll(Set.of("target", "applicationId", "roleId", "permissionId", "scopeType",
-                    "references", "validFrom", "expectedVersion"))) {
-                throw new Rbac3RuleViolation("REQUEST_INVALID");
-            }
-            catalogJson.scope(PermissionCatalogJson.object(body, "target"));
-            fieldWrites.require(DataRuleRequestDTO.class, new SubmittedFieldSet(body.keySet()),
-                    Set.of("target", "applicationId", "roleId", "permissionId", "scopeType", "directorySnapshotVersion",
-                            "references", "validFrom", "validTo", "expectedVersion"));
-            if (body.get("references") instanceof List<?> references) {
-                for (Object reference : references) {
-                    if (!(reference instanceof Map<?, ?> values)) throw new Rbac3RuleViolation("REQUEST_INVALID");
-                    Set<String> submitted = values.keySet().stream().map(String.class::cast).collect(java.util.stream.Collectors.toSet());
-                    fieldWrites.require(RuleReferenceVO.class, new SubmittedFieldSet(submitted), Set.of("referenceType", "referenceId"));
-                }
-            }
-            DataRuleRequestDTO command = catalogJson.read(catalogJson.write(body), DataRuleRequestDTO.class);
-            if (!validator.validate(command).isEmpty()) throw new Rbac3RuleViolation("REQUEST_INVALID");
-            return command;
-        } catch (IOException invalid) {
-            throw new IllegalArgumentException("invalid data rule JSON", invalid);
-        }
     }
 
     /**

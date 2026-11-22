@@ -1,17 +1,15 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.rolepermission.controller;
 
-import top.egon.cola.platform.tianquan.jianshen.starter.field.PermissionFieldBindingGuard;
-import top.egon.cola.platform.tianquan.jianshen.starter.field.SubmittedFieldSet;
-
 import top.egon.cola.component.yuheng.openapi.annotation.EgonApiCatalog;
 
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.rolepermission.domain.vo.RolePermissionGrantViewVO;
 import io.swagger.v3.oas.annotations.Operation;
-import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -26,12 +24,11 @@ import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.P
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionMessage;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.PermissionResource;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.RequiresPermissions;
+import top.egon.cola.platform.tianquan.jianshen.starter.field.StrictFieldBinding;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.CurrentRbac3User;
 
-import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Set;
 
 @RestController
 @EgonApiCatalog(businessDomainCode = "xingyuan", businessDomainName = "平台治理域",
@@ -45,10 +42,7 @@ public class RolePermissionGrantController {
     private final RolePermissionGrantService grants;
     private final PermissionCatalogJson json;
 
-    private final PermissionFieldBindingGuard fieldWrites;
-
-    public RolePermissionGrantController(RolePermissionGrantService grants, PermissionCatalogJson json, PermissionFieldBindingGuard fieldWrites) {
-        this.fieldWrites = java.util.Objects.requireNonNull(fieldWrites, "fieldWrites");
+    public RolePermissionGrantController(RolePermissionGrantService grants, PermissionCatalogJson json) {
         this.grants = grants;
         this.json = json;
     }
@@ -73,14 +67,10 @@ public class RolePermissionGrantController {
     @PermissionResource(key="tianquan-jianshen.api.role.permissions.replace", type=ResourceType.API, labelPage="permission.role", labelKey="manage")
     @Operation(operationId="tianquan-jianshen-role-permissions-replace-v1", summary="Replace scoped permission-code grants atomically")
     @EgonGatewayPolicy(exposure=EgonGatewayPolicy.Exposure.EXTERNAL)
-    public ResultRecord<RolePermissionGrantService.Result> replace(@PathVariable String roleId, HttpServletRequest request) throws IOException {
+    public ResultRecord<RolePermissionGrantService.Result> replace(
+            @PathVariable String roleId,
+            @Valid @RequestBody @StrictFieldBinding(requiredFields = {"target", "permissionCodes", "expectedVersion"}) ReplaceRolePermissionsRequestDTO request) {
         var actor = new CurrentRbac3User().require();
-        var body = json.readObject(request.getInputStream());
-        if (!body.keySet().containsAll(Set.of("target", "permissionCodes", "expectedVersion"))
-                || !Set.of("target", "permissionCodes", "expectedVersion", "validFrom", "validTo").containsAll(body.keySet())) {
-            throw new IllegalArgumentException("invalid role permission request fields");
-        }
-        fieldWrites.require(ReplaceRolePermissionsRequestDTO.class, new SubmittedFieldSet(body.keySet()), Set.of("target", "permissionCodes", "expectedVersion", "validFrom", "validTo"));
-        return ResultRecord.success(grants.replace(roleId, json.read(json.write(body), ReplaceRolePermissionsRequestDTO.class), actor));
+        return ResultRecord.success(grants.replace(roleId, request, actor));
     }
 }

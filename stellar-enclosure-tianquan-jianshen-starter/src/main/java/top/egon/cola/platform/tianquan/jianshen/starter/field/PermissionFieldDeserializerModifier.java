@@ -40,15 +40,25 @@ final class PermissionFieldDeserializerModifier extends BeanDeserializerModifier
             return new CapturingDeserializer(delegate, dto, guard);
         }
         @Override public Object deserialize(JsonParser parser, DeserializationContext context) throws IOException {
+            if (StrictSubmittedFieldBinder.isRequestVerified()) {
+                return _delegatee.deserialize(parser, context);
+            }
             try (JsonParser captured = capture(parser)) { return _delegatee.deserialize(captured, context); }
         }
         @Override public Object deserialize(JsonParser parser, DeserializationContext context, Object intoValue) throws IOException {
+            if (StrictSubmittedFieldBinder.isRequestVerified()) {
+                @SuppressWarnings("unchecked") JsonDeserializer<Object> delegate = (JsonDeserializer<Object>) _delegatee;
+                return delegate.deserialize(parser, context, intoValue);
+            }
             try (JsonParser captured = capture(parser)) {
                 @SuppressWarnings("unchecked") JsonDeserializer<Object> delegate = (JsonDeserializer<Object>) _delegatee;
                 return delegate.deserialize(captured, context, intoValue);
             }
         }
         @Override public Object deserializeWithType(JsonParser parser, DeserializationContext context, TypeDeserializer type) throws IOException {
+            if (StrictSubmittedFieldBinder.isRequestVerified()) {
+                return _delegatee.deserializeWithType(parser, context, type);
+            }
             try (JsonParser captured = capture(parser)) { return _delegatee.deserializeWithType(captured, context, type); }
         }
         private JsonParser capture(JsonParser parser) throws IOException {

@@ -187,6 +187,29 @@ public class Rbac3StarterAutoConfiguration {
                 users, masks.getIfAvailable(SensitiveStrategyRegistry::defaults), policies, writes);
     }
 
+    @Bean
+    @ConditionalOnMissingBean
+    public top.egon.cola.platform.tianquan.jianshen.starter.field.StrictSubmittedFieldBinder strictSubmittedFieldBinder(
+            ObjectProvider<ObjectMapper> objectMappers,
+            top.egon.cola.platform.tianquan.jianshen.starter.field.PermissionFieldBindingGuard writes,
+            ObjectProvider<top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionPolicyRegistry> policies) {
+        ObjectMapper baseMapper = objectMappers.getIfAvailable(() -> new ObjectMapper().findAndRegisterModules());
+        return new top.egon.cola.platform.tianquan.jianshen.starter.field.StrictSubmittedFieldBinder(
+                baseMapper, writes, policies.getIfAvailable());
+    }
+
+    @Configuration(value = "rbac3StrictFieldWebMvcConfiguration", proxyBeanMethods = false)
+    @org.springframework.boot.autoconfigure.condition.ConditionalOnClass(name = "org.springframework.web.servlet.mvc.method.annotation.RequestBodyAdvice")
+    @org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication(type = org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication.Type.SERVLET)
+    static class StrictFieldWebMvcConfiguration {
+        @Bean
+        @ConditionalOnMissingBean
+        public top.egon.cola.platform.tianquan.jianshen.starter.field.StrictFieldRequestBodyAdvice strictFieldRequestBodyAdvice(
+                top.egon.cola.platform.tianquan.jianshen.starter.field.StrictSubmittedFieldBinder binder) {
+            return new top.egon.cola.platform.tianquan.jianshen.starter.field.StrictFieldRequestBodyAdvice(binder);
+        }
+    }
+
     public Rbac3FieldJacksonModule rbac3FieldJacksonModule(
             CurrentRbac3User currentUser,
             ObjectProvider<SensitiveStrategyRegistry> registryProvider,

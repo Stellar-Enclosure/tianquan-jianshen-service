@@ -2,8 +2,6 @@ package top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import jakarta.validation.Validation;
-import jakarta.validation.ValidatorFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +17,8 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.servi
 import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.domain.convertor.PermissionCatalogJson;
 import top.egon.cola.platform.tianquan.jianshen.admin.shared.controller.Rbac3ApiExceptionHandler;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.CatalogScope;
+import top.egon.cola.platform.tianquan.jianshen.starter.field.StrictFieldRequestBodyAdvice;
+import top.egon.cola.platform.tianquan.jianshen.starter.field.StrictSubmittedFieldBinder;
 import top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3UserDetails;
 
 import java.util.LinkedHashMap;
@@ -41,14 +41,13 @@ class DataRuleHttpContractTest {
     private final Rbac3UserDetails actor = mock(Rbac3UserDetails.class);
     private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
     private final PermissionCatalogJson json = new PermissionCatalogJson(mapper);
-    private ValidatorFactory validators;
     private MockMvc mvc;
 
     @BeforeEach
     void prepare() {
-        validators = Validation.buildDefaultValidatorFactory();
-        mvc = MockMvcBuilders.standaloneSetup(new ConstraintController(facade, json, validators.getValidator(), fieldWrites))
-                .setControllerAdvice(new Rbac3ApiExceptionHandler())
+        var binder = new StrictSubmittedFieldBinder(mapper, fieldWrites);
+        mvc = MockMvcBuilders.standaloneSetup(new ConstraintController(facade, json))
+                .setControllerAdvice(new Rbac3ApiExceptionHandler(), new StrictFieldRequestBodyAdvice(binder))
                 .addFilters(new org.springframework.security.web.access.ExceptionTranslationFilter(
                         (request, response, denied) -> response.sendError(401)))
                 .setMessageConverters(new MappingJackson2HttpMessageConverter(mapper)).build();
@@ -62,7 +61,6 @@ class DataRuleHttpContractTest {
     @AfterEach
     void cleanup() {
         SecurityContextHolder.clearContext();
-        validators.close();
     }
 
     @Test

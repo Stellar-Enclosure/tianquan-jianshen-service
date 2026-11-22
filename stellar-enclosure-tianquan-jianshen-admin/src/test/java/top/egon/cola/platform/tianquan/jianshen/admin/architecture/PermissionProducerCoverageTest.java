@@ -131,15 +131,6 @@ class PermissionProducerCoverageTest {
         if (controller.getSimpleName().equals("ServiceExecutionGrantAuthorizationController") && method.getName().equals("decide")) {
             return List.of(top.egon.cola.platform.tianquan.jianshen.contract.authorization.ServiceExecutionAuthorizationContract.Request.class);
         }
-        if (controller.getSimpleName().equals("CatalogGovernanceController") && method.getName().equals("mutate")) {
-            return List.of(top.egon.cola.platform.tianquan.jianshen.admin.authorization.catalog.domain.dto.CatalogGovernanceCommandDTO.class);
-        }
-        if (controller.getSimpleName().equals("RolePermissionGrantController") && method.getName().equals("replace")) {
-            return List.of(top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.rolepermission.domain.dto.ReplaceRolePermissionsRequestDTO.class);
-        }
-        if (controller.getSimpleName().equals("ConstraintController") && Set.of("createDataRule", "updateDataRule").contains(method.getName())) {
-            return List.of(top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.dto.DataRuleRequestDTO.class);
-        }
         return List.of();
     }
 

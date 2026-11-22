@@ -11,9 +11,6 @@ import top.egon.cola.component.common.core.pojo.ResultRecord;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.*;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.annotation.*;
 import top.egon.cola.platform.tianquan.jianshen.starter.permission.PermissionFieldCatalog;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.policy.domain.dto.DataRuleRequestDTO;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.rolepermission.domain.dto.ReplaceRolePermissionsRequestDTO;
-import top.egon.cola.platform.tianquan.jianshen.admin.authorization.catalog.domain.dto.CatalogGovernanceCommandDTO;
 import java.util.Set;
 
 /** A finite projection of FIELD policy and the registered HTTP input DTO graph. */
@@ -38,6 +35,6 @@ public class FieldCatalogController {
     public ResponseEntity<ResultRecord<FieldCatalogSnapshot>> current(HttpServletRequest request) {
         return ResponseEntity.ok().header("Cache-Control","no-store")
                 .body(ResultRecord.success(fields.currentForHttp(request,KEY,adapters.getObject().getMessageConverters(),routes.getObject().getHandlerMethods().values(),
-                        Set.of(ADMIN),Set.of(DataRuleRequestDTO.class,ReplaceRolePermissionsRequestDTO.class,CatalogGovernanceCommandDTO.class))));
+                        Set.of(ADMIN),Set.of())));
     }
 }
