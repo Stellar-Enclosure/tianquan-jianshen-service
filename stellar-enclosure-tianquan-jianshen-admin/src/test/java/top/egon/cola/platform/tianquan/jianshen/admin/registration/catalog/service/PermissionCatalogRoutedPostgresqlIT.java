@@ -33,6 +33,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.repos
 import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.repository.PermissionManifestRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.repository.PermissionSourceOutboxRepository;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.CatalogActivationRequest;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.EffectivePermissionSnapshot;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.ManifestRegistrationRequest;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.SourceImportRequest;
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
@@ -42,6 +43,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.DriverManager;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -270,6 +272,39 @@ class PermissionCatalogRoutedPostgresqlIT {
                 snapshots, "permissions", 1L, 1L, List.of("40"), NOW.plusSeconds(300))));
         assertEquals(1L, transaction(() -> ((Number) entityManager.createNativeQuery(
                 "select count(*) from rbac3_catalog_role_permission where catalog_scope_id=1 and role_id=40 and status='DISABLED'").getSingleResult()).longValue()));
+    }
+
+    @Test
+    void snapshotExpiringDuringAuthorizationIsReplacedThroughRouting() throws Exception {
+        activate(register());
+        switchToLogicalDataSource();
+        long userId = transaction(() -> ((Number) entityManager.createNativeQuery("""
+                select id from rbac3_user where tenant_id=10 and identity_sub='9001'
+                """).getSingleResult()).longValue());
+        var repository = new PermissionRuntimeSnapshotRepository(entityManager, new ObjectMapper().findAndRegisterModules(),
+                mock(RoleActivationFactRepository.class), mock(ActivationTransaction.class), mock(RoleEligibilityService.class),
+                () -> NOW, new PermissionRuntimeProperties(null, List.of()));
+        Instant wallTime = Instant.now();
+        Instant priorExpiry = wallTime.minusSeconds(1);
+        var previous = snapshotExpiring(priorExpiry);
+        var fresh = snapshotExpiring(wallTime.plusSeconds(30));
+
+        assertEquals(previous, transaction(() -> publishSnapshot(repository, previous, userId, wallTime.minusSeconds(15))));
+        assertEquals(fresh, transaction(() -> publishSnapshot(repository, fresh, userId, wallTime.minusSeconds(5))));
+        assertEquals(fresh, transaction(() -> publishSnapshot(repository, fresh, userId, wallTime.minusSeconds(4))));
+        assertEquals(2L, transaction(() -> ((Number) entityManager.createNativeQuery("""
+                select count(*) from rbac3_catalog_effective_snapshot where catalog_scope_id=1 and user_id=:user
+                """).setParameter("user", userId).getSingleResult()).longValue()));
+    }
+
+    private EffectivePermissionSnapshot snapshotExpiring(Instant expiresAt) {
+        return new EffectivePermissionSnapshot(authority.issuer().toASCIIString(), "9001", SCOPE, "1", "0", "1",
+                new EffectivePermissionSnapshot.ActiveRoleContext(SCOPE.applicationCode(), List.of(), List.of()), List.of(), expiresAt);
+    }
+
+    private EffectivePermissionSnapshot publishSnapshot(PermissionRuntimeSnapshotRepository repository,
+            EffectivePermissionSnapshot snapshot, long userId, Instant decisionAt) {
+        return ReflectionTestUtils.invokeMethod(repository, "publish", snapshot, userId, decisionAt);
     }
 
     private void activate(SourceImportRequest source) {

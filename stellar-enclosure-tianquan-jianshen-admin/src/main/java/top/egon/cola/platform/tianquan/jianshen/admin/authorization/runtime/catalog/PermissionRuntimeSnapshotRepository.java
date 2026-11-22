@@ -348,14 +348,15 @@ public class PermissionRuntimeSnapshotRepository {
     }
 
     private EffectivePermissionSnapshot publish(EffectivePermissionSnapshot view, long userId, Instant now) {
+        // Directory reads can outlive a cached snapshot within the current transaction.
         List<Object[]> heads = rows("""
                 select cast(s.snapshot_json as text), s.snapshot_digest from rbac3_catalog_snapshot_head h
                 join rbac3_catalog_effective_snapshot s on s.id = h.snapshot_id
                 where h.catalog_scope_id = :scope and h.user_id = :user and h.auth_version = :auth
-                  and h.tenant_policy_version = :policy and h.catalog_version = :catalog and s.expires_at > :now
+                  and h.tenant_policy_version = :policy and h.catalog_version = :catalog and s.expires_at > clock_timestamp()
                 """, Map.of("scope", Long.parseLong(view.catalogScope().catalogScopeId()), "user", userId,
                 "auth", Long.parseLong(view.authVersion()), "policy", Long.parseLong(view.policyVersion()),
-                "catalog", Long.parseLong(view.catalogVersion()), "now", now));
+                "catalog", Long.parseLong(view.catalogVersion())));
         if (heads.size() == 1) {
             try {
                 Map<String, Object> encoded = mapper.readValue(text(heads.getFirst()[0]), Map.class);
