@@ -16,12 +16,18 @@ import top.egon.cola.platform.tianquan.jianshen.contract.permission.CatalogActiv
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.CatalogScope;
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
-/** Immutable activation membership and a single CAS pointer; closure checks stay in bounded SQL projections. */
+/** Immutable activation membership and a single CAS pointer; closure uses exact selected versions through the logical datasource. */
 @Repository
 @Transactional(propagation = Propagation.MANDATORY)
 public class PermissionCatalogActivationRepository {
@@ -82,57 +88,94 @@ public class PermissionCatalogActivationRepository {
         }
     }
 
+    private record PermissionIdentity(long id, String code) { }
+    private record MessageIdentity(String page, String key) { }
+    private record OwnedMessage(MessageIdentity message, String producer) { }
+
     public void requireReferenceClosure(CatalogActivationRequest request) {
-        // Only the selected version rows participate. A known but absent old definition cannot satisfy a reference.
-        String sql = """
-                with selected as (
-                    select x."producerId" producer_id, cast(x."producerVersion" as bigint) producer_version
-                      from jsonb_to_recordset(cast(:selection as jsonb)) x("producerId" text,"producerVersion" text)
-                ), manifests as (
-                    select m.* from rbac3_catalog_manifest m join selected s using(producer_id,producer_version)
-                     where m.catalog_scope_id=:scope
-                ), resources as (
-                    select r.* from rbac3_catalog_resource_version r join selected s using(producer_id,producer_version)
-                     where r.catalog_scope_id=:scope
-                ), permissions as (
-                    select p.* from rbac3_catalog_permission_version p join selected s using(producer_id,producer_version)
-                     where p.catalog_scope_id=:scope
-                ), messages as (
-                    select m.producer_id,j->>'pageCode' page_code,j->>'key' message_key
-                      from manifests m cross join lateral jsonb_array_elements(m.canonical_manifest->'messages') j
-                ), i18n as (
-                    select i18n_json i from resources union all select i18n_json from permissions
-                )
-                select exists (
-                    select 1 from resources r join rbac3_catalog_resource g on g.catalog_scope_id=r.catalog_scope_id and g.id=r.resource_id
-                     where g.governance_state='RETIRED' or g.owner_producer_id<>r.producer_id
-                    union all
-                    select 1 from permissions p join rbac3_catalog_permission g on g.catalog_scope_id=p.catalog_scope_id and g.id=p.permission_id
-                     where g.governance_state='RETIRED' or g.owner_producer_id<>p.producer_id
-                    union all
-                    select 1 from manifests m cross join lateral jsonb_array_elements_text(m.canonical_manifest->'permissionReferences') ref
-                     where not exists(select 1 from permissions p where p.permission_code=ref)
-                    union all
-                    select 1 from manifests m cross join lateral jsonb_array_elements(m.canonical_manifest->'resourceReferences') ref
-                     where not exists(select 1 from resources r where r.registration_key=ref->>'key'
-                         and (ref->>'usage' not in ('FORM_FIELD','TABLE_FIELD','DETAIL_FIELD') or r.resource_type='FIELD')
-                         and (ref->>'usage'<>'CALLS' or r.resource_type='API'))
-                    union all
-                    select 1 from rbac3_catalog_resource_requirement q join selected s using(producer_id,producer_version)
-                     where q.catalog_scope_id=:scope and not exists(select 1 from permissions p where p.permission_code=q.permission_code
-                         and p.permission_id=q.permission_id)
-                    union all
-                    select 1 from i18n cross join lateral jsonb_each_text(i) entry
-                     where entry.key<>'pageCode' and entry.value is not null and not exists (
-                         select 1 from messages msg join rbac3_catalog_message_owner o
-                           on o.catalog_scope_id=:scope and o.page_code=msg.page_code and o.message_key=msg.message_key
-                          and o.owner_producer_id=msg.producer_id and o.lifecycle='ACTIVE'
-                          where msg.page_code=i->>'pageCode' and msg.message_key=entry.value)
-                )
-                """;
-        Object invalid = query(sql, Map.of("scope", Long.parseLong(request.target().catalogScopeId()),
-                "selection", json.write(request.producers().stream().map(CatalogActivationRequest.Selection::toMap).toList()))).getSingleResult();
-        if (!Boolean.FALSE.equals(invalid)) throw new Rbac3RuleViolation("RESOURCE_MANIFEST_CONFLICT");
+        // Keep JSON expansion out of routed SQL. ShardingSphere binds ordinary table projections,
+        // while the shared contract reader validates the selected immutable FULL manifests.
+        Map<String, Object> parameters = new LinkedHashMap<>();
+        parameters.put("scope", Long.parseLong(request.target().catalogScopeId()));
+        for (int index = 0; index < request.producers().size(); index++) {
+            var selection = request.producers().get(index);
+            parameters.put("producer" + index, selection.producerId());
+            parameters.put("revision" + index, Long.parseLong(selection.producerVersion()));
+        }
+        String selection = IntStream.range(0, request.producers().size())
+                .mapToObj(index -> "(v.producer_id=:producer" + index + " and v.producer_version=:revision" + index + ")")
+                .collect(Collectors.joining(" or "));
+        String selected = " where v.catalog_scope_id=:scope and (" + selection + ")";
+        List<?> manifestRows = query("select v.canonical_manifest::text from rbac3_catalog_manifest v" + selected, parameters).getResultList();
+        List<PermissionManifest> manifests = manifestRows.stream().map(value -> json.manifest(value.toString())).toList();
+        requireClosure(manifests.size() == request.producers().size());
+        requireClosure(manifests.stream().allMatch(manifest -> manifest.producer().snapshotMode() == PermissionManifest.SnapshotMode.FULL));
+
+        Map<String, ResourceType> resources = new HashMap<>();
+        List<PermissionManifest.I18nReference> labels = new ArrayList<>();
+        List<?> resourceRows = query("""
+                select v.producer_id,v.registration_key,v.resource_type,v.i18n_json::text,g.governance_state,g.owner_producer_id
+                  from rbac3_catalog_resource_version v join rbac3_catalog_resource g
+                    on g.catalog_scope_id=v.catalog_scope_id and g.id=v.resource_id
+                """ + selected, parameters).getResultList();
+        for (Object value : resourceRows) {
+            Object[] row = (Object[]) value;
+            requireClosure(!"RETIRED".equals(row[4]) && row[0].equals(row[5]));
+            resources.put(row[1].toString(), ResourceType.valueOf(row[2].toString()));
+            labels.add(json.read(row[3].toString(), PermissionManifest.I18nReference.class));
+        }
+        Set<PermissionIdentity> permissions = new HashSet<>();
+        List<?> permissionRows = query("""
+                select v.producer_id,v.permission_id,v.permission_code,v.i18n_json::text,g.governance_state,g.owner_producer_id
+                  from rbac3_catalog_permission_version v join rbac3_catalog_permission g
+                    on g.catalog_scope_id=v.catalog_scope_id and g.id=v.permission_id
+                """ + selected, parameters).getResultList();
+        for (Object value : permissionRows) {
+            Object[] row = (Object[]) value;
+            requireClosure(!"RETIRED".equals(row[4]) && row[0].equals(row[5]));
+            permissions.add(new PermissionIdentity(((Number) row[1]).longValue(), row[2].toString()));
+            labels.add(json.read(row[3].toString(), PermissionManifest.I18nReference.class));
+        }
+        Set<String> codes = permissions.stream().map(PermissionIdentity::code).collect(Collectors.toSet());
+        for (PermissionManifest manifest : manifests) {
+            requireClosure(codes.containsAll(manifest.permissionReferences()));
+            for (var reference : manifest.resourceReferences()) {
+                ResourceType type = resources.get(reference.key());
+                requireClosure(type != null);
+                if (Set.of("FORM_FIELD", "TABLE_FIELD", "DETAIL_FIELD").contains(reference.usage())) requireClosure(type == ResourceType.FIELD);
+                if ("CALLS".equals(reference.usage())) requireClosure(type == ResourceType.API);
+            }
+        }
+        List<?> requirements = query("select v.permission_id,v.permission_code from rbac3_catalog_resource_requirement v" + selected, parameters).getResultList();
+        for (Object value : requirements) {
+            Object[] row = (Object[]) value;
+            requireClosure(row[0] != null && permissions.contains(new PermissionIdentity(((Number) row[0]).longValue(), row[1].toString())));
+        }
+
+        Set<OwnedMessage> declaredMessages = new HashSet<>();
+        for (PermissionManifest manifest : manifests) {
+            for (var message : manifest.messages()) {
+                declaredMessages.add(new OwnedMessage(new MessageIdentity(message.pageCode(), message.key()), manifest.producer().id()));
+            }
+        }
+        Set<MessageIdentity> messages = new HashSet<>();
+        List<?> owners = query("""
+                select page_code,message_key,owner_producer_id from rbac3_catalog_message_owner
+                 where catalog_scope_id=:scope and lifecycle='ACTIVE' and owner_producer_id in (:producers)
+                """, Map.of("scope", parameters.get("scope"), "producers", request.producers().stream().map(CatalogActivationRequest.Selection::producerId).toList()))
+                .getResultList();
+        for (Object value : owners) {
+            Object[] row = (Object[]) value;
+            var message = new MessageIdentity(row[0].toString(), row[1].toString());
+            if (declaredMessages.contains(new OwnedMessage(message, row[2].toString()))) messages.add(message);
+        }
+        for (var label : labels) {
+            requireClosure(label.keys().stream().allMatch(key -> messages.contains(new MessageIdentity(label.pageCode(), key))));
+        }
+    }
+
+    private void requireClosure(boolean valid) {
+        if (!valid) throw new Rbac3RuleViolation("RESOURCE_MANIFEST_CONFLICT");
     }
 
     public void save(CatalogActivationRequest request, ActivationDescriptor descriptor, String actor) {
