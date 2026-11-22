@@ -1,6 +1,12 @@
 package top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.service;
 
-
+import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.rolepermission.domain.dto.ReplaceRolePermissionsRequestDTO;
+import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.rolepermission.repository.RolePermissionGrantRepository;
+import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.repository.DeploymentQualificationRepository;
+import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.repository.CatalogAdministrationGuard;
+import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.state.repository.jpa.JpaTenantAuthorizationStateRepository;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.SourceImportReceipt;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.DeploymentQualificationRequest;
 import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.domain.convertor.PermissionCatalogJson;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -176,6 +182,66 @@ class PermissionCatalogRoutedPostgresqlIT {
         assertRejectedAfter("update rbac3_catalog_permission set owner_producer_id='other',version=version+1", request);
         assertRejectedAfter("update rbac3_catalog_message_owner set owner_producer_id='other',version=version+1", request);
         transaction(() -> { activations.requireReferenceClosure(request); return null; });
+    }
+
+    @Test
+    void activeRolePermissionReplacementAddsClearsAndRejectsInvalidOrStaleRequestsThroughRouting() throws Exception {
+        var source = register();
+        activate(source);
+        transaction(() -> {
+            entityManager.createNativeQuery("""
+                    insert into rbac3_role(id,tenant_id,application_id,role_code,role_name,role_type,risk_level,status,created_at,created_by,updated_at,updated_by)
+                    values(40,10,20,'CATALOG_ROUTED_TEST','Routed catalog test role','MANAGEMENT','LOW','ACTIVE',current_timestamp,'test',current_timestamp,'test')
+                    """).executeUpdate();
+            return null;
+        });
+        switchToLogicalDataSource();
+        var grants = new RolePermissionGrantRepository(entityManager);
+        var scope = new PermissionCatalogScopeRepository.ScopeState(SCOPE, 20, 1, 1);
+        var add = new ReplaceRolePermissionsRequestDTO(
+                SCOPE, List.of("app.read"), "0", NOW.plusSeconds(60), NOW.plusSeconds(3600));
+        var added = transaction(() -> grants.replace(scope, 40, add, "test", NOW));
+        assertEquals(new RolePermissionGrantRepository.Mutation("1", 1, 0), added);
+        var actual = transaction(() -> grants.read(scope, 40));
+        assertEquals(List.of("app.read"), actual.permissions().stream().map(permission -> permission.permissionCode()).toList());
+        assertEquals(add.validFrom(), actual.permissions().getFirst().validFrom());
+        assertEquals(add.validTo(), actual.permissions().getFirst().validTo());
+        var stale = assertThrows(Rbac3RuleViolation.class, () -> transaction(() -> grants.replace(scope, 40, add, "test", NOW)));
+        assertEquals("RESOURCE_VERSION_CONFLICT", stale.reasonCode());
+        var invalid = new ReplaceRolePermissionsRequestDTO(
+                SCOPE, List.of("app.missing"), "1", null, null);
+        assertEquals("RESOURCE_NOT_FOUND", assertThrows(Rbac3RuleViolation.class,
+                () -> transaction(() -> grants.replace(scope, 40, invalid, "test", NOW))).reasonCode());
+        assertEquals(actual, transaction(() -> grants.read(scope, 40)));
+        var clear = new ReplaceRolePermissionsRequestDTO(
+                SCOPE, List.of(), "1", null, null);
+        var removed = transaction(() -> grants.replace(scope, 40, clear, "test", NOW));
+        assertEquals(new RolePermissionGrantRepository.Mutation("2", 0, 1), removed);
+        assertTrue(transaction(() -> grants.read(scope, 40)).permissions().isEmpty());
+        assertEquals(1L, transaction(() -> ((Number) entityManager.createNativeQuery(
+                "select count(*) from rbac3_catalog_role_permission where catalog_scope_id=1 and role_id=40 and status='DISABLED'").getSingleResult()).longValue()));
+    }
+
+    private void activate(SourceImportRequest source) {
+        var receipts = new PermissionSourceReceiptService(scopes, manifests, audit, () -> NOW, mock(PermissionSourceOutboxRepository.class));
+        transaction(() -> {
+            receipts.accept(source, new SourceImportReceipt("300", source.operationId(), SCOPE,
+                    "api", "1", source.sourceVersion(), source.digests(), source.projectionDigest(), source.resourceIds().size(),
+                    source.permissionIds().size(), source.manifest().messages().size(), NOW));
+            return null;
+        });
+        var qualifications = new DeploymentQualificationRepository(entityManager, json);
+        var deployment = new DeploymentQualificationService(scopes, manifests, qualifications, json, audit, () -> NOW, ids::incrementAndGet);
+        var qualification = transaction(() -> deployment.qualify(new DeploymentQualificationRequest(SCOPE,
+                "api", "1", "f".repeat(64), source.digests().manifestDigest(), source.digests().policyDigest(), "pipeline", "build", "refs/heads/main",
+                "a".repeat(40), "deployment", new DeploymentQualificationRequest.Readiness(
+                "f".repeat(64), source.digests().manifestDigest(), source.digests().policyDigest(), true, true, true, NOW)), authority));
+        var catalogs = new PermissionCatalogActivationService(scopes, manifests, qualifications, activations,
+                new JpaTenantAuthorizationStateRepository(entityManager, () -> NOW),
+                mock(AuthorizationEventPublisher.class), audit, () -> NOW,
+                mock(CatalogAdministrationGuard.class));
+        transaction(() -> catalogs.activate(new CatalogActivationRequest(SCOPE, UUID.randomUUID().toString(), "0",
+                List.of(new CatalogActivationRequest.Selection("api", "1", qualification.qualificationId()))), authority));
     }
 
     private void assertRejectedAfter(String sql, CatalogActivationRequest request) {

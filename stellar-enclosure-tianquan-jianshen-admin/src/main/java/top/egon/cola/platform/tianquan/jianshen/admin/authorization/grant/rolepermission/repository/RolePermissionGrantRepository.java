@@ -8,7 +8,6 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.rolepermission.domain.dto.ReplaceRolePermissionsRequestDTO;
 import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.repository.PermissionCatalogScopeRepository;
-import top.egon.cola.platform.tianquan.jianshen.contract.permission.CanonicalJson;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.CatalogScope;
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
 
@@ -64,28 +63,30 @@ public class RolePermissionGrantRepository {
                 """, values).executeUpdate();
         RolePermissionGrantViewVO previous = read(scope, role);
         if (!previous.version().equals(request.expectedVersion())) throw new Rbac3RuleViolation("RESOURCE_VERSION_CONFLICT");
-        String codes = CanonicalJson.write(request.permissionCodes());
-        requireActiveCodes(scope.scope(), request.permissionCodes());
+        List<Long> permissionIds = activePermissionIds(scope.scope(), request.permissionCodes());
         values = base(scope.scope(), role);
-        values.put("codes", codes);
         values.put("actor", actor);
         values.put("now", now);
+        String retained = "";
+        if (!permissionIds.isEmpty()) {
+            values.put("ids", permissionIds);
+            retained = " and permission_id not in (:ids)";
+        }
         query("""
-                update rbac3_catalog_role_permission g set status='DISABLED',version=version+1,updated_at=:now,updated_by=:actor
-                 where g.catalog_scope_id=:scope and g.role_id=:role and g.status='ACTIVE' and not exists(
-                     select 1 from rbac3_catalog_permission p cross join lateral jsonb_array_elements_text(cast(:codes as jsonb)) requested(code)
-                      where p.catalog_scope_id=g.catalog_scope_id and p.id=g.permission_id and p.permission_code=requested.code)
-                """, values).executeUpdate();
-        values.put("from", from);
-        values.put("until", request.validTo());
-        query("""
-                insert into rbac3_catalog_role_permission(catalog_scope_id,role_id,permission_id,status,valid_from,valid_to,created_at,created_by,updated_at,updated_by)
-                select :scope,:role,p.id,'ACTIVE',:from,:until,:now,:actor,:now,:actor
-                  from jsonb_array_elements_text(cast(:codes as jsonb)) requested(code)
-                  join rbac3_catalog_permission p on p.catalog_scope_id=:scope and p.permission_code=requested.code
-                on conflict(catalog_scope_id,role_id,permission_id) do update set status='ACTIVE',valid_from=excluded.valid_from,
-                    valid_to=excluded.valid_to,version=rbac3_catalog_role_permission.version+1,updated_at=excluded.updated_at,updated_by=excluded.updated_by
-                """, values).executeUpdate();
+                update rbac3_catalog_role_permission set status='DISABLED',version=version+1,updated_at=:now,updated_by=:actor
+                 where catalog_scope_id=:scope and role_id=:role and status='ACTIVE'
+                """ + retained, values).executeUpdate();
+        if (!permissionIds.isEmpty()) {
+            values.put("from", from);
+            values.put("until", request.validTo());
+            query("""
+                    insert into rbac3_catalog_role_permission(catalog_scope_id,role_id,permission_id,status,valid_from,valid_to,created_at,created_by,updated_at,updated_by)
+                    select :scope,:role,p.id,'ACTIVE',:from,:until,:now,:actor,:now,:actor
+                      from rbac3_catalog_permission p where p.catalog_scope_id=:scope and p.id in (:ids)
+                    on conflict(catalog_scope_id,role_id,permission_id) do update set status='ACTIVE',valid_from=excluded.valid_from,
+                        valid_to=excluded.valid_to,version=rbac3_catalog_role_permission.version+1,updated_at=excluded.updated_at,updated_by=excluded.updated_by
+                    """, values).executeUpdate();
+        }
         long expected = Long.parseLong(request.expectedVersion());
         int changed = query("""
                 update rbac3_catalog_role_binding set permission_version=permission_version+1,version=version+1,updated_at=:now,updated_by=:actor
@@ -99,15 +100,21 @@ public class RolePermissionGrantRepository {
     }
 
     public void requireActiveCodes(CatalogScope scope, List<String> permissionCodes) {
-        String codes = CanonicalJson.write(permissionCodes);
-        long known = ((Number) query("""
-                select count(*) from jsonb_array_elements_text(cast(:codes as jsonb)) requested(code)
-                  join rbac3_catalog_permission p on p.catalog_scope_id=:scope and p.permission_code=requested.code and p.governance_state='ACTIVE'
+        activePermissionIds(scope, permissionCodes);
+    }
+
+    private List<Long> activePermissionIds(CatalogScope scope, List<String> permissionCodes) {
+        if (permissionCodes.isEmpty()) return List.of();
+        Set<String> codes = Set.copyOf(permissionCodes);
+        List<?> rows = query("""
+                select distinct p.id from rbac3_catalog_permission p
                   join rbac3_catalog_permission_version v on v.catalog_scope_id=p.catalog_scope_id and v.permission_id=p.id
                   join rbac3_catalog_activation_producer a on a.catalog_scope_id=v.catalog_scope_id and a.producer_id=v.producer_id and a.producer_version=v.producer_version
                   join rbac3_catalog_active_pointer head on head.catalog_scope_id=a.catalog_scope_id and head.activation_version=a.activation_version
-                """, Map.of("codes", codes, "scope", Long.parseLong(scope.catalogScopeId()))).getSingleResult()).longValue();
-        if (known != permissionCodes.size()) throw new Rbac3RuleViolation("RESOURCE_NOT_FOUND");
+                 where p.catalog_scope_id=:scope and p.governance_state='ACTIVE' and p.permission_code in (:codes)
+                """, Map.of("codes", codes, "scope", Long.parseLong(scope.catalogScopeId()))).getResultList();
+        if (rows.size() != codes.size()) throw new Rbac3RuleViolation("RESOURCE_NOT_FOUND");
+        return rows.stream().map(value -> ((Number) value).longValue()).toList();
     }
 
     private void requireRole(PermissionCatalogScopeRepository.ScopeState scope, long role) {
