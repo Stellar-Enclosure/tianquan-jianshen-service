@@ -16,6 +16,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -25,6 +28,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.acti
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.catalog.PermissionRuntimeProperties;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.catalog.PermissionRuntimeSnapshotRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.AuthorizationEventPublisher;
+import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.roleinheritance.repository.jdbc.PostgresqlRoleClosureRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.service.RoleEligibilityService;
 import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.domain.PermissionCatalogCaller;
 import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.repository.PermissionCatalogActivationRepository;
@@ -227,6 +231,98 @@ class PermissionCatalogRoutedPostgresqlIT {
         assertThrows(IllegalArgumentException.class, () -> transactions.execute(status -> repository.current("10", "route-user", "902", NOW)));
         assertEquals(1L, transaction(() -> ((Number) entityManager.createNativeQuery(
                 "select count(*) from rbac3_user_active_role where tenant_id=10 and user_id=901").getSingleResult()).longValue()));
+    }
+
+    @Test
+    void roleClosureRebuildKeepsSelfShortestDepthScopeAndRollbackThroughRouting() throws Exception {
+        switchToLogicalDataSource();
+        var jdbc = new JdbcTemplate(logicalDataSource);
+        var transactions = new TransactionTemplate(new DataSourceTransactionManager(logicalDataSource));
+        var closure = new PostgresqlRoleClosureRepository(jdbc);
+        transactions.executeWithoutResult(status -> {
+            jdbc.update("""
+                    insert into rbac3_application(id,application_code,application_name,display_priority,status,version,created_at,created_by,updated_at,updated_by,ddc_application_id,ddc_business_id)
+                    values(21,'other-app','Other app',0,'ACTIVE',0,current_timestamp,'test',current_timestamp,'test','other-app','biz')
+                    """);
+            for (long roleId = 1000; roleId <= 1011; roleId++) {
+                insertRoutedRole(jdbc, roleId, 10, 20);
+            }
+            for (long roleId = 1100; roleId <= 1103; roleId++) {
+                insertRoutedRole(jdbc, roleId, 10, 20);
+            }
+            insertRoutedRole(jdbc, 2000, 11, 20);
+            insertRoutedRole(jdbc, 2001, 10, 21);
+            jdbc.update("""
+                    insert into rbac3_role_closure(tenant_id,application_id,ancestor_role_id,descendant_role_id,depth)
+                    values(11,20,2000,2000,0),(10,21,2001,2001,0)
+                    """);
+            long edgeId = 3000;
+            for (long roleId = 1000; roleId < 1011; roleId++) {
+                insertRoutedEdge(jdbc, edgeId++, roleId, roleId + 1);
+            }
+            insertRoutedEdge(jdbc, edgeId++, 1100, 1101);
+            insertRoutedEdge(jdbc, edgeId++, 1100, 1102);
+            insertRoutedEdge(jdbc, edgeId++, 1101, 1103);
+            insertRoutedEdge(jdbc, edgeId++, 1102, 1103);
+            insertRoutedEdge(jdbc, edgeId, 1100, 1103);
+        });
+        transactions.executeWithoutResult(status -> {
+            closure.lockGraph(10, 20);
+            insertRoutedRole(jdbc, 1200, 10, 20);
+            closure.rebuild(10, 20);
+        });
+        assertEquals(0, jdbc.queryForObject("select depth from rbac3_role_closure where tenant_id=10 and application_id=20 and ancestor_role_id=1200 and descendant_role_id=1200", Integer.class));
+        assertEquals(1, jdbc.queryForObject("select depth from rbac3_role_closure where tenant_id=10 and application_id=20 and ancestor_role_id=1100 and descendant_role_id=1103", Integer.class));
+        assertEquals(10, jdbc.queryForObject("select depth from rbac3_role_closure where tenant_id=10 and application_id=20 and ancestor_role_id=1000 and descendant_role_id=1010", Integer.class));
+        assertEquals(0, jdbc.queryForObject("select count(*) from rbac3_role_closure where tenant_id=10 and application_id=20 and ancestor_role_id=1000 and descendant_role_id=1011", Integer.class));
+        assertEquals(87, jdbc.queryForObject("select count(*) from rbac3_role_closure where tenant_id=10 and application_id=20", Integer.class));
+        assertEquals(2, jdbc.queryForObject("select count(*) from rbac3_role_closure where (tenant_id=11 and application_id=20) or (tenant_id=10 and application_id=21)", Integer.class));
+        var expected = jdbc.queryForList("select * from rbac3_role_closure order by tenant_id,application_id,ancestor_role_id,descendant_role_id");
+        transactions.executeWithoutResult(status -> {
+            closure.lockGraph(10, 20);
+            closure.rebuild(10, 20);
+        });
+        assertEquals(expected, jdbc.queryForList("select * from rbac3_role_closure order by tenant_id,application_id,ancestor_role_id,descendant_role_id"));
+
+        var failure = assertThrows(IllegalStateException.class, () -> transactions.executeWithoutResult(status -> {
+            closure.lockGraph(10, 20);
+            insertRoutedRole(jdbc, 1201, 10, 20);
+            closure.rebuild(10, 20);
+            throw new IllegalStateException("rollback-probe");
+        }));
+        assertEquals("rollback-probe", failure.getMessage());
+        assertEquals(0, jdbc.queryForObject("select count(*) from rbac3_role where id=1201", Integer.class));
+        assertEquals(expected, jdbc.queryForList("select * from rbac3_role_closure order by tenant_id,application_id,ancestor_role_id,descendant_role_id"));
+
+        try (var connection = DriverManager.getConnection(url, user, password); var statement = connection.createStatement()) {
+            statement.execute("alter table rbac3_role_closure add constraint role_closure_batch_failure_probe check (ancestor_role_id <> 1201)");
+        }
+        assertThrows(org.springframework.dao.DataIntegrityViolationException.class, () -> transactions.executeWithoutResult(status -> {
+            closure.lockGraph(10, 20);
+            insertRoutedRole(jdbc, 1201, 10, 20);
+            closure.rebuild(10, 20);
+        }));
+        assertEquals(0, jdbc.queryForObject("select count(*) from rbac3_role where id=1201", Integer.class));
+        assertEquals(expected, jdbc.queryForList("select * from rbac3_role_closure order by tenant_id,application_id,ancestor_role_id,descendant_role_id"));
+        transactions.executeWithoutResult(status -> {
+            closure.lockGraph(12, 20);
+            closure.rebuild(12, 20);
+        });
+        assertEquals(expected, jdbc.queryForList("select * from rbac3_role_closure order by tenant_id,application_id,ancestor_role_id,descendant_role_id"));
+    }
+
+    private void insertRoutedRole(JdbcTemplate jdbc, long roleId, long tenantId, long applicationId) {
+        jdbc.update("""
+                insert into rbac3_role(id,tenant_id,application_id,role_code,role_name,role_type,risk_level,status,created_at,created_by,updated_at,updated_by)
+                values(?,?,?,?,'Routed role','MANAGEMENT','LOW','ACTIVE',current_timestamp,'test',current_timestamp,'test')
+                """, roleId, tenantId, applicationId, "ROUTED_" + roleId);
+    }
+
+    private void insertRoutedEdge(JdbcTemplate jdbc, long edgeId, long seniorId, long juniorId) {
+        jdbc.update("""
+                insert into rbac3_role_inheritance(id,tenant_id,application_id,senior_role_id,junior_role_id,created_at,created_by,updated_at,updated_by)
+                values(?,10,20,?,?,current_timestamp,'test',current_timestamp,'test')
+                """, edgeId, seniorId, juniorId);
     }
 
     @Test

@@ -4,6 +4,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCallback;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+
 /**
  * 类型 `PostgresqlRoleClosureRepository` 位于当前包内，是类型，用于承载 `Postgresql Role Closure Store` 相关的职责、状态或契约；调用方通常通过其公开 API、Spring 装配或实现关系使用。
  * Type `PostgresqlRoleClosureRepository` is a type in its package and carries the responsibility, state, or contract for `Postgresql Role Closure Store`; callers normally use it through its public API, Spring assembly, or implementation relationship.
@@ -65,46 +71,49 @@ public class PostgresqlRoleClosureRepository {
      * @param applicationId 输入参数 `applicationId`，用于确定本次操作的范围或内容；input value used to determine the operation's scope or content.
      */
     public void rebuild(long tenantId, long applicationId) {
+        // ShardingSphere cannot bind the recursive CTE. Read the locked graph and
+        // compute shortest paths per ancestor in the caller's transaction.
+        var roles = jdbcTemplate.query(
+                "select id from rbac3_role where tenant_id = ? and application_id = ? order by id",
+                (result, rowNumber) -> result.getLong("id"), tenantId, applicationId);
+        var children = new HashMap<Long, List<Long>>();
+        jdbcTemplate.query("""
+                select senior_role_id, junior_role_id from rbac3_role_inheritance
+                 where tenant_id = ? and application_id = ?
+                 order by senior_role_id, junior_role_id
+                """, result -> {
+                    children.computeIfAbsent(result.getLong("senior_role_id"), ignored -> new ArrayList<>())
+                            .add(result.getLong("junior_role_id"));
+                }, tenantId, applicationId);
         jdbcTemplate.update(
                 "delete from rbac3_role_closure where tenant_id = ? and application_id = ?",
                 tenantId,
                 applicationId);
-        jdbcTemplate.update("""
-                with recursive paths(ancestor_role_id, descendant_role_id, depth) as (
-                    select senior_role_id, junior_role_id, 1
-                      from rbac3_role_inheritance
-                     where tenant_id = ? and application_id = ?
-                    union
-                    select paths.ancestor_role_id, edges.junior_role_id, paths.depth + 1
-                      from paths
-                      join rbac3_role_inheritance edges
-                        on edges.tenant_id = ?
-                       and edges.application_id = ?
-                       and edges.senior_role_id = paths.descendant_role_id
-                     where paths.depth < 10
-                ), closure_rows as (
-                    select id as ancestor_role_id, id as descendant_role_id, 0 as depth
-                      from rbac3_role
-                     where tenant_id = ? and application_id = ?
-                    union all
-                    select ancestor_role_id, descendant_role_id, min(depth)
-                      from paths
-                     group by ancestor_role_id, descendant_role_id
-                )
-                insert into rbac3_role_closure (
-                    tenant_id, application_id, ancestor_role_id, descendant_role_id, depth
-                )
-                select ?, ?, ancestor_role_id, descendant_role_id, min(depth)
-                  from closure_rows
-                 group by ancestor_role_id, descendant_role_id
-                """,
-                tenantId,
-                applicationId,
-                tenantId,
-                applicationId,
-                tenantId,
-                applicationId,
-                tenantId,
-                applicationId);
+        for (long ancestorId : roles) {
+            var depths = new LinkedHashMap<Long, Integer>();
+            var queue = new ArrayDeque<Long>();
+            depths.put(ancestorId, 0);
+            queue.add(ancestorId);
+            while (!queue.isEmpty()) {
+                long currentId = queue.removeFirst();
+                int depth = depths.get(currentId);
+                if (depth == 10) {
+                    continue;
+                }
+                for (long descendantId : children.getOrDefault(currentId, List.of())) {
+                    if (depths.putIfAbsent(descendantId, depth + 1) == null) {
+                        queue.addLast(descendantId);
+                    }
+                }
+            }
+            var rows = new ArrayList<Object[]>();
+            depths.forEach((descendantId, depth) ->
+                    rows.add(new Object[] {tenantId, applicationId, ancestorId, descendantId, depth}));
+            jdbcTemplate.batchUpdate("""
+                    insert into rbac3_role_closure (
+                        tenant_id, application_id, ancestor_role_id, descendant_role_id, depth
+                    ) values (?, ?, ?, ?, ?)
+                    """, rows);
+        }
     }
 }
