@@ -55,7 +55,11 @@ public class PermissionBootstrapConfiguration {
     Clock clock() { return Clock.systemUTC(); }
 
     @Bean({"jacksonObjectMapper", "outboxStateMachineObjectMapper"})
-    ObjectMapper mapper() { return PermissionBootstrapCli.mapper(); }
+    ObjectMapper mapper() {
+        // Storage manifests permit optional constructor properties; operator input keeps the strict CLI parser.
+        return PermissionBootstrapCli.mapper().disable(
+                com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES);
+    }
 
     @Bean("egonColaShardingTopologyValidator")
     EgonColaShardingTopologyValidator topologyValidator(@Qualifier("egonColaValidationUtils") ValidationUtils validation) {

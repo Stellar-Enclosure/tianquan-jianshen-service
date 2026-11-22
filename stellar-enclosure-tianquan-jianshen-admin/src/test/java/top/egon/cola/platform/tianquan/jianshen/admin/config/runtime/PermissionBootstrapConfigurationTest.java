@@ -60,6 +60,20 @@ class PermissionBootstrapConfigurationTest {
     }
 
     @Test
+    void storageManifestAllowsItsOptionalBaselineWhileOperatorCommandsRemainStrict() throws Exception {
+        var storageMapper = new PermissionBootstrapConfiguration().mapper();
+        try (var manifest = new org.springframework.core.io.ClassPathResource("db/egon-outbox-mp/manifest.json").getInputStream()) {
+            assertThat(storageMapper.readValue(manifest,
+                    top.egon.cola.component.common.mybatis.ddl.EgonColaDdlManifestBO.class).family())
+                    .isEqualTo("component-outbox");
+        }
+        assertThat(top.egon.cola.platform.tianquan.jianshen.admin.bootstrap.controller.cli.PermissionBootstrapCli.mapper()
+                .isEnabled(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES)).isTrue();
+        assertThatThrownBy(() -> storageMapper.readValue("{\"family\":\"component-outbox\"}",
+                top.egon.cola.component.common.mybatis.ddl.EgonColaDdlManifestBO.class)).isInstanceOf(Exception.class);
+    }
+
+    @Test
     void everyBorrowedConnectionMustMatchDatabaseOidOwnerUserAndNativeSchema() throws Exception {
         var input = connection();
         var source = PermissionBootstrapCommandRunner.guardedDataSource(input);
