@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.Immutable;
 import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
@@ -18,6 +19,7 @@ import java.util.Objects;
  */
 @Entity(name = "AuditLogEntity")
 @Table(name = "rbac3_audit_log")
+@Immutable
 public class AuditLogPO {
 
     /**
