@@ -136,11 +136,13 @@ public class PermissionRuntimeSnapshotRepository {
                 """, Map.of("tenant", tenantId, "subject", subject), "IDENTITY_INACTIVE");
         long userId = number(user[0]);
         long authVersion = number(user[1]);
-        if (!CatalogProjectionTenantContext.call(scope.tenantId(), () -> eligibility.isEffectiveForProjection(
-                scope.tenantId(), Long.toString(userId), Long.toString(state.applicationId()), now))) {
-            throw new Rbac3RuleViolation("APPLICATION_BINDING_DENIED");
-        }
-        var fact = facts.load(scope.tenantId(), Long.toString(userId), now);
+        var fact = CatalogProjectionTenantContext.call(scope.tenantId(), () -> {
+            if (!eligibility.isEffectiveForProjection(scope.tenantId(), Long.toString(userId),
+                    Long.toString(state.applicationId()), now)) {
+                throw new Rbac3RuleViolation("APPLICATION_BINDING_DENIED");
+            }
+            return facts.load(scope.tenantId(), Long.toString(userId), now);
+        });
         if (fact.authVersion() != authVersion || fact.policyVersion() != policyVersion) {
             throw new Rbac3RuleViolation("AUTH_RUNTIME_VERSION_CONFLICT");
         }

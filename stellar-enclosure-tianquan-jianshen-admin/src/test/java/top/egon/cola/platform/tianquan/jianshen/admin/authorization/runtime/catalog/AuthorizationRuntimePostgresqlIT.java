@@ -32,6 +32,8 @@ import top.egon.cola.platform.tianquan.jianshen.contract.permission.ManifestRegi
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.SourceImportReceipt;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.SourceImportRequest;
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
+import top.egon.cola.platform.tianquan.jianshen.admin.shared.tenant.domain.CatalogProjectionTenantContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import top.egon.cola.platform.tianquan.shoubing.contract.ServiceIdentityPrincipal;
 
 import java.nio.charset.StandardCharsets;
@@ -75,6 +77,7 @@ class AuthorizationRuntimePostgresqlIT {
     private final AuditQueryService audit = mock(AuditQueryService.class);
     private final AtomicLong ids = new AtomicLong(100);
     private final List<String> recordedSql = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private boolean failFactLoad;
 
     @BeforeEach
     void connectToExplicitExistingDatabase() throws Exception {
@@ -171,7 +174,11 @@ class AuthorizationRuntimePostgresqlIT {
     void scopedSqlSnapshotAndHeadCommitTogetherAndRevocationCannotReuseTheOldView() {
         provisionActiveCatalog();
         var repository = runtime(entityManager, null, null);
+        assertNull(CatalogProjectionTenantContext.currentOrNull());
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
         var first = transaction(() -> repository.current(proof()));
+        assertNull(CatalogProjectionTenantContext.currentOrNull());
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
         assertEquals(java.util.Set.of("app.read"), first.permissions());
         assertEquals(1L, count("select count(*) from rbac3_catalog_effective_snapshot"));
         assertEquals(1L, count("select count(*) from rbac3_catalog_snapshot_head"));
@@ -181,10 +188,27 @@ class AuthorizationRuntimePostgresqlIT {
             return null;
         });
         var after = transaction(() -> repository.current(proof()));
+        assertNull(CatalogProjectionTenantContext.currentOrNull());
         assertTrue(after.permissions().isEmpty());
         assertTrue(after.policyVersion() > first.policyVersion());
         assertEquals(2L, count("select count(*) from rbac3_catalog_effective_snapshot"));
         assertEquals(after.policyVersion(), count("select tenant_policy_version from rbac3_catalog_snapshot_head where catalog_scope_id=1"));
+    }
+
+    @Test
+    void factLoadFailureCleansTheVerifiedProjectionTenantWithoutPublishingAHead() {
+        provisionActiveCatalog();
+        failFactLoad = true;
+        var repository = runtime(entityManager, null, null);
+        assertNull(CatalogProjectionTenantContext.currentOrNull());
+
+        var failure = assertThrows(Rbac3RuleViolation.class, () -> transaction(() -> repository.current(proof())));
+
+        assertEquals("DIRECTORY_RUNTIME_UNAVAILABLE", failure.reasonCode());
+        assertNull(CatalogProjectionTenantContext.currentOrNull());
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+        assertEquals(0L, count("select count(*) from rbac3_catalog_effective_snapshot"));
+        assertEquals(0L, count("select count(*) from rbac3_catalog_snapshot_head"));
     }
 
     @Test
@@ -361,8 +385,17 @@ class AuthorizationRuntimePostgresqlIT {
         var facts = mock(top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.activation.repository.RoleActivationFactRepository.class);
         var roots = mock(top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.activation.repository.ActivationTransaction.class);
         var eligibility = mock(top.egon.cola.platform.tianquan.jianshen.admin.iam.role.service.RoleEligibilityService.class);
-        when(eligibility.isEffectiveForProjection(any(),any(),any(),any())).thenReturn(true);
+        when(eligibility.isEffectiveForProjection(any(),any(),any(),any())).thenAnswer(invocation -> {
+            assertEquals(invocation.getArgument(0), CatalogProjectionTenantContext.currentOrNull(),
+                    "Every catalog eligibility read requires the verified projection tenant");
+            assertNull(SecurityContextHolder.getContext().getAuthentication(), "Projection must not manufacture authentication");
+            return true;
+        });
         when(facts.load(any(),any(),any())).thenAnswer(invocation -> {
+            // The real JPA facts loader repeats eligibility while constructing the role hierarchy.
+            assertTrue(eligibility.isEffectiveForProjection(invocation.getArgument(0), invocation.getArgument(1),
+                    "20", invocation.getArgument(2)));
+            if (failFactLoad) throw new Rbac3RuleViolation("DIRECTORY_RUNTIME_UNAVAILABLE");
             if (entered != null) { entered.countDown(); assertTrue(release.await(10, java.util.concurrent.TimeUnit.SECONDS)); }
             Object[] user = (Object[]) em.createNativeQuery("select id,auth_version from rbac3_user where tenant_id=10 and identity_sub='9001'").getSingleResult();
             long policy = ((Number) em.createNativeQuery("select policy_version from rbac3_tenant_authorization_state where tenant_id=10").getSingleResult()).longValue();
