@@ -184,6 +184,32 @@ class PermissionBootstrapServiceTest {
         assertThat(first.bindingDigest()).isNotEqualTo(second.bindingDigest());
     }
 
+    @Test
+    void b0AcceptsUnderscorePermissionNamespacesThroughTheStrictCommandParser() throws Exception {
+        var encoded = json.write(catalog()).replace("\"system:\"", "\"TIANSHU_\"");
+        var command = PermissionBootstrapCli.mapper().readValue(encoded, PermissionCatalogBootstrapCommandDTO.class);
+
+        assertThat(command.producers().getFirst().ownedPermissionPrefixes()).containsExactly("TIANSHU_");
+        service.catalog(command, false);
+        verify(repository).initializeCatalog(command, NOW);
+        verifyNoInteractions(scopes, grants, policy, events);
+    }
+
+    @Test
+    void b0KeepsExplicitPermissionBoundariesAndRejectsUnderscoreResourceOrMessageBoundaries() throws Exception {
+        var encoded = json.write(catalog());
+        for (String invalid : List.of(
+                encoded.replace("\"system:\"", "\"TIANSHU\""),
+                encoded.replace("\"system:\"", "\"TIANSHU*\""),
+                encoded.replace("\"tianquan-jianshen.api.\"", "\"tianshu_api_\""),
+                encoded.replace("\"permission/\"", "\"permission_\""))) {
+            assertThatThrownBy(() -> PermissionBootstrapCli.mapper().readValue(invalid, PermissionCatalogBootstrapCommandDTO.class))
+                    .isInstanceOf(com.fasterxml.jackson.databind.JsonMappingException.class)
+                    .hasRootCauseInstanceOf(IllegalArgumentException.class);
+        }
+        verify(repository, never()).initializeCatalog(any(), any());
+    }
+
     private PermissionCatalogBootstrapCommandDTO catalog() {
         var grant = new PermissionCatalogBootstrapCommandDTO.ServiceGrant(URI.create("https://idp.example/tenants/10"), "ci", URI.create("https://rbac.example"),
                 List.of(PermissionCatalogCaller.Capability.REGISTER), List.of("refs/heads/main"), false);

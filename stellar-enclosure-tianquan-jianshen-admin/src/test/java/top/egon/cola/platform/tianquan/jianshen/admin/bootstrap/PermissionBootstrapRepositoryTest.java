@@ -69,6 +69,22 @@ class PermissionBootstrapRepositoryTest {
     }
 
     @Test
+    void b0RejectsOverlappingUnderscorePermissionOwnersIgnoringCase() {
+        var fixture = new Fixture();
+        var baseline = catalog();
+        var original = baseline.producers().getFirst();
+        var producer = new PermissionCatalogBootstrapCommandDTO.Producer(original.producerId(), original.kind(),
+                original.ownedKeyPrefixes(), List.of("TIANSHU_"), original.ownedMessagePrefixes(), original.expectedModules(), original.serviceGrants());
+        var command = new PermissionCatalogBootstrapCommandDTO(baseline.schemaVersion(), baseline.operationId(), baseline.connectionFile(),
+                baseline.target(), baseline.applicationId(), baseline.applicationName(), baseline.ddcBusinessId(), baseline.ddcApplicationId(), List.of(producer));
+        fixture.rows.put("from rbac3_catalog_producer", List.<Object[]>of(new Object[]{"foreign-java", "JAVA", "[\"foreign.api.\"]",
+                "[\"tianshu_ai_\"]", "[\"foreign/\"]", "[\"other\"]", 0L, true, 0L}));
+
+        assertThatThrownBy(() -> fixture.repository.initializeCatalog(command, NOW)).hasMessage("BOOTSTRAP_OWNER_PREFIX_CONFLICT");
+        assertThat(fixture.updates).noneMatch(sql -> sql.contains("insert into rbac3_catalog_producer") || sql.startsWith("update "));
+    }
+
+    @Test
     void b0RejectsActiveCatalogAndNeverOverwritesOrReenablesServiceGrants() {
         var fixture = new Fixture(); fixture.revision = 1;
         assertThatThrownBy(() -> fixture.repository.initializeCatalog(catalog(), NOW)).hasMessage("BOOTSTRAP_CATALOG_ALREADY_ACTIVE");

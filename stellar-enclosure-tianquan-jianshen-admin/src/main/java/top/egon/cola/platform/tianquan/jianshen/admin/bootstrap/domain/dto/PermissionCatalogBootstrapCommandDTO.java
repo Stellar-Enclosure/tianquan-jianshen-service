@@ -43,9 +43,9 @@ public record PermissionCatalogBootstrapCommandDTO(int schemaVersion, String ope
         public Producer {
             producerId = identifier(producerId, "producerId", 128);
             Objects.requireNonNull(kind, "kind");
-            ownedKeyPrefixes = prefixes(ownedKeyPrefixes, "ownedKeyPrefixes", true);
-            ownedPermissionPrefixes = prefixes(ownedPermissionPrefixes, "ownedPermissionPrefixes", false);
-            ownedMessagePrefixes = prefixes(ownedMessagePrefixes, "ownedMessagePrefixes", true);
+            ownedKeyPrefixes = prefixes(ownedKeyPrefixes, "ownedKeyPrefixes", true, ".:/");
+            ownedPermissionPrefixes = prefixes(ownedPermissionPrefixes, "ownedPermissionPrefixes", false, ".:/_");
+            ownedMessagePrefixes = prefixes(ownedMessagePrefixes, "ownedMessagePrefixes", true, ".:/");
             expectedModules = identifiers(expectedModules, "expectedModules", 256, true);
             serviceGrants = Objects.requireNonNull(serviceGrants, "serviceGrants").stream().sorted(java.util.Comparator.comparing(ServiceGrant::bindingDigest)).toList();
             if (serviceGrants.isEmpty() || serviceGrants.size() > 16) throw new IllegalArgumentException("B0 requires 1-16 service grants per producer");
@@ -112,9 +112,9 @@ public record PermissionCatalogBootstrapCommandDTO(int schemaVersion, String ope
         return result;
     }
 
-    private static List<String> prefixes(List<String> values, String name, boolean required) {
+    private static List<String> prefixes(List<String> values, String name, boolean required, String boundaryCharacters) {
         var result = identifiers(values, name, 128, required);
-        if (result.stream().anyMatch(value -> !(value.endsWith(".") || value.endsWith(":") || value.endsWith("/")))) {
+        if (result.stream().anyMatch(value -> boundaryCharacters.indexOf(value.charAt(value.length() - 1)) < 0)) {
             throw new IllegalArgumentException(name + " must end at an explicit namespace boundary");
         }
         return result;
