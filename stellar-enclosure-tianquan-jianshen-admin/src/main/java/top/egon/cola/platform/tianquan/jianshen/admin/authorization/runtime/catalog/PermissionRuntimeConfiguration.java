@@ -3,6 +3,7 @@ package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.cat
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.context.annotation.Primary;
 import top.egon.cola.platform.tianquan.jianshen.starter.client.Rbac3AuthorizationClient;
 import top.egon.cola.platform.tianquan.jianshen.contract.authorization.SystemAuthorizationSnapshot;
@@ -15,8 +16,8 @@ public class PermissionRuntimeConfiguration {
     /** The authority reads its own SQL state; it never recursively calls its authenticated HTTP endpoint. */
     @Bean
     @Primary
-    Rbac3AuthorizationClient localCatalogAuthorizationClient(PermissionRuntimeProofService proofs,
-                                                            PermissionRuntimeSnapshotRepository snapshots) {
+    Rbac3AuthorizationClient localCatalogAuthorizationClient(@Lazy PermissionRuntimeProofService proofs,
+                                                            @Lazy PermissionRuntimeSnapshotRepository snapshots) {
         return new Rbac3AuthorizationClient() {
             @Override public top.egon.cola.platform.tianquan.jianshen.contract.authorization.ServicePolicySnapshot fetchPolicy(
                     String systemCode, top.egon.cola.platform.tianquan.shoubing.contract.ServiceIdentityPrincipal caller) {
