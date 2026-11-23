@@ -15,6 +15,8 @@ import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
@@ -370,8 +372,9 @@ class PermissionCatalogRoutedPostgresqlIT {
                 "select count(*) from rbac3_catalog_role_permission where catalog_scope_id=1 and role_id=40 and status='DISABLED'").getSingleResult()).longValue()));
     }
 
-    @Test
-    void snapshotExpiringDuringAuthorizationIsReplacedThroughRouting() throws Exception {
+    @ParameterizedTest
+    @ValueSource(longs = {-1, 5})
+    void snapshotExpiringDuringAuthorizationIsReplacedThroughRouting(long previousSecondsRemaining) throws Exception {
         activate(register());
         switchToLogicalDataSource();
         long userId = transaction(() -> ((Number) entityManager.createNativeQuery("""
@@ -381,7 +384,7 @@ class PermissionCatalogRoutedPostgresqlIT {
                 mock(RoleActivationFactRepository.class), mock(ActivationTransaction.class), mock(RoleEligibilityService.class),
                 () -> NOW, new PermissionRuntimeProperties(null, List.of()));
         Instant wallTime = Instant.now();
-        Instant priorExpiry = wallTime.minusSeconds(1);
+        Instant priorExpiry = wallTime.plusSeconds(previousSecondsRemaining);
         var previous = snapshotExpiring(priorExpiry);
         var fresh = snapshotExpiring(wallTime.plusSeconds(30));
 
