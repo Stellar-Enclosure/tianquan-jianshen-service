@@ -3,6 +3,7 @@ package top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.cat
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import top.egon.cola.component.common.id.snowflake.SnowflakeIdGenerator;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.activation.repository.RoleActivationFactRepository;
@@ -68,7 +69,7 @@ public class PermissionRuntimeSnapshotRepository {
     }
 
     /** Reads a SERVICE policy and its activated resource without creating a USER snapshot. */
-    @Transactional
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
     ServiceExecutionView currentServiceExecution(PermissionRuntimeProperties.Binding binding, Instant expiresAt, String resourceKey) {
         var snapshot = policy(binding, expiresAt);
         return new ServiceExecutionView(snapshot, executionResource(binding, snapshot.catalogVersion(), resourceKey));
@@ -127,7 +128,7 @@ public class PermissionRuntimeSnapshotRepository {
         long tenantId = Long.parseLong(scope.tenantId());
         Instant now = clock.transactionNow();
         if (!proofExpiresAt.isAfter(now)) throw new Rbac3RuleViolation("JWT_EXPIRED");
-        PolicyState state = policyState(binding);
+        PolicyState state = policyState(binding, true);
         long policyVersion = state.policyVersion();
         long catalogVersion = state.catalogVersion();
         Object[] user = one("""
@@ -179,10 +180,11 @@ public class PermissionRuntimeSnapshotRepository {
                 Map.of(), digest, now, expiresAt, view, build);
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
     public top.egon.cola.platform.tianquan.jianshen.contract.authorization.ServicePolicySnapshot policy(
             PermissionRuntimeProperties.Binding binding, Instant credentialExpiresAt) {
-        var state = policyState(binding);
+        // Directory calls during projection can read committed policy without waiting on the projection's tenant fence.
+        var state = policyState(binding, false);
         Instant now = clock.transactionNow();
         Instant expires = now.plus(properties.snapshotTtl());
         if (credentialExpiresAt.isBefore(expires)) expires = credentialExpiresAt;
@@ -194,7 +196,7 @@ public class PermissionRuntimeSnapshotRepository {
                         state.catalogVersion()), expires);
     }
 
-    private PolicyState policyState(PermissionRuntimeProperties.Binding binding) {
+    private PolicyState policyState(PermissionRuntimeProperties.Binding binding, boolean publishUserSnapshot) {
         CatalogScope scope = binding.scope();
         long scopeId = Long.parseLong(scope.catalogScopeId());
         long tenantId = Long.parseLong(scope.tenantId());
@@ -203,13 +205,14 @@ public class PermissionRuntimeSnapshotRepository {
                        s.application_id from rbac3_catalog_scope s join rbac3_application a on a.id = s.application_id
                 where s.id = :scope and s.status = 'ACTIVE' and a.status = 'ACTIVE'
                   and a.application_code = s.application_code and a.ddc_business_id = s.ddc_business_id
-                  and a.ddc_application_id = s.ddc_application_id for share of s
-                """, Map.of("scope", scopeId), "APPLICATION_BINDING_DENIED");
+                  and a.ddc_application_id = s.ddc_application_id
+                """ + (publishUserSnapshot ? " for share of s" : ""), Map.of("scope", scopeId), "APPLICATION_BINDING_DENIED");
         CatalogScope stored = new CatalogScope(text(scopeRow[0]), text(scopeRow[1]), text(scopeRow[2]),
                 text(scopeRow[3]), text(scopeRow[4]), text(scopeRow[5]));
         if (!scope.equals(stored)) throw new Rbac3RuleViolation("APPLICATION_BINDING_DENIED");
-        // Every catalog mutation takes scope before tenant state. Readers use the same order.
-        long policyVersion = number(one("select policy_version from rbac3_tenant_authorization_state where tenant_id = :tenant for share",
+        // USER publication locks in the catalog mutation order. SERVICE policy reads use a consistent MVCC view.
+        long policyVersion = number(one("select policy_version from rbac3_tenant_authorization_state where tenant_id = :tenant"
+                        + (publishUserSnapshot ? " for share" : ""),
                 Map.of("tenant", tenantId), "AUTH_RUNTIME_UNAVAILABLE")[0]);
         Object[] deployed = one("""
                 select a.activation_version, a.policy_version, ap.producer_version, ap.manifest_digest,

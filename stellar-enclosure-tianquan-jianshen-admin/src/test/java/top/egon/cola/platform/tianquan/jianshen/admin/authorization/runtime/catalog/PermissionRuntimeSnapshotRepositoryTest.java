@@ -161,6 +161,7 @@ class PermissionRuntimeSnapshotRepositoryTest {
         assertEquals(NOW.plusSeconds(30), view.snapshot().expiresAt());
         assertTrue(fixture.writes.isEmpty());
         assertTrue(fixture.sql.stream().noneMatch(sql -> sql.contains("select id, auth_version from rbac3_user")));
+        assertTrue(fixture.sql.stream().noneMatch(sql -> sql.contains("for share")));
         fixture.definitionDigest = "f".repeat(64);
         assertEquals("AUTH_RUNTIME_CHECKSUM_MISMATCH", assertThrows(Rbac3RuleViolation.class,
                 () -> fixture.repository.currentServiceExecution(binding(), NOW.plusSeconds(60), "shop.api.read")).reasonCode());
@@ -179,6 +180,7 @@ class PermissionRuntimeSnapshotRepositoryTest {
             fixture.transactionObserved = false;
             repository.currentServiceExecution(binding(), NOW.plusSeconds(60), "shop.api.read");
             assertTrue(fixture.transactionObserved);
+            assertEquals(java.sql.Connection.TRANSACTION_REPEATABLE_READ, fixture.transactionIsolation);
         }
     }
 
@@ -206,6 +208,7 @@ class PermissionRuntimeSnapshotRepositoryTest {
         String artifact="a".repeat(64); long policy=3;
         String definitionJson, definitionDigest;
         boolean transactionObserved;
+        Integer transactionIsolation;
         java.time.Instant activatedAt=NOW.minusSeconds(5), qualifiedAt=NOW.minusSeconds(10), qualificationExpiresAt=NOW.plusSeconds(900);
         Fixture() {
             var resource = new top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest.ResourceDefinition(
@@ -241,7 +244,8 @@ class PermissionRuntimeSnapshotRepositoryTest {
         }
         List<?> rows(String text) {
             transactionObserved |= org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive();
-            if(text.contains("for share of s")) return List.<Object[]>of(new Object[]{10L,20L,"commerce","shop","default","test",40L});
+            transactionIsolation = org.springframework.transaction.support.TransactionSynchronizationManager.getCurrentTransactionIsolationLevel();
+            if(text.contains("from rbac3_catalog_scope s join rbac3_application a")) return List.<Object[]>of(new Object[]{10L,20L,"commerce","shop","default","test",40L});
             if(text.contains("policy_version from rbac3_tenant")) return List.of(policy);
             if(text.contains("select id, auth_version from rbac3_user")) return List.<Object[]>of(new Object[]{60L,2L});
             if(text.contains("select a.activation_version")) return List.<Object[]>of(new Object[]{1L,3L,1L,"c".repeat(64),"b".repeat(64),artifact,activatedAt,qualifiedAt,qualificationExpiresAt});

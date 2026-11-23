@@ -51,6 +51,7 @@ import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
 import top.egon.cola.platform.tianquan.shoubing.contract.ServiceIdentityPrincipal;
 
 import java.nio.charset.StandardCharsets;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.DriverManager;
@@ -61,6 +62,8 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -570,6 +573,38 @@ class PermissionCatalogRoutedPostgresqlIT {
         var checkpoint = transaction(() -> projections.read("CHECKPOINT", "g8-checkpoint", "10")).orElseThrow();
         assertEquals(payload, checkpoint.payload());
         assertTrue(checkpoint.ready());
+    }
+
+    @Test
+    void servicePolicyReadsTheCommittedVersionWhileProjectionHoldsTheTenantFence() throws Exception {
+        var source = register();
+        activate(source);
+        switchToLogicalDataSource();
+        URI resource = URI.create("https://api.example.test/resource");
+        var binding = new PermissionRuntimeProperties.Binding(SCOPE, resource, authority.issuer(), "service", "service",
+                "biz", "app", "test", resource, "api", "1", "f".repeat(64), source.digests().policyDigest(),
+                source.digests().manifestDigest(), false);
+        var projections = new PermissionRuntimeSnapshotRepository(entityManager, new ObjectMapper(),
+                mock(RoleActivationFactRepository.class), mock(ActivationTransaction.class), mock(RoleEligibilityService.class),
+                () -> NOW, new PermissionRuntimeProperties(null, List.of(binding)));
+        try (var executor = Executors.newSingleThreadExecutor(); var writer = DriverManager.getConnection(url, user, password)) {
+            writer.setAutoCommit(false);
+            try (var update = writer.prepareStatement("""
+                    update rbac3_tenant_authorization_state set version=version+1, policy_version=policy_version+1
+                    where tenant_id=10 returning policy_version
+                    """); var updated = update.executeQuery()) {
+                assertTrue(updated.next());
+                String committedVersion = Long.toString(updated.getLong(1) - 1);
+                var pending = executor.submit(() -> transaction(() -> projections.policy(binding, NOW.plusSeconds(600))));
+                try {
+                    var policy = pending.get(2, TimeUnit.SECONDS);
+                    assertEquals(committedVersion, policy.policyVersion());
+                    assertEquals("1", policy.catalogVersion());
+                } finally {
+                    writer.rollback();
+                }
+            }
+        }
     }
 
     private void activate(SourceImportRequest source) {
