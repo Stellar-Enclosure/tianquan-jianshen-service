@@ -7,11 +7,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.catalog.domain.dto.CatalogGovernanceCommandDTO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.catalog.repository.CatalogGovernanceRepository;
+import top.egon.cola.platform.tianquan.jianshen.admin.authorization.catalog.service.CatalogGovernanceService;
+import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.repository.CatalogAdministrationGuard;
 import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.repository.PermissionCatalogScopeRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.domain.convertor.PermissionCatalogJson;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.CatalogScope;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.PermissionManifest;
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
+import top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3UserDetails;
 
 import java.time.Instant;
 import java.util.List;
@@ -19,6 +22,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import static top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.service.PermissionCatalogActivationService.READ;
 
 class CatalogGovernanceTest {
     private static final CatalogScope SCOPE = new CatalogScope("1", "10", "biz", "app", "default", "test");
@@ -84,6 +88,27 @@ class CatalogGovernanceTest {
         var json = new PermissionCatalogJson(new ObjectMapper());
         assertThrows(IllegalArgumentException.class, () -> json.read("{\"target\":" + json.write(SCOPE)
                 + ",\"kind\":\"RESOURCE\",\"identityId\":\"101\",\"action\":\"ENABLE\",\"expectedVersion\":\"4\"}", CatalogGovernanceCommandDTO.class));
+    }
+
+    @Test
+    void catalogReadsCheckAuthorizationWithoutTakingTheMutationFence() {
+        var actor = mock(Rbac3UserDetails.class, RETURNS_DEEP_STUBS);
+        when(actor.tenantId()).thenReturn(SCOPE.tenantId());
+        when(actor.snapshot().permissionSnapshot().catalogScope()).thenReturn(SCOPE);
+        var guard = mock(CatalogAdministrationGuard.class);
+        var reads = mock(CatalogGovernanceRepository.class);
+        var service = new CatalogGovernanceService(guard, reads, null, null, null, () -> NOW);
+        var kind = CatalogGovernanceCommandDTO.Kind.RESOURCE;
+
+        service.scopes(0, 20, actor);
+        service.page(SCOPE, kind, 0, 20, actor);
+        service.detail(SCOPE, kind, 101, actor);
+
+        verify(guard, times(3)).requireRead(SCOPE, actor, READ, NOW);
+        verifyNoMoreInteractions(guard);
+        verify(reads).scopes(SCOPE.tenantId(), 0, 20);
+        verify(reads).page(SCOPE, kind, 0, 20);
+        verify(reads).detail(SCOPE, kind, 101);
     }
 
     private CatalogGovernanceCommandDTO command(CatalogGovernanceCommandDTO.Action action, String version, String target) {

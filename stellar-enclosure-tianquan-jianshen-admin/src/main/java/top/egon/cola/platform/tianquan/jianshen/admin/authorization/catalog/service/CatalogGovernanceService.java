@@ -68,19 +68,19 @@ public class CatalogGovernanceService {
         if (actor == null || actor.snapshot().permissionSnapshot() == null) {
             throw new top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation("AUTH_SNAPSHOT_NOT_READY");
         }
-        guard.require(actor.snapshot().permissionSnapshot().catalogScope(), actor, PermissionCatalogActivationService.READ, clock.transactionNow());
+        guard.requireRead(actor.snapshot().permissionSnapshot().catalogScope(), actor, PermissionCatalogActivationService.READ, clock.transactionNow());
         return governance.scopes(actor.tenantId(), afterId, limit);
     }
 
     @Transactional
     public CatalogDefinitionPageVO page(CatalogScope target, CatalogGovernanceCommandDTO.Kind kind, long afterId, int limit, Rbac3UserDetails actor) {
-        guard.require(target, actor, PermissionCatalogActivationService.READ, clock.transactionNow());
+        guard.requireRead(target, actor, PermissionCatalogActivationService.READ, clock.transactionNow());
         return governance.page(target, kind, afterId, limit);
     }
 
     @Transactional
     public CatalogDefinitionDetailVO detail(CatalogScope target, CatalogGovernanceCommandDTO.Kind kind, long id, Rbac3UserDetails actor) {
-        guard.require(target, actor, PermissionCatalogActivationService.READ, clock.transactionNow());
+        guard.requireRead(target, actor, PermissionCatalogActivationService.READ, clock.transactionNow());
         return governance.detail(target, kind, id);
     }
 
