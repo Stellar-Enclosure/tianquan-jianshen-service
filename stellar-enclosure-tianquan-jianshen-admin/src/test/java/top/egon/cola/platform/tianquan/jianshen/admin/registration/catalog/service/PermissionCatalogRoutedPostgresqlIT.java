@@ -36,6 +36,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.domai
 import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.repository.PermissionCatalogActivationRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.repository.PermissionCatalogDefinitionRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.repository.PermissionCatalogScopeRepository;
+import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.repository.PermissionCatalogQueryRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.repository.PermissionManifestRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.repository.PermissionSourceOutboxRepository;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.CatalogActivationRequest;
@@ -233,6 +234,100 @@ class PermissionCatalogRoutedPostgresqlIT {
         assertThrows(IllegalArgumentException.class, () -> transactions.execute(status -> repository.current("10", "route-user", "902", NOW)));
         assertEquals(1L, transaction(() -> ((Number) entityManager.createNativeQuery(
                 "select count(*) from rbac3_user_active_role where tenant_id=10 and user_id=901").getSingleResult()).longValue()));
+    }
+
+    @Test
+    void candidatePaginationSelectsOneFreshTrustedQualificationPerVersionThroughRouting() throws Exception {
+        transaction(() -> {
+            entityManager.createNativeQuery("""
+                    insert into rbac3_tenant_authorization_state(tenant_id,policy_version,version,created_at,created_by,updated_at,updated_by)
+                    values(11,0,0,current_timestamp,'test',current_timestamp,'test')
+                    """).executeUpdate();
+            entityManager.createNativeQuery("""
+                    insert into rbac3_catalog_scope(id,tenant_id,business_code,application_id,application_code,namespace_code,environment,ddc_business_id,ddc_application_id,status,created_at,created_by,updated_at,updated_by)
+                    values(2,11,'biz',20,'app','default','test','biz','app','ACTIVE',current_timestamp,'test',current_timestamp,'test')
+                    """).executeUpdate();
+            entityManager.createNativeQuery("""
+                    insert into rbac3_catalog_producer(catalog_scope_id,producer_id,kind,owned_key_prefixes,owned_permission_prefixes,owned_message_prefixes,expected_modules,enabled,created_at,created_by,updated_at,updated_by)
+                    select 2,producer_id,kind,owned_key_prefixes,owned_permission_prefixes,owned_message_prefixes,expected_modules,enabled,created_at,created_by,updated_at,updated_by
+                      from rbac3_catalog_producer where catalog_scope_id=1 and producer_id='api'
+                    """).executeUpdate();
+            entityManager.createNativeQuery("""
+                    insert into rbac3_catalog_service_grant(id,catalog_scope_id,producer_id,issuer,client_id,resource_uri,principal_binding_digest,capabilities,allowed_source_refs,allow_permission_expansion,enabled,created_at,created_by,updated_at,updated_by)
+                    select 31,1,producer_id,issuer,client_id,resource_uri,repeat('e',64),capabilities,allowed_source_refs,allow_permission_expansion,enabled,created_at,created_by,updated_at,updated_by
+                      from rbac3_catalog_service_grant where id=30
+                    """).executeUpdate();
+            entityManager.createNativeQuery("""
+                    insert into rbac3_catalog_service_grant(id,catalog_scope_id,producer_id,issuer,client_id,resource_uri,principal_binding_digest,capabilities,allowed_source_refs,allow_permission_expansion,enabled,created_at,created_by,updated_at,updated_by)
+                    select 32,2,producer_id,issuer,client_id,resource_uri,principal_binding_digest,capabilities,allowed_source_refs,allow_permission_expansion,enabled,created_at,created_by,updated_at,updated_by
+                      from rbac3_catalog_service_grant where id=30
+                    """).executeUpdate();
+            for (long version = 1; version <= 4; version++) {
+                insertCandidateManifest(1, "api", version);
+            }
+            insertCandidateManifest(1, "other", 9);
+            insertCandidateManifest(2, "api", 9);
+            insertCandidateQualification(101, 1, 1, NOW.minusSeconds(30), NOW.plusSeconds(60), "refs/heads/main", authority.principal().clientId());
+            insertCandidateQualification(202, 1, 2, NOW, NOW.plusSeconds(60), "refs/heads/main", authority.principal().clientId());
+            insertCandidateQualification(303, 1, 3, NOW.minusSeconds(10), NOW.plusSeconds(60), "refs/heads/main", authority.principal().clientId());
+            insertCandidateQualification(304, 1, 3, NOW.minusSeconds(10), NOW.plusSeconds(60), "refs/heads/main", authority.principal().clientId());
+            insertCandidateQualification(399, 1, 3, NOW.minusSeconds(20), NOW.plusSeconds(60), "refs/heads/main", authority.principal().clientId());
+            insertCandidateQualification(305, 1, 3, NOW.plusSeconds(1), NOW.plusSeconds(60), "refs/heads/main", authority.principal().clientId());
+            insertCandidateQualification(306, 1, 3, NOW.minusSeconds(1), NOW, "refs/heads/main", authority.principal().clientId());
+            insertCandidateQualification(307, 1, 3, NOW, NOW.plusSeconds(60), "refs/heads/other", authority.principal().clientId());
+            insertCandidateQualification(308, 1, 3, NOW, NOW.plusSeconds(60), "refs/heads/main", "foreign-client");
+            insertCandidateQualification(909, 2, 9, NOW, NOW.plusSeconds(60), "refs/heads/main", authority.principal().clientId());
+            return null;
+        });
+        switchToLogicalDataSource();
+        var queries = new PermissionCatalogQueryRepository(entityManager, json);
+        var first = transaction(() -> queries.candidates(SCOPE, "api", 0, 2, NOW));
+        assertEquals(List.of("4", "3", "2"), first.stream().map(row -> row.value().producerVersion()).toList());
+        assertNull(first.get(0).value().qualification());
+        assertEquals("304", first.get(1).value().qualification().qualificationId());
+        assertEquals("202", first.get(2).value().qualification().qualificationId());
+        assertEquals(13, first.get(1).metadataRevision());
+        var second = transaction(() -> queries.candidates(SCOPE, "api", 3, 1, NOW));
+        assertEquals(List.of("2", "1"), second.stream().map(row -> row.value().producerVersion()).toList());
+        assertEquals("101", second.get(1).value().qualification().qualificationId());
+        assertTrue(transaction(() -> queries.candidates(SCOPE, "api", 1, 2, NOW)).isEmpty());
+        var otherProducer = transaction(() -> queries.candidates(SCOPE, "other", 0, 2, NOW));
+        assertEquals(List.of("9"), otherProducer.stream().map(row -> row.value().producerVersion()).toList());
+        assertNull(otherProducer.getFirst().value().qualification());
+        var foreignScope = new top.egon.cola.platform.tianquan.jianshen.contract.permission.CatalogScope("2", "11", "biz", "app", "default", "test");
+        var otherTenant = transaction(() -> queries.candidates(foreignScope, "api", 0, 2, NOW));
+        assertEquals(List.of("9"), otherTenant.stream().map(row -> row.value().producerVersion()).toList());
+        assertEquals("909", otherTenant.getFirst().value().qualification().qualificationId());
+
+        for (String revoke : List.of("enabled=false", "enabled=true,capabilities='[\"REGISTER\"]'::jsonb",
+                "capabilities='[\"QUALIFY_DEPLOYMENT\"]'::jsonb,allowed_source_refs='[]'::jsonb")) {
+            transaction(() -> {
+                entityManager.createNativeQuery("update rbac3_catalog_service_grant set " + revoke + ",version=version+1 where catalog_scope_id=1 and producer_id='api'").executeUpdate();
+                return null;
+            });
+            assertTrue(transaction(() -> queries.candidates(SCOPE, "api", 0, 4, NOW)).stream()
+                    .allMatch(row -> row.value().qualification() == null));
+        }
+    }
+
+    private void insertCandidateManifest(long scopeId, String producer, long version) {
+        entityManager.createNativeQuery("""
+                insert into rbac3_catalog_manifest(catalog_scope_id,producer_id,producer_version,manifest_digest,policy_digest,metadata_digest,canonical_manifest,state,source_operation_id,repository,commit,build_id,artifact_version,resource_count,permission_count,message_count,diff_json,version,created_at,created_by,updated_at)
+                values(:scope,:producer,:revision,:digest,repeat('a',64),repeat('b',64),'{}','REGISTERED',:operation,'candidate-test',repeat('a',40),'build','1',0,0,0,'{}',:metadataRevision,:now,'test',:now)
+                """).setParameter("scope", scopeId).setParameter("producer", producer).setParameter("revision", version)
+                .setParameter("digest", String.format("%064x", version)).setParameter("operation", OPERATION)
+                .setParameter("metadataRevision", version + 10).setParameter("now", NOW).executeUpdate();
+    }
+
+    private void insertCandidateQualification(long id, long scopeId, long version, Instant verifiedAt, Instant expiresAt, String sourceRef, String clientId) {
+        entityManager.createNativeQuery("""
+                insert into rbac3_catalog_deployment_qualification(id,catalog_scope_id,producer_id,producer_version,artifact_digest,manifest_digest,policy_digest,pipeline_id,build_id,source_ref,commit,deployment_id,readiness_digest,trusted_issuer,trusted_client_id,trusted_resource,verified_at,expires_at,original_receipt_json)
+                values(:id,:scope,'api',:revision,repeat('f',64),:digest,repeat('a',64),'pipeline','build',:sourceRef,repeat('a',40),:deployment,repeat('e',64),:issuer,:client,:resource,:verifiedAt,:expiresAt,'{}')
+                """).setParameter("id", id).setParameter("scope", scopeId).setParameter("revision", version)
+                .setParameter("digest", String.format("%064x", version)).setParameter("sourceRef", sourceRef)
+                .setParameter("deployment", "deployment-" + id).setParameter("issuer", authority.issuer().toString())
+                .setParameter("client", clientId).setParameter("resource", authority.principal().resourceUri().toString())
+                .setParameter("verifiedAt", verifiedAt).setParameter("expiresAt", expiresAt).executeUpdate();
     }
 
     @Test

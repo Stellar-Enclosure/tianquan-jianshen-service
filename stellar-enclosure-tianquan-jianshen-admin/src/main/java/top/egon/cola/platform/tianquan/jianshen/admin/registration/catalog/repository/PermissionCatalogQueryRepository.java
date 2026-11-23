@@ -154,18 +154,22 @@ public class PermissionCatalogQueryRepository {
                        m.repository,m.commit,m.build_id,m.artifact_version,m.created_at,m.version,
                        q.id,q.artifact_digest,q.deployment_id,q.expires_at
                   from rbac3_catalog_manifest m
-                  left join lateral (
-                    select candidate.id,candidate.artifact_digest,candidate.deployment_id,candidate.expires_at
+                  left join (
+                    select candidate.catalog_scope_id,candidate.producer_id,candidate.producer_version,
+                           candidate.id,candidate.artifact_digest,candidate.deployment_id,candidate.expires_at,
+                           row_number() over (partition by candidate.catalog_scope_id,candidate.producer_id,candidate.producer_version
+                             order by candidate.verified_at desc,candidate.id desc) as qualification_rank
                       from rbac3_catalog_deployment_qualification candidate
-                     where candidate.catalog_scope_id=m.catalog_scope_id and candidate.producer_id=m.producer_id
-                       and candidate.producer_version=m.producer_version and candidate.verified_at<=:now and candidate.expires_at>:now
-                       and exists(select 1 from rbac3_catalog_service_grant g
-                         where g.catalog_scope_id=candidate.catalog_scope_id and g.producer_id=candidate.producer_id and g.enabled
-                           and g.issuer=candidate.trusted_issuer and g.client_id=candidate.trusted_client_id and g.resource_uri=candidate.trusted_resource
-                           and g.capabilities @> '["QUALIFY_DEPLOYMENT"]'::jsonb
-                           and g.allowed_source_refs @> jsonb_build_array(candidate.source_ref))
-                     order by candidate.verified_at desc,candidate.id desc limit 1
-                  ) q on true
+                      join rbac3_catalog_service_grant g
+                        on g.catalog_scope_id=candidate.catalog_scope_id and g.producer_id=candidate.producer_id
+                       and g.issuer=candidate.trusted_issuer and g.client_id=candidate.trusted_client_id and g.resource_uri=candidate.trusted_resource
+                     where candidate.catalog_scope_id=:scope and candidate.producer_id=:producer
+                       and (:before=0 or candidate.producer_version<:before)
+                       and candidate.verified_at<=:now and candidate.expires_at>:now and g.enabled
+                       and g.capabilities @> '["QUALIFY_DEPLOYMENT"]'::jsonb
+                       and g.allowed_source_refs @> jsonb_build_array(candidate.source_ref)
+                  ) q on q.catalog_scope_id=m.catalog_scope_id and q.producer_id=m.producer_id
+                     and q.producer_version=m.producer_version and q.qualification_rank=1
                  where m.catalog_scope_id=:scope and m.producer_id=:producer and (:before=0 or m.producer_version<:before)
                  order by m.producer_version desc
                 """).setParameter("scope", Long.parseLong(scope.catalogScopeId())).setParameter("producer", producer)
