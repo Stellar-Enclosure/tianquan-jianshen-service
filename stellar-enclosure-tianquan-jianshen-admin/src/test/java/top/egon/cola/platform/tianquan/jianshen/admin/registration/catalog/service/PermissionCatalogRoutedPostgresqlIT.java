@@ -2,9 +2,11 @@ package top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.serv
 
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.rolepermission.domain.dto.ReplaceRolePermissionsRequestDTO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.rolepermission.repository.RolePermissionGrantRepository;
+import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.rolepermission.service.RolePermissionGrantService;
 import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.repository.DeploymentQualificationRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.repository.CatalogAdministrationGuard;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.state.repository.jpa.JpaTenantAuthorizationStateRepository;
+import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.state.repository.TenantAuthorizationStateRepository;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.SourceImportReceipt;
 import top.egon.cola.platform.tianquan.jianshen.contract.permission.DeploymentQualificationRequest;
 import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.domain.convertor.PermissionCatalogJson;
@@ -36,6 +38,8 @@ import top.egon.cola.platform.tianquan.jianshen.contract.permission.CanonicalJso
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.AuthorizationEventPublisher;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.roleinheritance.repository.jdbc.PostgresqlRoleClosureRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.service.RoleEligibilityService;
+import top.egon.cola.platform.tianquan.jianshen.admin.shared.domain.DatabaseClock;
+import top.egon.cola.platform.tianquan.jianshen.starter.security.Rbac3UserDetails;
 import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.domain.PermissionCatalogCaller;
 import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.repository.PermissionCatalogActivationRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.repository.PermissionCatalogDefinitionRepository;
@@ -427,6 +431,76 @@ class PermissionCatalogRoutedPostgresqlIT {
                 insert into rbac3_role_inheritance(id,tenant_id,application_id,senior_role_id,junior_role_id,created_at,created_by,updated_at,updated_by)
                 values(?,10,20,?,?,current_timestamp,'test',current_timestamp,'test')
                 """, edgeId, seniorId, juniorId);
+    }
+
+    @Test
+    void roleGrantReadAvoidsWriterLocksAndKeepsOneSnapshotThroughRouting() throws Exception {
+        activate(register());
+        transaction(() -> {
+            entityManager.createNativeQuery("""
+                    insert into rbac3_role(id,tenant_id,application_id,role_code,role_name,role_type,risk_level,status,created_at,created_by,updated_at,updated_by)
+                    values(40,10,20,'ROUTED_GRANT_READ','Routed grant read','MANAGEMENT','LOW','ACTIVE',current_timestamp,'test',current_timestamp,'test')
+                    """).executeUpdate();
+            return null;
+        });
+        switchToLogicalDataSource();
+        var scope = new PermissionCatalogScopeRepository.ScopeState(SCOPE, 20, 1, 1);
+        var writerGrants = new RolePermissionGrantRepository(entityManager);
+        transaction(() -> writerGrants.replace(scope, 40, new ReplaceRolePermissionsRequestDTO(SCOPE, List.of("app.read"), "0", null, null), "test", NOW));
+        var shared = org.springframework.orm.jpa.SharedEntityManagerCreator.createSharedEntityManager(factory.getObject());
+        var guard = mock(CatalogAdministrationGuard.class);
+        var actor = mock(Rbac3UserDetails.class);
+        when(guard.require(SCOPE, actor, RolePermissionGrantService.READ, NOW)).thenReturn(scope);
+        when(guard.requireRead(SCOPE, actor, RolePermissionGrantService.READ, NOW)).thenReturn(scope);
+        var clock = mock(DatabaseClock.class);
+        when(clock.transactionNow()).thenReturn(NOW);
+        var service = new RolePermissionGrantService(
+                guard, new RolePermissionGrantRepository(shared), mock(TenantAuthorizationStateRepository.class),
+                mock(AuthorizationEventPublisher.class), mock(AuditQueryService.class), clock);
+        var annotation = RolePermissionGrantService.class.getMethod("read", top.egon.cola.platform.tianquan.jianshen.contract.permission.CatalogScope.class,
+                String.class, Rbac3UserDetails.class).getAnnotation(org.springframework.transaction.annotation.Transactional.class);
+        var reads = new TransactionTemplate(new org.springframework.orm.jpa.JpaTransactionManager(factory.getObject()));
+        reads.setReadOnly(annotation.readOnly());
+        reads.setIsolationLevel(annotation.isolation().value());
+        try (var executor = java.util.concurrent.Executors.newSingleThreadExecutor();
+             var lock = DriverManager.getConnection(url, user, password)) {
+            lock.setAutoCommit(false);
+            try (var statement = lock.createStatement()) {
+                statement.execute("select id from rbac3_role where tenant_id=10 and id=40 for update");
+                statement.execute("select role_id from rbac3_catalog_role_binding where catalog_scope_id=1 and role_id=40 for update");
+            }
+            try {
+                var nonblocking = executor.submit(() -> reads.execute(status -> service.read(SCOPE, "40", actor)));
+                assertEquals("1", nonblocking.get(3, java.util.concurrent.TimeUnit.SECONDS).version());
+            } finally {
+                lock.rollback();
+            }
+            var snapshotRead = new java.util.concurrent.CountDownLatch(1);
+            var writerCommitted = new java.util.concurrent.CountDownLatch(1);
+            var consistent = executor.submit(() -> reads.execute(status -> {
+                assertEquals(1L, ((Number) shared.createNativeQuery("select permission_version from rbac3_catalog_role_binding where catalog_scope_id=1 and role_id=40").getSingleResult()).longValue());
+                snapshotRead.countDown();
+                try {
+                    assertTrue(writerCommitted.await(5, java.util.concurrent.TimeUnit.SECONDS));
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException(interrupted);
+                }
+                return service.read(SCOPE, "40", actor);
+            }));
+            try {
+                assertTrue(snapshotRead.await(5, java.util.concurrent.TimeUnit.SECONDS));
+                transaction(() -> writerGrants.replace(scope, 40, new ReplaceRolePermissionsRequestDTO(SCOPE, List.of(), "1", null, null), "test", NOW));
+            } finally {
+                writerCommitted.countDown();
+            }
+            var previous = consistent.get(5, java.util.concurrent.TimeUnit.SECONDS);
+            assertEquals("1", previous.version());
+            assertEquals(List.of("app.read"), previous.permissions().stream().map(value -> value.permissionCode()).toList());
+            var current = reads.execute(status -> service.read(SCOPE, "40", actor));
+            assertEquals("2", current.version());
+            assertTrue(current.permissions().isEmpty());
+        }
     }
 
     @Test

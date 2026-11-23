@@ -8,6 +8,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.audit.service.AuditQuerySe
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.rolepermission.domain.dto.ReplaceRolePermissionsRequestDTO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.rolepermission.repository.RolePermissionGrantRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.rolepermission.service.RolePermissionGrantService;
+import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.rolepermission.domain.vo.RolePermissionGrantViewVO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.AuthorizationEventPublisher;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.state.repository.TenantAuthorizationStateRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.registration.catalog.repository.PermissionCatalogScopeRepository;
@@ -46,6 +47,24 @@ class RolePermissionGrantTest {
         when(guard.require(SCOPE, actor, RolePermissionGrantService.MANAGE, NOW)).thenReturn(scope);
         when(grants.replace(scope, 40, request, "90", NOW)).thenReturn(new RolePermissionGrantRepository.Mutation("1", 1, 0));
         when(policy.increment(10L, "90")).thenReturn(1L);
+    }
+
+    @Test
+    void readUsesTheReadGuardAndRepeatableReadWithoutChangingTransactionRouting() throws Exception {
+        var view = new RolePermissionGrantViewVO(SCOPE, "40", "0", "1", List.of());
+        when(guard.requireRead(SCOPE, actor, RolePermissionGrantService.READ, NOW)).thenReturn(scope);
+        when(grants.read(scope, 40)).thenReturn(view);
+
+        assertEquals(view, service.read(SCOPE, "40", actor));
+
+        verify(guard).requireRead(SCOPE, actor, RolePermissionGrantService.READ, NOW);
+        verify(guard, never()).require(any(), any(), anyString(), any());
+        verifyNoInteractions(policy, events, audit);
+        var transaction = RolePermissionGrantService.class.getMethod("read", CatalogScope.class, String.class, Rbac3UserDetails.class)
+                .getAnnotation(org.springframework.transaction.annotation.Transactional.class);
+        assertNotNull(transaction);
+        assertFalse(transaction.readOnly());
+        assertEquals(org.springframework.transaction.annotation.Isolation.REPEATABLE_READ, transaction.isolation());
     }
 
     @Test

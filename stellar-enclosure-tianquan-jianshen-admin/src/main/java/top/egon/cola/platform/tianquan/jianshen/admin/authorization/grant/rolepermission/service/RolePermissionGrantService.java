@@ -10,6 +10,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.rolepe
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.rolepermission.domain.RolePermissionGrantCodes;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 import top.egon.cola.platform.tianquan.jianshen.admin.audit.domain.dto.AuditCommandDTO;
 import top.egon.cola.platform.tianquan.jianshen.admin.audit.service.AuditQueryService;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.rolepermission.domain.dto.ReplaceRolePermissionsRequestDTO;
@@ -80,10 +81,10 @@ public class RolePermissionGrantService {
         this.clock = clock;
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
     public RolePermissionGrantViewVO read(CatalogScope target, String roleId, Rbac3UserDetails actor) {
         long role = role(roleId);
-        var scope = guard.require(target, actor, READ, clock.transactionNow());
+        var scope = guard.requireRead(target, actor, READ, clock.transactionNow());
         return grants.read(scope, role);
     }
 

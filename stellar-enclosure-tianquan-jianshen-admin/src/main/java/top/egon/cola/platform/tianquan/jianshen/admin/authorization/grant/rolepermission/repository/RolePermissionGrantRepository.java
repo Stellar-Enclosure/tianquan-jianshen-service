@@ -30,9 +30,14 @@ public class RolePermissionGrantRepository {
     public RolePermissionGrantRepository(EntityManager entityManager) { this.entityManager = entityManager; }
 
     public RolePermissionGrantViewVO read(PermissionCatalogScopeRepository.ScopeState scope, long role) {
-        requireRole(scope, role);
+        requireRole(scope, role, false);
+        return readGrants(scope, role, false);
+    }
+
+    private RolePermissionGrantViewVO readGrants(PermissionCatalogScopeRepository.ScopeState scope, long role, boolean lockBinding) {
         Map<String, Object> values = base(scope.scope(), role);
-        var binding = query("select permission_version,enabled from rbac3_catalog_role_binding where catalog_scope_id=:scope and role_id=:role for update", values).getResultList();
+        var binding = query("select permission_version,enabled from rbac3_catalog_role_binding where catalog_scope_id=:scope and role_id=:role"
+                + (lockBinding ? " for update" : ""), values).getResultList();
         long version = binding.isEmpty() ? 0 : ((Number) ((Object[]) binding.getFirst())[0]).longValue();
         if (!binding.isEmpty() && !Boolean.TRUE.equals(((Object[]) binding.getFirst())[1])) throw new Rbac3RuleViolation("PERMISSION_DENIED");
         List<?> rows = query("""
@@ -49,7 +54,7 @@ public class RolePermissionGrantRepository {
     }
 
     public Mutation replace(PermissionCatalogScopeRepository.ScopeState scope, long role, ReplaceRolePermissionsRequestDTO request, String actor, Instant now) {
-        requireRole(scope, role);
+        requireRole(scope, role, true);
         Instant from = request.validFrom() == null ? now : request.validFrom();
         if (request.validTo() != null && !request.validTo().isAfter(from)) throw new IllegalArgumentException("invalid grant interval");
         Map<String, Object> values = base(scope.scope(), role);
@@ -61,7 +66,7 @@ public class RolePermissionGrantRepository {
                 insert into rbac3_catalog_role_binding(catalog_scope_id,role_id,tenant_id,application_id,created_at,created_by,updated_at,updated_by)
                 values(:scope,:role,:tenant,:application,:now,:actor,:now,:actor) on conflict(catalog_scope_id,role_id) do nothing
                 """, values).executeUpdate();
-        RolePermissionGrantViewVO previous = read(scope, role);
+        RolePermissionGrantViewVO previous = readGrants(scope, role, true);
         if (!previous.version().equals(request.expectedVersion())) throw new Rbac3RuleViolation("RESOURCE_VERSION_CONFLICT");
         List<Long> permissionIds = activePermissionIds(scope.scope(), request.permissionCodes());
         values = base(scope.scope(), role);
@@ -117,10 +122,10 @@ public class RolePermissionGrantRepository {
         return rows.stream().map(value -> ((Number) value).longValue()).toList();
     }
 
-    private void requireRole(PermissionCatalogScopeRepository.ScopeState scope, long role) {
+    private void requireRole(PermissionCatalogScopeRepository.ScopeState scope, long role, boolean lock) {
         var rows = query("""
-                select id from rbac3_role where id=:role and tenant_id=:tenant and application_id=:application and status='ACTIVE' for update
-                """, Map.of("role", role, "tenant", Long.parseLong(scope.scope().tenantId()), "application", scope.applicationId())).getResultList();
+                select id from rbac3_role where id=:role and tenant_id=:tenant and application_id=:application and status='ACTIVE'
+                """ + (lock ? " for update" : ""), Map.of("role", role, "tenant", Long.parseLong(scope.scope().tenantId()), "application", scope.applicationId())).getResultList();
         if (rows.size() != 1) throw new Rbac3RuleViolation("ROLE_APPLICATION_MISMATCH");
     }
 
