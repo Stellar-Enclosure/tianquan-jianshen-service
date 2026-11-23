@@ -16,6 +16,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repo
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.service.Rbac3RuntimeProjectionRecovery;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.state.domain.po.TenantAuthorizationStatePO;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.state.repository.TenantAuthorizationStateRepository;
+import top.egon.cola.platform.tianquan.jianshen.admin.shared.tenant.domain.CatalogProjectionTenantContext;
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
 
 import java.time.Clock;
@@ -142,8 +143,12 @@ class Rbac3RuntimeProjectionRecoveryTest {
 
     @Test
     void transientFailureRemainsRetryableAndDoesNotDiscardTheUserSelection() {
-        when(activation.refresh(any())).thenThrow(new IllegalStateException("ddc unavailable"));
+        when(activation.refresh(any())).thenAnswer(ignored -> {
+            assertThat(CatalogProjectionTenantContext.currentOrNull()).isEqualTo("7");
+            throw new IllegalStateException("ddc unavailable");
+        });
         assertThatThrownBy(() -> recovery.project(userMutation())).hasMessage("ddc unavailable");
+        assertThat(CatalogProjectionTenantContext.currentOrNull()).isNull();
         verifyNoInteractions(reselection, runtime);
     }
 

@@ -26,14 +26,14 @@ public class PermissionSnapshotRebuildRepository {
         Instant now = clock.transactionNow();
         String selectedScope = event.payload().get("catalogScopeId");
         List<Object[]> scopes = rows("""
-                select s.id, t.policy_version, coalesce(p.activation_version, 0)
+                select s.id as scope_id, t.policy_version, p.activation_version
                   from rbac3_catalog_scope s join rbac3_tenant_authorization_state t on t.tenant_id = s.tenant_id
                   left join rbac3_catalog_active_pointer p on p.catalog_scope_id = s.id
-                 where s.tenant_id = :tenant and s.status = 'ACTIVE' order by s.id
+                 where s.tenant_id = :tenant and s.status = 'ACTIVE' order by scope_id
                 """, Map.of("tenant", Long.parseLong(event.tenantId())));
         for (Object[] row : scopes) {
             if (selectedScope != null && !selectedScope.equals(row[0].toString())) continue;
-            long catalog = number(row[2]);
+            long catalog = row[2] == null ? 0L : number(row[2]);
             long policy = number(row[1]);
             if (selectedScope != null && (event.payload().containsKey("policyVersion")
                     && Long.parseLong(event.payload().get("policyVersion")) > policy
@@ -60,7 +60,7 @@ public class PermissionSnapshotRebuildRepository {
                  where state in ('PENDING','RUNNING') and deadline <= :now
                 """).setParameter("now", now).executeUpdate();
         for (Object[] row : rows("""
-                select id, catalog_scope_id, version, lease_generation, deadline from rbac3_catalog_rebuild_task
+                select id, catalog_scope_id, version, lease_generation, deadline, next_attempt_at from rbac3_catalog_rebuild_task
                  where deadline > :now and ((state = 'PENDING' and next_attempt_at <= :now)
                    or (state = 'RUNNING' and lease_until <= :now)) order by next_attempt_at, id limit 50
                 """, Map.of("now", now))) {

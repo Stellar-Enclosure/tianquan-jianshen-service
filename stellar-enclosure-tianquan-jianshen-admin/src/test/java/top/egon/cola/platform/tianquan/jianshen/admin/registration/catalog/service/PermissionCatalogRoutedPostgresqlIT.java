@@ -29,6 +29,10 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.acti
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.activation.repository.RoleActivationFactRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.catalog.PermissionRuntimeProperties;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.catalog.PermissionRuntimeSnapshotRepository;
+import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.catalog.PermissionSnapshotRebuildRepository;
+import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.domain.vo.EventEnvelopeVO;
+import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.postgresql.PostgresqlRuntimeProjectionRepository;
+import top.egon.cola.platform.tianquan.jianshen.contract.permission.CanonicalJson;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.AuthorizationEventPublisher;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.grant.roleinheritance.repository.jdbc.PostgresqlRoleClosureRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.iam.role.service.RoleEligibilityService;
@@ -499,6 +503,73 @@ class PermissionCatalogRoutedPostgresqlIT {
     private EffectivePermissionSnapshot publishSnapshot(PermissionRuntimeSnapshotRepository repository,
             EffectivePermissionSnapshot snapshot, long userId, Instant decisionAt) {
         return ReflectionTestUtils.invokeMethod(repository, "publish", snapshot, userId, decisionAt);
+    }
+
+    @Test
+    void catalogRebuildEnqueuesTheLatestVersionsExactlyOnceThroughRouting() throws Exception {
+        activate(register());
+        switchToLogicalDataSource();
+        var rebuilds = new PermissionSnapshotRebuildRepository(entityManager, () -> NOW);
+        var event = new EventEnvelopeVO("g8-rebuild-1", "tianquan-jianshen.catalog.changed.v1", 1, NOW,
+                "10", "CATALOG_SCOPE", "1", 1, "g8-rebuild-1", Map.of("catalogScopeId", "1", "catalogVersion", "1"));
+
+        transaction(() -> {
+            rebuilds.enqueue(event);
+            rebuilds.enqueue(event);
+            return null;
+        });
+
+        long policyVersion = transaction(() -> ((Number) entityManager.createNativeQuery("""
+                select policy_version from rbac3_tenant_authorization_state where tenant_id=10
+                """).getSingleResult()).longValue());
+        assertEquals(1L, transaction(() -> ((Number) entityManager.createNativeQuery("""
+                select count(*) from rbac3_catalog_rebuild_task where catalog_scope_id=1 and command_id='g8-rebuild-1'
+                  and requested_policy_version=:policy and requested_catalog_version=1 and state='PENDING'
+                """).setParameter("policy", policyVersion).getSingleResult()).longValue()));
+    }
+
+    @Test
+    void catalogRebuildClaimsTheOldestDueTaskAndCompletesThroughRouting() throws Exception {
+        activate(register());
+        switchToLogicalDataSource();
+        var rebuilds = new PermissionSnapshotRebuildRepository(entityManager, () -> NOW);
+        transaction(() -> {
+            for (long taskId : List.of(701L, 702L)) {
+                entityManager.createNativeQuery("""
+                        insert into rbac3_catalog_rebuild_task (id, catalog_scope_id, requested_policy_version,
+                          requested_catalog_version, command_id, next_attempt_at, deadline, created_at, updated_at)
+                        values (:id, 1, 1, 1, :command, :due, :deadline, :created, :created)
+                        """).setParameter("id", taskId).setParameter("command", "g8-due-" + taskId)
+                        .setParameter("due", NOW.minusSeconds(taskId - 700)).setParameter("deadline", NOW.plusSeconds(600))
+                        .setParameter("created", NOW.minusSeconds(3)).executeUpdate();
+            }
+            return null;
+        });
+
+        var claimed = transaction(() -> rebuilds.claim("g8-worker"));
+        assertNotNull(claimed);
+        assertEquals(702L, claimed.id());
+        transaction(() -> { rebuilds.finish(claimed, true); return null; });
+        assertEquals(701L, transaction(() -> rebuilds.claim("g8-worker")).id());
+    }
+
+    @Test
+    void checkpointProjectionDecodesTheFixedWidthChecksumThroughRouting() throws Exception {
+        switchToLogicalDataSource();
+        var payload = Map.of("eventId", "g8-checkpoint", "aggregateVersion", "2");
+        transaction(() -> {
+            entityManager.createNativeQuery("""
+                    insert into rbac3_catalog_runtime_projection
+                      (projection_kind, projection_key, tenant_id, payload_json, checksum, ready, updated_at)
+                    values ('CHECKPOINT', 'g8-checkpoint', 10, cast(:payload as jsonb), :checksum, true, current_timestamp)
+                    """).setParameter("payload", CanonicalJson.write(payload))
+                    .setParameter("checksum", CanonicalJson.digest(payload)).executeUpdate();
+            return null;
+        });
+        var projections = new PostgresqlRuntimeProjectionRepository(entityManager, new ObjectMapper());
+        var checkpoint = transaction(() -> projections.read("CHECKPOINT", "g8-checkpoint", "10")).orElseThrow();
+        assertEquals(payload, checkpoint.payload());
+        assertTrue(checkpoint.ready());
     }
 
     private void activate(SourceImportRequest source) {

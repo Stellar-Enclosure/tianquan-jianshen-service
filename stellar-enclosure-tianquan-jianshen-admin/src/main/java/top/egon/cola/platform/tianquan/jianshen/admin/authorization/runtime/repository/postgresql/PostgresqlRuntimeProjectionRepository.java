@@ -66,7 +66,7 @@ public class PostgresqlRuntimeProjectionRepository {
         if (local != null) return Optional.of(local);
         @SuppressWarnings("unchecked")
         List<Object[]> rows = entityManager.createNativeQuery("""
-                select tenant_id, auth_version, policy_version, cast(payload_json as text), checksum, ready
+                select tenant_id, auth_version, policy_version, cast(payload_json as text), cast(checksum as text), ready
                   from rbac3_catalog_runtime_projection where tenant_id = :tenant and projection_kind = :kind and projection_key = :key
                 """)
                 .setParameter("tenant", Long.valueOf(tenantId)).setParameter("kind", kind).setParameter("key", key).getResultList();

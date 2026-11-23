@@ -11,6 +11,7 @@ import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repo
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.RuntimeProjectionTargetRepository.ProjectionTarget;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.repository.RuntimePublicationRepository;
 import top.egon.cola.platform.tianquan.jianshen.admin.authorization.runtime.state.repository.TenantAuthorizationStateRepository;
+import top.egon.cola.platform.tianquan.jianshen.admin.shared.tenant.domain.CatalogProjectionTenantContext;
 import top.egon.cola.platform.tianquan.jianshen.core.rule.Rbac3RuleViolation;
 
 import java.time.Clock;
@@ -133,8 +134,9 @@ public class Rbac3RuntimeProjectionRecovery implements
             return;
         }
         try {
-            activation.refresh(new ReplaceCommandDTO(tenantId, target.identitySub(), target.userId(),
-                    roots, current.authVersion(), ACTOR, repairId + '-' + target.userId()));
+            CatalogProjectionTenantContext.call(tenantId, () -> activation.refresh(new ReplaceCommandDTO(
+                    tenantId, target.identitySub(), target.userId(), roots, current.authVersion(), ACTOR,
+                    repairId + '-' + target.userId())));
         } catch (Rbac3RuleViolation exception) {
             if (!RESELECTION_REASONS.contains(exception.reasonCode())) {
                 throw exception;
